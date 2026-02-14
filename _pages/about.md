@@ -11,7 +11,7 @@ profile:
   more_info: >
     <p>Room 502, Intelligent Computing Lab</p>
     <p>Shanghai University, Shanghai</p>
-    <p>Email18870788548@shu.edu.cn</p>
+    <p>Email: 18870788548@shu.edu.cn</p>
 
 selected_papers: false # includes a list of papers marked as "selected={true}"
 social: false # includes social icons at the bottom of the page

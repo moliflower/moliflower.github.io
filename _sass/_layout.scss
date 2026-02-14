@@ -38,6 +38,34 @@ body.sticky-bottom-footer {
   img {
     width: 100%;
   }
+
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+// Section dividers
+.section-divider {
+  border: none;
+  border-top: 1px solid var(--global-divider-color);
+  margin: 2.5rem 0 1.5rem;
+}
+
+// Section icons next to headings
+.section-icon {
+  font-size: 0.85em;
+  margin-right: 0.4rem;
+  color: var(--global-theme-color);
+  opacity: 0.8;
+}
+
+// About page content sections
+.post {
+  article {
+    .news,
+    .latest-posts {
+      margin-bottom: 2.5rem;
+    }
+  }
 }
 
 // Content layout uses Bootstrap's grid system with responsive columns

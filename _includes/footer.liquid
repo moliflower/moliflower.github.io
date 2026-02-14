@@ -1,5 +1,5 @@
 {% capture footer_contents %}
-  &copy; Copyright {{ site.time | date: '%Y' }}
+  &copy; <span data-i18n="copyright">Copyright</span> {{ site.time | date: '%Y' }}
   {{ site.first_name }}
   {{ site.middle_name }}
   {{ site.last_name }}. {{ site.footer_text }}
@@ -7,7 +7,7 @@
     <a href="{{ site.url }}{{ site.baseurl }}{{ site.impressum_path }}">Impressum</a>.
   {% endif %}
   {% if site.last_updated %}
-    Last updated: {{ 'now' | date: '%B %d, %Y' }}.
+    <span data-i18n="last_updated">Last updated</span>: {{ 'now' | date: '%B %d, %Y' }}.
   {% endif %}
 {% endcapture %}
 
