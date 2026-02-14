@@ -1,115 +1,98 @@
 cv:
-  name: Albert Einstein
-  label: Scientist
-  email: einstein@example.com
-  location: Princeton, NJ
-  image: ""
-  summary: A German-born theoretical physicist, widely ranked among the greatest and most influential scientists of all time
+  name: Yuhan Deng
+  label: Master's Student
+  email: 18870788548@shu.edu.cn
+  location: Intelligent Computing Laboratory, Shanghai University
+  image: "prof_pic.jpg"
+  summary: A master's student at Shanghai University and a member of the Intelligent Computing Laboratory (ICL), focusing on efficient and scalable inference for large language models.
 
   social_networks:
-    - network: X
-      username: AlbertEinstein
     - network: GitHub
-      username: example
-    - network: LinkedIn
-      username: example
+      username: moliflower
 
   address:
-    street: 2712 Broadway St
-    city: San Francisco
-    region: California
-    postalCode: CA 94115
-    countryCode: US
+    city: Shanghai
+    postalCode: 200444
+    countryCode: CN
 
   sections:
     Education:
-      - institution: University of Zurich
-        location: Zurich, Switzerland
-        url: https://www.uzh.ch/
-        area: Physics
-        studyType: PhD
-        start_date: 1900
-        end_date: 1905
+      - institution: Shanghai University
+        location: Shanghai, China
+        url: https://www.shu.edu.cn/
+        area: Computer Science
+        studyType: Master
+        start_date: 2026-09
+        end_date: 
         score: ""
-        courses: "Theory of Relativity"
+        courses: "High-Performance Computing, Deep Learning"
         highlights:
-          - Description 1.
-          - Description 2.
+          - Incoming Graduate Student (Admitted).
+          - Advisor: Prof. Kai Zhao
 
-      - institution: Eidgenössische Technische Hochschule
-        location: Zurich, Switzerland
-        area: Physics
-        studyType: Federal teaching diploma
-        start_date: 1896
-        end_date: 1900
+      - institution: Shanghai University
+        location: Shanghai, China
+        url: https://www.shu.edu.cn/
+        area: Communication Engineering
+        studyType: Bachelor's Degree
+        start_date: 2022-09  
+        end_date: 2026-06    
+        score: "Rank: 11/243 (Top 4.5%)"
+        courses: "Machine Learning, Computer Networks, Communication Principles, Digital Electronics, Analog Electronics"
         highlights:
-          - Description 1.
-          - Description 2.
+          - "2025 National Undergraduate Electronics Design Contest: National Second Prize & Shanghai First Prize."
+          - "16th Lanqiao Cup (FPGA Track): National Second Prize & Shanghai First Prize."
+          - "2024 National Undergraduate Electronics Design Contest: Shanghai Second Prize."
+          - "Scholarships: SHU Academic Excellence Scholarship (Second Class, multiple times), Innovation & Entrepreneurship Scholarship."
 
     Experience:
-      - company: Institute for Advanced Study, Princeton University
-        position: Professor of Theoretical Physics
-        location: Princeton University, NJ
-        start_date: 1933
-        end_date: 1955
-        summary: Teaching at Palmer Physical Laboratory (now 302 Frist Campus Center). While not a professor at Princeton, I associated with the physics professors and continued to give lectures on campus.
-        highlights:
-          - Relativity
-          - Description 2.
-
-      - company: California Institute of Technology
-        position: Visiting Professor
-        location: Pasadena, California, US
-        start_date: 1933
-        end_date: 1933
-        highlights:
-          - Description 1.
-          - Description 2.
-
-      - company: Kaiser Wilhelm Institute for Physics
-        position: Director
-        location: Berlin, Germany
-        start_date: 1917
-        end_date: 1933
-
-      - company: Karl-Ferdinand University
-        position: Professor of Theoretical Physics
-        location: Prague, Czechoslovakia
-        start_date: 1911
-        end_date: 1917
-
-      - company: University of Zurich
-        position: Associate Professor of Theoretical Physics
-        location: Zurich, Switzerland
-        start_date: 1909
-        end_date: 1911
+    - company: Intelligent Computing Laboratory, Shanghai University
+    position: Research Assistant
+    location: Shanghai, China
+    start_date: 2025-11-01
+    end_date: Present
+    summary: Contributing to the open-source project **torchmorph**, developing CUDA operators to accelerate scientific computing and graphics functions.
+    highlights:
+      - Implemented CUDA operators to parallelize SciPy graphics functions for faster computation
+      - Optimized GPU kernels for efficiency and memory usage in the torchmorph project
+      - Collaborated on GitHub to maintain and improve open-source codebase
+      - Conducted performance benchmarking and profiling for high-performance computing tasks
 
     Volunteer:
-      - company: People's Climate March
-        position: Lead Organizer
-        location: Zurich, Switzerland
-        start_date: 2014-04-01
-        end_date: 2015-07-01
-        summary: Lead organizer for the New York City branch of the People's Climate March, the largest climate march in history.
-        highlights:
-          - "Awarded 'Climate Hero' award by Greenpeace for my efforts organizing the march."
-          - "Men of the year 2014 by Time magazine"
+    - company: Shanghai University Blue Ribbon Charity Club, Publicity Department
+    position: Staff Member
+    location: Shanghai, China
+    start_date: 2023-06-01
+    end_date: 2024-06-01
+    summary: Participated in the publicity department, responsible for writing social media posts and conducting community surveys.
+    highlights:
+      - "Wrote engaging posts for the club's social media accounts."
+      - "Conducted surveys to understand community needs and improve services."
 
     Awards:
-      - title: Nobel Prize in Physics
-        authors:
-          - "Royal Swedish Academy of Sciences"
-        date: 1921-11-01
-        awarder: Royal Swedish Academy of Sciences
-        url: https://www.nobelprize.org/prizes/physics/1921/einstein/biographical/
-        summary: The Nobel Prizes are five separate prizes that, according to Alfred Nobel's will of 1895, are awarded to 'those who, during the preceding year, have conferred the greatest benefit to humankind.'
+      - title: National Second Prize, National Undergraduate Electronics Design Contest (NUEDC)
+        authors: [] 
+        date: 2025
+        awarder: Ministry of Education & MIIT
+        summary: "Also awarded Shanghai First Prize. One of the most prestigious electronics competitions for undergraduates in China."
 
-      - title: Max Planck Medal
-        authors:
-          - "German Physical Society"
-        date: 2029
-        awarder: German Physical Society
-        summary: Awarded for outstanding scientific achievement
+      - title: National Second Prize, 16th Lanqiao Cup (FPGA Track)
+        authors: []
+        date: 2025
+        awarder: MIIT Talent Exchange Center
+        summary: "Also awarded Shanghai First Prize. Focused on Verilog HDL design and hardware implementation."
+
+      - title: Shanghai Second Prize, National Undergraduate Electronics Design Contest (NUEDC)
+        authors: []
+        date: 2024
+        awarder: Shanghai Organizing Committee
+        summary: "Completed complex electronic system design and debugging within 4 days."
+
+      - title: Academic Excellence Scholarship & Innovation Scholarship
+        authors: []
+        date: 2023 - 2025
+        awarder: Shanghai University
+        summary: "Awarded Academic Excellence Scholarship (Second Class) multiple times for ranking top 5%. Also received the University Innovation & Entrepreneurship Scholarship."
 
     Publications:
       - title: Zur Elektrodynamik bewegter Körper
@@ -143,47 +126,11 @@ cv:
         keywords: "Quantum Mechanics, Quantum Computing, Quantum Information, Quantum Cryptography, Quantum Communication, Quantum Teleportation"
 
     Languages:
-      - name: German
+      - name: CN
         summary: "Native speaker"
 
       - name: English
         summary: "Fluent"
 
-    Interests:
-      - name: Physics
-        icon: fa-solid fa-tag
-        keywords: "Quantum Mechanics, Quantum Computing, Quantum Information, Quantum Cryptography, Quantum Communication, Quantum Teleportation"
 
-    Certificates:
-      - name: Machine Learning
-        date: 2018-01-01
-        issuer: Stanford University
-        icon: fa-solid fa-location-dot
-
-      - name: Quantum Computing
-        date: 2018-01-01
-        issuer: Stanford University
-        icon: fa-solid fa-tag
-
-      - name: Quantum Information
-        date: 2018-01-01
-        issuer: Stanford University
-        icon: fa-solid fa-envelope
-
-    Projects:
-      - name: Quantum Computing
-        summary: Quantum computing is the use of quantum-mechanical phenomena such as superposition and entanglement to perform computation. Computers that perform quantum computations are known as quantum computers.
-        highlights:
-          - Quantum Teleportation
-          - Quantum Cryptography
-        start_date: 2018-01-01
-        end_date: 2018-01-01
-
-    References:
-      - name: Professor John Doe
-        icon: fa-solid fa-laptop
-        reference: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam condimentum, diam quis convallis euismod, arcu mi ullamcorper lorem, a vestibulum nunc magna at sem. Sed in risus ac felis varius blandit.
-
-      - name: Professor Jane Smith
-        icon: fa-solid fa-thumbtack
-        reference: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam condimentum, diam quis convallis euismod, arcu mi ullamcorper lorem, a vestibulum nunc magna at sem. Sed in risus ac felis varius blandit.
+    
