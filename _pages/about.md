@@ -2,7 +2,7 @@
 layout: about
 title: about
 permalink: /
-subtitle: <a href='#'>Intelligent Computing Laboratory</a>. Shanghai University. Yuhan Deng. Efficient LLM Inference.
+subtitle: <a href='https://intcomp.org/'>Intelligent Computing Laboratory</a>. Shanghai University. Yuhan Deng. Efficient LLM Inference.
 
 profile:
   align: right
@@ -10,8 +10,8 @@ profile:
   image_circular: false # crops the image to make it circular
   more_info: >
     <p>Room 502, Intelligent Computing Lab</p>
-    <p>Shanghai University , Shanghai</p>
-    <p>Email：18870788548@shu.edu.cn</p>
+    <p>Shanghai University, Shanghai</p>
+    <p>Email18870788548@shu.edu.cn</p>
 
 selected_papers: false # includes a list of papers marked as "selected={true}"
 social: false # includes social icons at the bottom of the page

@@ -10,7 +10,6 @@ email: 18870788548@shu.edu.cn
 contact_note: >
   The best way to reach me is via email.
 description: > # the ">" symbol means to ignore newlines until "footer_text:"
-  description: >
   A master's student at Shanghai University and a member of the Intelligent Computing Laboratory (ICL), focusing on efficient and scalable inference for large language models.
 footer_text: >
   © 2026 Yuhan Deng | Intelligent Computing Laboratory, Shanghai University
@@ -129,16 +128,6 @@ disqus_shortname: al-folio # put your disqus shortname
 # you can display them in your blog by adding a link to the RSS feed.
 # Optional: Set default categories and tags for posts from each source.
 external_sources:
-  - name: medium.com
-    rss_url: https://medium.com/@al-folio/feed
-    categories: [external-posts]
-    tags: [medium]
-  - name: Google Blog
-    posts:
-      - url: https://blog.google/technology/ai/google-gemini-update-flash-ai-assistant-io-2024/
-        published_date: 2024-05-14
-    categories: [external-posts]
-    tags: [google]
 
 # -----------------------------------------------------------------------------
 # Newsletter
