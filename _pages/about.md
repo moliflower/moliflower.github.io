@@ -27,7 +27,7 @@ latest_posts:
   limit: 3 # leave blank to include all the blog posts
 ---
 
-Hi, I'm **Yuhan Deng**, a master's student at XXX University and a member of the **Intelligent Computing Laboratory (ICL)**.  
+Hi, I'm **Yuhan Deng**, a master's student at Shanghai University and a member of the **Intelligent Computing Laboratory (ICL)**.  
 
 My research focuses on **efficient inference techniques for large language models**, including system-level optimization, CUDA kernel acceleration, FlashAttention, and model quantization.  
 
