@@ -23,20 +23,20 @@ cv:
         area: Computer Science
         studyType: Master
         start_date: 2026-09
-        end_date: 
+        end_date:
         score: ""
         courses: "High-Performance Computing, Deep Learning"
         highlights:
           - Incoming Graduate Student (Admitted).
-          - Advisor: Prof. Kai Zhao
+          - "Advisor: Prof. Kai Zhao"
 
       - institution: Shanghai University
         location: Shanghai, China
         url: https://www.shu.edu.cn/
         area: Communication Engineering
         studyType: Bachelor's Degree
-        start_date: 2022-09  
-        end_date: 2026-06    
+        start_date: 2022-09
+        end_date: 2026-06
         score: "Rank: 11/243 (Top 4.5%)"
         courses: "Machine Learning, Computer Networks, Communication Principles, Digital Electronics, Analog Electronics"
         highlights:
@@ -46,84 +46,75 @@ cv:
           - "Scholarships: SHU Academic Excellence Scholarship (Second Class, multiple times), Innovation & Entrepreneurship Scholarship."
 
     Experience:
-    - company: Intelligent Computing Laboratory, Shanghai University
-    position: Research Assistant
-    location: Shanghai, China
-    start_date: 2025-11-01
-    end_date: Present
-    summary: Contributing to the open-source project **torchmorph**, developing CUDA operators to accelerate scientific computing and graphics functions.
-    highlights:
-      - Implemented CUDA operators to parallelize SciPy graphics functions for faster computation
-      - Optimized GPU kernels for efficiency and memory usage in the torchmorph project
-      - Collaborated on GitHub to maintain and improve open-source codebase
-      - Conducted performance benchmarking and profiling for high-performance computing tasks
+      - company: Intelligent Computing Laboratory, Shanghai University
+        position: Research Assistant
+        location: Shanghai, China
+        start_date: 2025-11-01
+        end_date: Present
+        summary: Contributing to the open-source project **torchmorph**, developing CUDA operators to accelerate scientific computing and graphics functions.
+        highlights:
+          - Implemented CUDA operators to parallelize SciPy graphics functions for faster computation
+          - Optimized GPU kernels for efficiency and memory usage in the torchmorph project
+          - Collaborated on GitHub to maintain and improve open-source codebase
+          - Conducted performance benchmarking and profiling for high-performance computing tasks
 
     Volunteer:
-    - company: Shanghai University Blue Ribbon Charity Club, Publicity Department
-    position: Staff Member
-    location: Shanghai, China
-    start_date: 2023-06-01
-    end_date: 2024-06-01
-    summary: Participated in the publicity department, responsible for writing social media posts and conducting community surveys.
-    highlights:
-      - "Wrote engaging posts for the club's social media accounts."
-      - "Conducted surveys to understand community needs and improve services."
+      - company: Shanghai University Blue Ribbon Charity Club, Publicity Department
+        position: Staff Member
+        location: Shanghai, China
+        start_date: 2023-06-01
+        end_date: 2024-06-01
+        summary: Participated in the publicity department, responsible for writing social media posts and conducting community surveys.
+        highlights:
+          - "Wrote engaging posts for the club's social media accounts."
+          - "Conducted surveys to understand community needs and improve services."
 
     Awards:
       - title: National Second Prize, National Undergraduate Electronics Design Contest (NUEDC)
-        authors: [] 
         date: 2025
         awarder: Ministry of Education & MIIT
         summary: "Also awarded Shanghai First Prize. One of the most prestigious electronics competitions for undergraduates in China."
 
       - title: National Second Prize, 16th Lanqiao Cup (FPGA Track)
-        authors: []
         date: 2025
         awarder: MIIT Talent Exchange Center
         summary: "Also awarded Shanghai First Prize. Focused on Verilog HDL design and hardware implementation."
 
       - title: Shanghai Second Prize, National Undergraduate Electronics Design Contest (NUEDC)
-        authors: []
         date: 2024
         awarder: Shanghai Organizing Committee
         summary: "Completed complex electronic system design and debugging within 4 days."
 
       - title: Academic Excellence Scholarship & Innovation Scholarship
-        authors: []
         date: 2023 - 2025
         awarder: Shanghai University
         summary: "Awarded Academic Excellence Scholarship (Second Class) multiple times for ranking top 5%. Also received the University Innovation & Entrepreneurship Scholarship."
 
-    Publications:
-      - title: Zur Elektrodynamik bewegter Körper
-        authors:
-          - Albert Einstein
-        publisher: Annalen der Physik
-        releaseDate: 1905-06-30
-        url: https://en.wikisource.org/wiki/Translation:On_the_Electrodynamics_of_Moving_Bodies
-        summary: It concerned an interpretation of the Michelson–Morley experiment and the properties of light and time. Special relativity incorporates the principle that the speed of light is the same for all inertial observers regardless of the state of motion of the source.
-
-      - title: Über einen die Erzeugung und Verwandlung des Lichtes betreffenden heuristischen Gesichtspunkt
-        authors:
-          - Albert Einstein
-        publisher: Annalen der Physik
-        releaseDate: 1905-03-18
-        url: https://de.wikisource.org/wiki/Über_einen_die_Erzeugung_und_Verwandlung_des_Lichtes_betreffenden_heuristischen_Gesichtspunkt
-        summary: In the second paper, he applied the quantum theory to light to explain the photoelectric effect. In particular, he used the idea of light quanta (photons) to explain experimental results, but stressed the importance of the experimental results. The importance of his work on the photoelectric effect earned him the Nobel Prize in Physics in 1921.
-
-      - title: Die Grundlage der allgemeinen Relativitätstheorie
-        authors:
-          - Albert Einstein
-        publisher: Annalen der Physik
-        releaseDate: 1916-03-20
-        url: https://de.wikisource.org/wiki/Die_Grundlage_der_allgemeinen_Relativitätstheorie
-        summary: The publication of the theory of general relativity made him internationally famous. He was professor of physics at the universities of Zurich (1909–1911) and Prague (1911–1912), before he returned to ETH Zurich (1912–1914).
-
     Skills:
-      - name: Physics
-        level: Master
-        icon: fa-solid fa-hashtag
-        keywords: "Quantum Mechanics, Quantum Computing, Quantum Information, Quantum Cryptography, Quantum Communication, Quantum Teleportation"
+      - name: CUDA
+        level: Proficient
+        icon: fa-solid fa-microchip
+        keywords: "GPU Programming, Kernel Optimization, Parallel Computing"
+
+      - name: PyTorch
+        level: Proficient
+        icon: fa-solid fa-brain
+        keywords: "Deep Learning, Model Training, Inference Optimization"
+
+      - name: Python
+        level: Proficient
+        icon: fa-solid fa-code
+        keywords: "Scientific Computing, Data Processing, Scripting"
+
+      - name: C/C++
+        level: Proficient
+        icon: fa-solid fa-terminal
+        keywords: "Systems Programming, High-Performance Computing"
+
+      - name: Verilog
+        level: Proficient
+        icon: fa-solid fa-memory
+        keywords: "FPGA Design, Digital Circuit Design, HDL"
 
     Languages:
       - name: CN
@@ -131,6 +122,3 @@ cv:
 
       - name: English
         summary: "Fluent"
-
-
-    
