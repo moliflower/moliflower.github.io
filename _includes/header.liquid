@@ -32,9 +32,9 @@
         data-target="#navbarNav"
         aria-controls="navbarNav"
         aria-expanded="false"
-        aria-label="Toggle navigation"
+        aria-label="切换导航栏"
       >
-        <span class="sr-only">Toggle navigation</span>
+        <span class="sr-only">切换导航栏</span>
         <span class="icon-bar top-bar"></span>
         <span class="icon-bar middle-bar"></span>
         <span class="icon-bar bottom-bar"></span>
@@ -120,19 +120,21 @@
           {% if site.search_enabled %}
             <!-- Search -->
             <li class="nav-item">
-              <button id="search-toggle" title="Search" onclick="openSearchModal()">
+              <button id="search-toggle" title="搜索" onclick="openSearchModal()">
                 <span class="nav-link">ctrl k <i class="fa-solid fa-magnifying-glass"></i></span>
               </button>
             </li>
           {% endif %}
-          <!-- Language toggle -->
+          {% if site.enable_language_toggle %}
+            <!-- Language toggle -->
             <li class="toggle-container">
-              <button id="lang-toggle" title="Switch language" onclick="window.i18n.toggleLanguage()">中</button>
+              <button id="lang-toggle" title="切换语言" onclick="window.i18n.toggleLanguage()">EN</button>
             </li>
+          {% endif %}
           {% if site.enable_darkmode %}
             <!-- Toogle theme mode -->
             <li class="toggle-container">
-              <button id="light-toggle" title="Change theme">
+              <button id="light-toggle" title="切换主题">
                 <i class="fa-half-sun-moon" id="light-toggle-system"></i>
                 <i class="fa-solid fa-moon" id="light-toggle-dark"></i>
                 <i class="fa-solid fa-sun" id="light-toggle-light"></i>

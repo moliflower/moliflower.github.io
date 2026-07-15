@@ -56,16 +56,14 @@
   }
 
   function toggleLanguage() {
-    var current = localStorage.getItem("site-lang") || "en";
+    var current = localStorage.getItem("site-lang") || "zh";
     var next = current === "en" ? "zh" : "en";
     setLanguage(next);
   }
 
   function initLanguage() {
-    var saved = localStorage.getItem("site-lang");
-    if (saved && saved !== "en") {
-      setLanguage(saved);
-    }
+    var saved = localStorage.getItem("site-lang") || "zh";
+    setLanguage(saved);
   }
 
   // Expose globally

@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-Started contributing to [TorchMorph](https://github.com/intcomp/torchmorph), a lightweight CUDA-accelerated library for batch-parallel morphological transformations in PyTorch.
+[TorchMorph](https://github.com/intcomp/torchmorph) 一个轻量级 CUDA 加速库，用于在 PyTorch 中实现批量并行的形态学变换。

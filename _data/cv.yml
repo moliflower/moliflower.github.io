@@ -1,124 +1,96 @@
 cv:
-  name: Yuhan Deng
-  label: Master's Student
+  name: 邓予涵
+  label: 硕士研究生
   email: 18870788548@shu.edu.cn
-  location: Intelligent Computing Laboratory, Shanghai University
+  location: 上海大学智能计算实验室
   image: "prof_pic.jpg"
-  summary: A master's student at Shanghai University and a member of the Intelligent Computing Laboratory (ICL), focusing on efficient and scalable inference for large language models.
+  summary: 上海大学硕士研究生、智能计算实验室成员，主要研究大语言模型的高效与可扩展推理，关注 CUDA 算子优化、FlashAttention 和模型量化。
 
   social_networks:
     - network: GitHub
       username: moliflower
 
   address:
-    city: Shanghai
+    city: 上海
     postalCode: 200444
     countryCode: CN
 
   sections:
     Education:
-      - institution: Shanghai University
-        location: Shanghai, China
+      - institution: 上海大学
+        location: 中国上海
         url: https://www.shu.edu.cn/
-        area: Computer Science
-        studyType: Master
+        area: 信息与通信工程
+        studyType: 硕士研究生
         start_date: 2026-09
-        end_date:
+        end_date: 至今
         score: ""
-        courses: "High-Performance Computing, Deep Learning"
+        courses: [高性能计算, 深度学习]
         highlights:
-          - Incoming Graduate Student (Admitted).
-          - "Advisor: Prof. Kai Zhao"
+          - 已录取为上海大学硕士研究生。
+          - "导师：[赵凯教授](https://kaizhao.net/)"
 
-      - institution: Shanghai University
-        location: Shanghai, China
+      - institution: 上海大学
+        location: 中国上海
         url: https://www.shu.edu.cn/
-        area: Communication Engineering
-        studyType: Bachelor's Degree
+        area: 通信工程
+        studyType: 工学学士
         start_date: 2022-09
         end_date: 2026-06
-        score: "Rank: 11/243 (Top 4.5%)"
-        courses: "Machine Learning, Computer Networks, Communication Principles, Digital Electronics, Analog Electronics"
-        highlights:
-          - "2025 National Undergraduate Electronics Design Contest: National Second Prize & Shanghai First Prize."
-          - "16th Lanqiao Cup (FPGA Track): National Second Prize & Shanghai First Prize."
-          - "2024 National Undergraduate Electronics Design Contest: Shanghai Second Prize."
-          - "Scholarships: SHU Academic Excellence Scholarship (Second Class, multiple times), Innovation & Entrepreneurship Scholarship."
+        score: "专业排名:11/243(前 4.5%)"
+        courses: [机器学习, 计算机网络, 通信原理]
 
     Experience:
-      - company: Intelligent Computing Laboratory, Shanghai University
-        position: Research Assistant
-        location: Shanghai, China
+      - company: 上海大学智能计算实验室
+        position: 实习生
+        location: 中国上海
         start_date: 2025-11-01
-        end_date: Present
-        summary: Contributing to the open-source project **torchmorph**, developing CUDA operators to accelerate scientific computing and graphics functions.
+        end_date: 2026-06-01
+        summary: 参与大语言模型高效推理相关研究，专注于 CUDA 算子优化、FlashAttention 和模型量化。
         highlights:
-          - Implemented CUDA operators to parallelize SciPy graphics functions for faster computation
-          - Optimized GPU kernels for efficiency and memory usage in the torchmorph project
-          - Collaborated on GitHub to maintain and improve open-source codebase
-          - Conducted performance benchmarking and profiling for high-performance computing tasks
-
-    Volunteer:
-      - company: Shanghai University Blue Ribbon Charity Club, Publicity Department
-        position: Staff Member
-        location: Shanghai, China
-        start_date: 2023-06-01
-        end_date: 2024-06-01
-        summary: Participated in the publicity department, responsible for writing social media posts and conducting community surveys.
-        highlights:
-          - "Wrote engaging posts for the club's social media accounts."
-          - "Conducted surveys to understand community needs and improve services."
-
+          - TorchMorph 开源代码库的开发、维护与功能完善。
     Awards:
-      - title: National Second Prize, National Undergraduate Electronics Design Contest (NUEDC)
-        date: 2025
-        awarder: Ministry of Education & MIIT
-        summary: "Also awarded Shanghai First Prize. One of the most prestigious electronics competitions for undergraduates in China."
+      - title: 全国大学生电子设计竞赛全国二等奖
+        date: 2025.08
+        awarder: 全国大学生电子设计竞赛组委会
 
-      - title: National Second Prize, 16th Lanqiao Cup (FPGA Track)
-        date: 2025
-        awarder: MIIT Talent Exchange Center
-        summary: "Also awarded Shanghai First Prize. Focused on Verilog HDL design and hardware implementation."
+      - title: 第十六届蓝桥杯全国软件和信息技术专业人才大赛全国二等奖(FPGA组)
+        date: 2025.06
+        awarder: 工业和信息化部人才交流中心
 
-      - title: Shanghai Second Prize, National Undergraduate Electronics Design Contest (NUEDC)
-        date: 2024
-        awarder: Shanghai Organizing Committee
-        summary: "Completed complex electronic system design and debugging within 4 days."
-
-      - title: Academic Excellence Scholarship & Innovation Scholarship
-        date: 2023 - 2025
-        awarder: Shanghai University
-        summary: "Awarded Academic Excellence Scholarship (Second Class) multiple times for ranking top 5%. Also received the University Innovation & Entrepreneurship Scholarship."
+      - title: 全国大学生电子设计竞赛上海市二等奖
+        date: 2024.08
+        awarder: 全国大学生电子设计竞赛上海赛区组委会
 
     Skills:
       - name: CUDA
-        level: Proficient
+        level: 熟练
         icon: fa-solid fa-microchip
-        keywords: "GPU Programming, Kernel Optimization, Parallel Computing"
+        keywords: [GPU 编程, 算子优化, 并行计算]
 
       - name: PyTorch
-        level: Proficient
+        level: 熟练
         icon: fa-solid fa-brain
-        keywords: "Deep Learning, Model Training, Inference Optimization"
+        keywords: [深度学习, 模型训练, 推理优化]
 
       - name: Python
-        level: Proficient
+        level: 熟练
         icon: fa-solid fa-code
-        keywords: "Scientific Computing, Data Processing, Scripting"
+        keywords: [科学计算, 数据处理, 自动化脚本]
 
       - name: C/C++
-        level: Proficient
+        level: 熟练
         icon: fa-solid fa-terminal
-        keywords: "Systems Programming, High-Performance Computing"
+        keywords: [系统编程, 高性能计算]
 
       - name: Verilog
-        level: Proficient
+        level: 熟练
         icon: fa-solid fa-memory
-        keywords: "FPGA Design, Digital Circuit Design, HDL"
+        keywords: [FPGA 设计, 数字电路设计, 硬件描述语言]
 
     Languages:
-      - name: CN
-        summary: "Native speaker"
+      - name: 中文
+        summary: 母语
 
-      - name: English
-        summary: "Fluent"
+      - name: 英语
+        summary: 熟练

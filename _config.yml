@@ -8,13 +8,13 @@ middle_name: ""
 last_name: Deng
 email: 18870788548@shu.edu.cn
 contact_note: >
-  The best way to reach me is via email.
+  如需联系我，推荐通过电子邮件沟通。
 description: > # the ">" symbol means to ignore newlines until "footer_text:"
-  A master's student at Shanghai University and a member of the Intelligent Computing Laboratory (ICL), focusing on efficient and scalable inference for large language models.
+  上海大学硕士研究生，智能计算实验室成员，研究方向为大语言模型的高效与可扩展推理。
 footer_text: >
-  Shanghai University
-keywords: LLM, CUDA, Flashattention , Model Quantization # add your own keywords or leave empty
-lang: en # the language of your site (for example: en, fr, cn, ru, etc.)
+  上海大学
+keywords: 大语言模型, 高效推理, CUDA, FlashAttention, 模型量化 # add your own keywords or leave empty
+lang: zh-CN # the language of your site (for example: en, fr, cn, ru, etc.)
 icon: ⚛️ # the emoji used as the favicon (alternatively, provide image name in /assets/img/)
 
 url: https://moliflower.github.io # the base hostname & protocol for your site
@@ -58,6 +58,7 @@ search_enabled: true
 socials_in_search: true
 posts_in_search: true
 bib_search: true
+enable_language_toggle: false # 完成英文版后可改为 true
 
 # Dimensions
 max_width: 930px
@@ -90,8 +91,8 @@ bing_site_verification: # out your bing-site-verification ID (Bing Webmaster)
 # Blog
 # -----------------------------------------------------------------------------
 
-blog_name: al-folio # blog_name will be displayed in your blog page
-blog_description: a simple whitespace theme for academics
+blog_name: 我的一些感悟与分享 # blog_name will be displayed in your blog page
+blog_description: 关于LLM、CUDA和高性能推理的笔记
 permalink: /blog/:year/:title/
 lsi: false # produce an index for related posts
 
@@ -107,9 +108,9 @@ related_blog_posts:
 # Follow instructions on https://giscus.app/ to setup for your repo to fill out the information below.
 giscus:
   repo: moliflower/moliflower.github.io
-  repo_id: 
+  repo_id:
   category: Comments
-  category_id: 
+  category_id:
   mapping: title
   strict: 1
   reactions_enabled: 1
@@ -117,8 +118,8 @@ giscus:
   dark_theme: dark
   light_theme: light
   emit_metadata: 0
-  lang: en
-  
+  lang: zh-CN
+
 # Disqus comments (DEPRECATED)
 disqus_shortname: al-folio # put your disqus shortname
 # https://help.disqus.com/en/articles/1717111-what-s-a-shortname
@@ -260,8 +261,8 @@ jekyll-archives:
   books:
     enabled: [year, tags, categories] # enables year, tag and category archives (remove if you need to disable one of them).
 
-display_tags: ["formatting", "images", "links", "math", "code", "blockquotes"] # these tags will be displayed on the front page of your blog
-display_categories: ["external-services"] # these categories will be displayed on the front page of your blog
+display_tags: [] # these tags will be displayed on the front page of your blog
+display_categories: [] # these categories will be displayed on the front page of your blog
 
 # -----------------------------------------------------------------------------
 # Jekyll Scholar
