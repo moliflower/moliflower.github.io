@@ -41,6 +41,17 @@ ninja.data = [{
             window.location.href = "/blog/2026/%E5%AF%B9%E4%BA%8E%E6%A8%A1%E5%9E%8B%E4%B8%AD%E5%8D%87%E7%BB%B4%E5%92%8C%E9%99%8D%E7%BB%B4%E7%9A%84%E7%90%86%E8%A7%A3/";
           
         },
+      },{id: "post-从-remote-ssh-到-github-ssh-key-第一次用实验室服务器时踩过的几个坑",
+        
+          title: "从 Remote SSH 到 GitHub SSH Key：第一次用实验室服务器时踩过的几个坑",
+        
+        description: "记录第一次使用实验室服务器时，从 VS Code Remote SSH 登录、免密认证，到解决 GitHub push 反复认证问题的过程。",
+        section: "Posts",
+        handler: () => {
+          
+            window.location.href = "/blog/2025/%E8%80%81%E5%B8%88%E5%8F%AA%E7%BB%99%E6%88%91%E4%B8%80%E4%B8%AAip-%E7%A7%91%E7%A0%94%E5%B0%8F%E7%99%BD%E7%9A%84ssh%E5%85%A5%E9%97%A8/";
+          
+        },
       },{id: "books-the-godfather",
           title: 'The Godfather',
           description: "",
