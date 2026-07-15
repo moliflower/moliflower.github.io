@@ -27,7 +27,7 @@ latest_posts:
   limit: 3 # leave blank to include all the blog posts
 ---
 
-你好，我是 **邓予涵**，现为上海大学硕士研究生、**智能计算实验室（ICL）**成员。
+我是 **邓予涵**，现为上海大学硕士研究生、**智能计算实验室（ICL）**成员。
 
 目前师从[赵凯副教授](https://kaizhao.net/)，开展大语言模型高效推理相关研究。
 
