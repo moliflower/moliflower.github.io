@@ -78,6 +78,18 @@ table.table a {
   }
 }
 
+a,
+button,
+input,
+select,
+textarea,
+[tabindex]:not([tabindex="-1"]) {
+  &:focus-visible {
+    outline: 3px solid rgba(var(--global-theme-color-rgb), 0.35);
+    outline-offset: 3px;
+  }
+}
+
 .table-dark {
   background-color: transparent;
   &.table-bordered {

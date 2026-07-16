@@ -13,14 +13,15 @@ layout: default
   </style>
 {% endif %}
 
-<div class="post">
+<div class="post post-detail">
   <header class="post-header">
+    <p class="page-eyebrow">ARTICLE</p>
     <h1 class="post-title">{{ page.title }}</h1>
     <p class="post-meta">
-      Created on {{ page.date | date: '%B %d, %Y' }}
-      {% if page.author %}by {{ page.author }}{% endif %}
+      <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: '%Y年%-m月%-d日' }}</time> 发布
+      {% if page.author %}，作者：{{ page.author }}{% endif %}
       {% assign last_date = page.last_modified_at | default: page.last_updated %}
-      {% if last_date %}, last updated on {{ last_date | date: '%B %d, %Y' }}{% endif %}
+      {% if last_date %}，更新于 {{ last_date | date: '%Y年%-m月%-d日' }}{% endif %}
       {% if page.meta %}• {{ page.meta }}{% endif %}
     </p>
     <p class="post-tags">

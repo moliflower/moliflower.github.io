@@ -3,14 +3,31 @@
  ******************************************************************************/
 
 .header-bar {
-  border-bottom: 1px solid var(--global-divider-color);
-  text-align: center;
-  padding-top: 2rem;
-  padding-bottom: 3rem;
+  margin-bottom: 2.5rem;
+  padding: clamp(1.75rem, 5vw, 3.2rem);
+  overflow: hidden;
+  text-align: left;
+  border: 1px solid rgba(var(--global-theme-color-rgb), 0.18);
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(var(--global-theme-color-rgb), 0.08), var(--global-card-bg-color) 65%);
+  box-shadow: 0 18px 48px rgba(25, 45, 50, 0.07);
 
   h1 {
-    color: var(--global-theme-color);
-    font-size: 5rem;
+    max-width: 48rem;
+    margin: 0;
+    color: var(--global-text-color);
+    font-size: clamp(2.2rem, 7vw, 3.8rem);
+    font-weight: 700;
+    letter-spacing: -0.045em;
+    line-height: 1.15;
+  }
+
+  h2 {
+    margin: 0.9rem 0 0;
+    color: var(--global-text-color-light);
+    font-size: clamp(0.95rem, 2vw, 1.1rem);
+    font-weight: 400;
+    line-height: 1.7;
   }
 }
 
@@ -40,15 +57,14 @@
 }
 
 .post-list {
-  margin: 0;
-  margin-bottom: 40px;
+  margin: 0 0 40px;
   padding: 0;
 
   li {
-    border-bottom: 1px solid var(--global-divider-color);
-    list-style: none;
     padding-top: 2rem;
     padding-bottom: 2rem;
+    list-style: none;
+    border-bottom: 1px solid var(--global-divider-color);
 
     .post-meta {
       color: var(--global-text-color-light);
@@ -79,10 +95,17 @@
 }
 
 .pagination {
+  gap: 0.35rem;
+
   .page-item {
     .page-link {
       color: var(--global-text-color);
-      padding: 0.75rem 1.15rem;
+      min-width: 2.7rem;
+      padding: 0.65rem 0.9rem;
+      text-align: center;
+      border: 1px solid var(--global-divider-color);
+      border-radius: 10px;
+      background: var(--global-card-bg-color);
 
       &:hover {
         color: #000;
@@ -121,6 +144,57 @@
         color: var(--global-theme-color);
       }
     }
+  }
+}
+
+.post-detail {
+  .post-header,
+  .post-content,
+  > .publications,
+  > #disqus_thread,
+  > .giscus {
+    max-width: 760px;
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  .post-header {
+    .post-meta,
+    .post-tags {
+      line-height: 1.7;
+    }
+  }
+
+  #markdown-content {
+    color: var(--global-text-color);
+    font-size: 1.02rem;
+    line-height: 1.9;
+
+    h2 {
+      margin-top: 2.6rem;
+      font-size: 1.55rem;
+    }
+
+    h3 {
+      margin-top: 2rem;
+      font-size: 1.25rem;
+    }
+
+    img {
+      border-radius: 12px;
+    }
+
+    table {
+      display: block;
+      max-width: 100%;
+      overflow-x: auto;
+    }
+  }
+}
+
+@media (max-width: 767px) {
+  .header-bar {
+    border-radius: 18px;
   }
 }
 

@@ -8,13 +8,23 @@ layout: default
   </style>
 {% endif %}
 
-<div class="post">
+<div class="post{% if page.collection == 'projects' %} project-detail{% endif %}">
   <header class="post-header">
+    {% if page.collection == 'projects' %}
+      <p class="page-eyebrow">{{ page.category | default: 'PROJECT' }}</p>
+    {% endif %}
     <h1 class="post-title">{{ page.title }}</h1>
     <p class="post-description">{{ page.description }}</p>
+    {% if page.collection == 'projects' and page.github %}
+      <a class="project-repo-link" href="{{ page.github }}" target="_blank" rel="noopener noreferrer">
+        <i class="fa-brands fa-github" aria-hidden="true"></i>
+        GitHub 仓库
+        <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+      </a>
+    {% endif %}
   </header>
 
-  <article>
+  <article class="page-content">
     {{ content }}
   </article>
 
