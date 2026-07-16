@@ -18,6 +18,7 @@ showcase_items:
     title: TorchMorph
     description: 面向 PyTorch 的轻量级 CUDA 加速批量并行形态学变换库。
     url: /projects/torchmorph/
+    visual: morphology
     tags:
       - PyTorch
       - CUDA

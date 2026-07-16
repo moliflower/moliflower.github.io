@@ -7,8 +7,8 @@
 .navbar {
   box-shadow: none;
   border-bottom: 1px solid var(--global-divider-color);
-  background-color: var(--global-bg-color);
-  opacity: 0.95;
+  background: color-mix(in srgb, var(--global-bg-color) 86%, transparent);
+  backdrop-filter: blur(18px) saturate(140%);
 }
 
 .navbar .dropdown-menu,
@@ -61,14 +61,19 @@
 
   .navbar-nav .nav-item .nav-link {
     color: var(--global-text-color);
+    border-radius: 8px;
+    transition:
+      color 160ms ease,
+      background-color 160ms ease;
 
     &:hover {
       color: var(--global-hover-color);
+      background: rgba(var(--global-theme-color-rgb), 0.06);
     }
   }
 
   .navbar-nav .nav-item.active > .nav-link {
-    background-color: inherit;
+    background: rgba(var(--global-theme-color-rgb), 0.08);
     font-weight: bolder;
     color: var(--global-theme-color);
 
@@ -204,7 +209,9 @@
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  transition: color 0.2s ease, background-color 0.2s ease;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
 
   &:hover {
     color: var(--global-hover-color);

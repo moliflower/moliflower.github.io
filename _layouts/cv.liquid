@@ -60,11 +60,36 @@ layout: default
         {% comment %} RenderCV format {% endcomment %}
         {% assign cv = site.data.cv.cv %}
 
+        <nav class="cv-section-nav" aria-label="简历章节导航">
+          {% if cv.name or cv.label or cv.location or cv.email or cv.phone or cv.website %}
+            <a href="#contact">联系信息</a>
+          {% endif %}
+          {% if cv.summary -%}
+            <a href="#summary">个人简介</a>
+          {%- endif %}
+          {% if cv.sections.Experience or cv.sections.Volunteer -%}
+            <a href="#experience">实践经历</a>
+          {%- endif %}
+          {% if cv.sections.Education -%}
+            <a href="#education">教育经历</a>
+          {%- endif %}
+          {% if cv.sections.Awards -%}
+            <a href="#awards">荣誉奖项</a>
+          {%- endif %}
+          {% if cv.sections.Skills -%}
+            <a href="#skills">专业技能</a>
+          {%- endif %}
+          {% if cv.sections.Languages -%}
+            <a href="#languages">语言能力</a>
+          {%- endif %}
+        </nav>
+
         <!-- Header/Contact Information -->
         {% if cv.name or cv.label or cv.location or cv.email or cv.phone or cv.website %}
+          <a class="anchor" id="contact"></a>
           <div class="card mt-3 p-3">
             <h3 class="card-title font-weight-medium">联系信息</h3>
-            <table class="table table-cv table-sm table-borderless">
+            <table class="table table-cv cv-contact-table table-sm table-borderless">
               {% if cv.name %}
                 <tr>
                   <td class="p-1 pr-2 font-weight-bold"><b>姓名</b></td>
@@ -114,6 +139,7 @@ layout: default
 
         <!-- Summary -->
         {% if cv.summary %}
+          <a class="anchor" id="summary"></a>
           <div class="card mt-3 p-3">
             <h3 class="card-title font-weight-medium">个人简介</h3>
             <p>{{ cv.summary | markdownify | remove: '<p>' | remove: '</p>' }}</p>
@@ -226,7 +252,7 @@ layout: default
           <div class="card mt-3 p-3">
             <h3 class="card-title font-weight-medium">Contact Information</h3>
             {% assign basics = site.data.resume.basics %}
-            <table class="table table-cv table-sm table-borderless">
+            <table class="table table-cv cv-contact-table table-sm table-borderless">
               {% if basics.name %}
                 <tr>
                   <td class="p-1 pr-2 font-weight-bold"><b>Name</b></td>

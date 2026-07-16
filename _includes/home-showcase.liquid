@@ -1,5 +1,5 @@
 {% if page.showcase_items %}
-  <section class="home-showcase scroll-animate" aria-labelledby="home-showcase-title">
+  <section id="selected-work" class="home-showcase scroll-animate" aria-labelledby="home-showcase-title">
     <div class="home-showcase__header">
       <div>
         <p class="home-showcase__eyebrow">SELECTED WORK</p>
@@ -20,6 +20,23 @@
           <a class="home-showcase-card__link" href="{{ item.url | relative_url }}" aria-label="查看 {{ item.title }}">
             <span class="home-showcase-card__type">{{ item.type }}</span>
             <span class="home-showcase-card__number" aria-hidden="true">0{{ forloop.index }}</span>
+
+            {% if item.visual == 'morphology' %}
+              <span class="home-showcase-card__matrix" aria-hidden="true">
+                <span class="home-showcase-card__matrix-grid">
+                  {% for cell in (1..9) -%}
+                    <i></i>
+                  {%- endfor %}
+                </span>
+                <b>→</b>
+                <span class="home-showcase-card__matrix-grid home-showcase-card__matrix-grid--output">
+                  {% for cell in (1..9) -%}
+                    <i></i>
+                  {%- endfor %}
+                </span>
+              </span>
+            {% endif %}
+
             <h3>{{ item.title }}</h3>
             <p>{{ item.description }}</p>
 

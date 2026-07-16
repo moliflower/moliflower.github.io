@@ -11,11 +11,10 @@
     <p class="home-hero__subtitle">{{ page.subtitle }}</p>
 
     {% if page.research_interests %}
-      <ul class="home-hero__tags" aria-label="研究方向">
-        {% for interest in page.research_interests %}
-          <li>{{ interest }}</li>
-        {% endfor %}
-      </ul>
+      <div class="home-hero__focus">
+        <span>CURRENT FOCUS</span>
+        <strong>{{ page.research_interests | join: ' / ' }}</strong>
+      </div>
     {% endif %}
 
     <div class="home-hero__actions">
@@ -42,6 +41,21 @@
             alt="邓予涵在湖边的个人照片"
             cache_bust=true
           %}
+
+          <div class="home-profile__hud home-profile__hud--status" aria-hidden="true">
+            <span>RESEARCH NODE</span>
+            <strong><i></i> ONLINE</strong>
+          </div>
+
+          <div class="home-profile__telemetry" aria-hidden="true">
+            <span>GPU SIGNAL</span>
+            <div class="home-profile__bars">
+              {% for bar in (1..10) %}
+                <i></i>
+              {% endfor %}
+            </div>
+            <strong>CUDA / ACTIVE</strong>
+          </div>
         </div>
       {% endif %}
 

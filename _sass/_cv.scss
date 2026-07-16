@@ -15,24 +15,119 @@ table.table-cv {
   }
 }
 
+table.cv-contact-table {
+  width: 100%;
+  margin: 0;
+
+  tr:not(:last-child) {
+    border-bottom: 1px solid var(--global-divider-color);
+  }
+
+  td {
+    padding: 0.7rem 0.45rem !important;
+
+    &:first-child {
+      width: 24%;
+      color: var(--global-text-color-light);
+      font-size: 0.82rem;
+      font-weight: 500 !important;
+    }
+
+    &:last-child {
+      color: var(--global-text-color);
+      font-size: 0.96rem;
+    }
+  }
+}
+
 .cv-page {
+  max-width: 900px;
+  margin-right: auto;
+  margin-left: auto;
+
   .post-header {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.2rem;
+
+    .post-title {
+      font-size: clamp(2.5rem, 6vw, 3.4rem);
+    }
+  }
+}
+
+.cv-section-nav {
+  position: sticky;
+  top: 4.2rem;
+  z-index: 5;
+  display: flex;
+  gap: 0.35rem;
+  margin: 0 0 1.25rem;
+  padding: 0.45rem;
+  overflow-x: auto;
+  border: 1px solid var(--global-divider-color);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--global-bg-color) 88%, transparent);
+  box-shadow: 0 10px 30px rgba(25, 45, 50, 0.08);
+  backdrop-filter: blur(18px) saturate(140%);
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  a {
+    flex: 0 0 auto;
+    padding: 0.68rem 0.9rem;
+    color: var(--global-text-color-light);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    border-radius: 9px;
+    transition:
+      color 160ms ease,
+      background-color 160ms ease;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--global-theme-color);
+      text-decoration: none;
+      background: rgba(var(--global-theme-color-rgb), 0.08);
+    }
   }
 }
 
 .cv {
   .card {
-    padding: clamp(1.15rem, 3vw, 1.6rem) !important;
-    border-radius: 16px;
+    position: relative;
+    margin-top: 1rem !important;
+    padding: clamp(1.25rem, 3vw, 1.8rem) !important;
+    overflow: hidden;
+    border-radius: 18px;
 
     > .card-title {
-      margin: 0 0 1rem;
-      padding-bottom: 0.75rem;
+      position: relative;
+      margin: 0 0 1.1rem;
+      padding: 0 0 0.85rem 1rem;
       color: var(--global-text-color);
-      font-size: 1.15rem;
+      font-size: 1.2rem;
       font-weight: 700 !important;
       border-bottom: 1px solid var(--global-divider-color);
+
+      &::before {
+        content: "";
+        position: absolute;
+        top: 0.2rem;
+        bottom: 1rem;
+        left: 0;
+        width: 3px;
+        border-radius: 999px;
+        background: var(--global-theme-color);
+      }
+    }
+
+    > p {
+      margin-bottom: 0;
+      line-height: 1.85;
     }
   }
 
@@ -41,8 +136,19 @@ table.table-cv {
   }
 
   .list-group-item {
-    padding: 1rem 0;
+    padding: 1.15rem 0;
     line-height: 1.7;
+
+    .title {
+      margin-bottom: 0.35rem;
+      font-size: 1.02rem;
+      line-height: 1.5;
+    }
+
+    h6:not(.title) {
+      color: var(--global-text-color-light);
+      line-height: 1.6;
+    }
   }
 
   .badge {
@@ -63,6 +169,13 @@ table.table-cv {
   .language-item {
     padding: 0.55rem 0;
   }
+
+  .skill-item i,
+  .language-item i {
+    width: 1.4rem;
+    color: var(--global-theme-color);
+    text-align: center;
+  }
 }
 
 a.btncv {
@@ -80,20 +193,6 @@ a.btncv {
   vertical-align: middle;
   text-transform: uppercase;
   white-space: nowrap;
-}
-
-#toc-sidebar {
-  .nav-link {
-    color: var(--global-text-color-light);
-    font-size: 0.82rem;
-    border-left: 2px solid var(--global-divider-color);
-
-    &.active,
-    &:hover {
-      color: var(--global-theme-color);
-      border-left-color: var(--global-theme-color);
-    }
-  }
 }
 
 a.btncv:hover {
@@ -221,7 +320,7 @@ td.list-group-link {
 a.anchor {
   display: block;
   position: relative;
-  top: -50px;
+  top: -130px;
   visibility: hidden;
 }
 
@@ -260,15 +359,24 @@ ul.timeline li::before {
 }
 
 @media (max-width: 767px) {
+  .cv-page .post-header .post-title {
+    font-size: 2.7rem;
+  }
+
+  .cv-section-nav {
+    top: 3.8rem;
+    margin-right: -0.35rem;
+    margin-left: -0.35rem;
+  }
+
+  table.cv-contact-table td:first-child {
+    width: 32%;
+  }
+
   .cv .date-column {
     width: auto;
     margin-bottom: 0.4rem;
     text-align: left !important;
-  }
-
-  #toc-sidebar {
-    position: static !important;
-    margin-bottom: 1rem;
   }
 }
 
