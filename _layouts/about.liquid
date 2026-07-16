@@ -1,21 +1,25 @@
 ---
 layout: default
 ---
-<div class="post">
-  <header class="post-header">
-    <h1 class="post-title">
-      {% if site.title == 'blank' %}
-        <span class="font-weight-bold">{{ site.first_name }}</span> {{ site.middle_name }}
-        {{ site.last_name }}
-      {% else %}
-        {{ site.title }}
-      {% endif %}
-    </h1>
-    <p class="desc">{{ page.subtitle }}</p>
-  </header>
+<div class="post{% if page.enhanced_home %} enhanced-home{% endif %}">
+  {% if page.enhanced_home %}
+    {% include home-hero.liquid %}
+  {% else %}
+    <header class="post-header">
+      <h1 class="post-title">
+        {% if site.title == 'blank' %}
+          <span class="font-weight-bold">{{ site.first_name }}</span> {{ site.middle_name }}
+          {{ site.last_name }}
+        {% else %}
+          {{ site.title }}
+        {% endif %}
+      </h1>
+      <p class="desc">{{ page.subtitle }}</p>
+    </header>
+  {% endif %}
 
   <article>
-    {% if page.profile %}
+    {% if page.profile and page.enhanced_home != true %}
       <div class="profile float-{% if page.profile.align == 'left' %}left{% else %}right{% endif %}">
         {% if page.profile.image %}
           {% assign profile_image_path = page.profile.image | prepend: 'assets/img/' %}
@@ -38,7 +42,19 @@ layout: default
       </div>
     {% endif %}
 
-    <div class="clearfix">{{ content }}</div>
+    {% if page.enhanced_home %}
+      <section class="home-intro scroll-animate" aria-labelledby="home-intro-title">
+        <div class="home-intro__label">
+          <span>ABOUT MY RESEARCH</span>
+          <h2 id="home-intro-title">{{ page.intro_heading }}</h2>
+        </div>
+        <div class="home-intro__body">{{ content }}</div>
+      </section>
+
+      {% include featured-project.liquid %}
+    {% else %}
+      <div class="clearfix">{{ content }}</div>
+    {% endif %}
 
     <!-- News -->
     {% if page.announcements and page.announcements.enabled %}

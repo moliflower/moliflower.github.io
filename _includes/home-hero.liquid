@@ -1,0 +1,60 @@
+<section class="home-hero scroll-animate" aria-labelledby="home-title">
+  <div class="home-hero__content">
+    {% if page.hero_eyebrow %}
+      <p class="home-hero__eyebrow">
+        <span class="home-hero__status-dot" aria-hidden="true"></span>
+        {{ page.hero_eyebrow }}
+      </p>
+    {% endif %}
+
+    <h1 id="home-title" class="home-hero__title">{{ site.title }}</h1>
+    <p class="home-hero__subtitle">{{ page.subtitle }}</p>
+
+    {% if page.research_interests %}
+      <ul class="home-hero__tags" aria-label="研究方向">
+        {% for interest in page.research_interests %}
+          <li>{{ interest }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    <div class="home-hero__actions">
+      {% if page.featured_project.url %}
+        <a class="home-button home-button--primary" href="{{ page.featured_project.url }}" target="_blank" rel="noopener noreferrer">
+          <i class="fa-solid fa-code-branch" aria-hidden="true"></i>
+          探索 TorchMorph
+        </a>
+      {% endif %}
+      {% if page.github_url %}
+        <a class="home-button home-button--secondary" href="{{ page.github_url }}" target="_blank" rel="noopener noreferrer">
+          <i class="fa-brands fa-github" aria-hidden="true"></i>
+          GitHub
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if page.profile %}
+    <aside class="home-profile" aria-label="个人资料">
+      {% if page.profile.image %}
+        {% assign profile_image_path = page.profile.image | prepend: 'assets/img/' %}
+        <div class="home-profile__image">
+          {%
+            include figure.liquid
+            loading="eager"
+            path=profile_image_path
+            class="home-profile__photo"
+            sizes="(min-width: 992px) 310px, (min-width: 576px) 42vw, 88vw"
+            alt="邓予涵在湖边的个人照片"
+            cache_bust=true
+          %}
+        </div>
+      {% endif %}
+
+      <div class="home-profile__meta">
+        <span><i class="fa-solid fa-location-dot" aria-hidden="true"></i> 上海 · 中国</span>
+        <span><i class="fa-solid fa-flask" aria-hidden="true"></i> ICL · 上海大学</span>
+      </div>
+    </aside>
+  {% endif %}
+</section>

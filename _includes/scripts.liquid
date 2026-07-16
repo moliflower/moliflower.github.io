@@ -187,6 +187,11 @@
 <!-- Scroll Animations -->
 <script defer src="{{ '/assets/js/scroll-animations.js' | relative_url | bust_file_cache }}"></script>
 
+{% if page.enhanced_home %}
+  <!-- Home page pointer glow -->
+  <script defer src="{{ '/assets/js/home-effects.js' | relative_url | bust_file_cache }}"></script>
+{% endif %}
+
 <!-- Jupyter Open External Links New Tab -->
 <script defer src="{{ '/assets/js/jupyter_new_tab.js' | relative_url | bust_file_cache }}"></script>
 
