@@ -13,11 +13,16 @@ research_interests:
   - AI Systems
 github_url: https://github.com/moliflower
 
-featured_project:
-  title: TorchMorph
-  description: 面向 PyTorch 的轻量级 CUDA 加速批量并行形态学变换库。
-  role: 核心算子实现、性能优化与测试验证
-  url: https://github.com/intcomp/torchmorph
+showcase_items:
+  - type: 项目
+    title: TorchMorph
+    description: 面向 PyTorch 的轻量级 CUDA 加速批量并行形态学变换库。
+    url: /projects/torchmorph/
+    tags:
+      - PyTorch
+      - CUDA
+      - C++
+      - GPU Kernel
 
 profile:
   align: right
@@ -30,7 +35,7 @@ selected_papers: false # includes a list of papers marked as "selected={true}"
 social: false # includes social icons at the bottom of the page
 
 announcements:
-  enabled: true # includes a list of news items
+  enabled: false # includes a list of news items
   scrollable: false # adds a vertical scroll bar if there are more than 3 news items
   limit: 5 # leave blank to include all the news in the `_news` folder
 

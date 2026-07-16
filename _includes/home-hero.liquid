@@ -19,12 +19,6 @@
     {% endif %}
 
     <div class="home-hero__actions">
-      {% if page.featured_project.url %}
-        <a class="home-button home-button--primary" href="{{ page.featured_project.url }}" target="_blank" rel="noopener noreferrer">
-          <i class="fa-solid fa-code-branch" aria-hidden="true"></i>
-          探索 TorchMorph
-        </a>
-      {% endif %}
       {% if page.github_url %}
         <a class="home-button home-button--secondary" href="{{ page.github_url }}" target="_blank" rel="noopener noreferrer">
           <i class="fa-brands fa-github" aria-hidden="true"></i>

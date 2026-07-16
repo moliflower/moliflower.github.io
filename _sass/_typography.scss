@@ -4,6 +4,35 @@
 
 @use "variables" as v;
 
+:root {
+  --site-font-sans: "Inter", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --site-font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--site-font-sans);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: inherit;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--site-font-mono);
+}
+
 p,
 h1,
 h2,
