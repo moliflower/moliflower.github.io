@@ -30,7 +30,18 @@ ninja.data = [{
           handler: () => {
             window.location.href = "/cv/";
           },
-        },{id: "post-理解大模型中的升维与降维-从张量形状到-ffn",
+        },{id: "post-从-vit-的-patch-到-llm-的-rope-理解位置编码",
+        
+          title: "从 ViT 的 Patch 到 LLM 的 RoPE：理解位置编码",
+        
+        description: "从注意力的置换等变性出发，理解绝对位置、相对位置、ViT 的 patch 位置嵌入与大语言模型中的旋转位置编码 RoPE。",
+        section: "Posts",
+        handler: () => {
+          
+            window.location.href = "/blog/2026/%E4%BB%8E-vit-patch-%E5%88%B0-llm-rope-%E7%90%86%E8%A7%A3%E4%BD%8D%E7%BD%AE%E7%BC%96%E7%A0%81/";
+          
+        },
+      },{id: "post-理解大模型中的升维与降维-从张量形状到-ffn",
         
           title: "理解大模型中的升维与降维：从张量形状到 FFN",
         
