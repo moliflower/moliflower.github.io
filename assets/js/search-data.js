@@ -45,7 +45,7 @@ ninja.data = [{
         
           title: "理解大模型中的升维与降维：从张量形状到 FFN",
         
-        description: "从 Transformer 前馈网络出发，理解大语言模型为什么先升维、再经过非线性变换，最后降回隐藏维度。",
+        description: "从非线性表达、Key-Value 记忆、特征叠加与工程解耦四个视角，理解 Transformer FFN 为什么先升维再降维。",
         section: "Posts",
         handler: () => {
           
