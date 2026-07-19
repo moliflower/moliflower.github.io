@@ -30,9 +30,9 @@ ninja.data = [{
           handler: () => {
             window.location.href = "/cv/";
           },
-        },{id: "post-从-vit-的-patch-到-llm-的-rope-理解位置编码",
+        },{id: "post-位置编码-从-vit-patch-到-llm-rope",
         
-          title: "从 ViT 的 Patch 到 LLM 的 RoPE：理解位置编码",
+          title: "位置编码：从 ViT Patch 到 LLM RoPE",
         
         description: "从注意力的置换等变性出发，理解绝对位置、相对位置、ViT 的 patch 位置嵌入与大语言模型中的旋转位置编码 RoPE。",
         section: "Posts",
@@ -52,9 +52,9 @@ ninja.data = [{
             window.location.href = "/blog/2026/%E5%AF%B9%E4%BA%8E%E6%A8%A1%E5%9E%8B%E4%B8%AD%E5%8D%87%E7%BB%B4%E5%92%8C%E9%99%8D%E7%BB%B4%E7%9A%84%E7%90%86%E8%A7%A3/";
           
         },
-      },{id: "post-从-remote-ssh-到-github-ssh-key-第一次用实验室服务器时踩过的几个坑",
+      },{id: "post-实验室服务器-ssh-入门-从-remote-ssh-到-github-ssh-key",
         
-          title: "从 Remote SSH 到 GitHub SSH Key：第一次用实验室服务器时踩过的几个坑",
+          title: "实验室服务器 SSH 入门：从 Remote SSH 到 GitHub SSH Key",
         
         description: "记录第一次使用实验室服务器时，从 VS Code Remote SSH 登录、免密认证，到解决 GitHub push 反复认证问题的过程。",
         section: "Posts",
