@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 500" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 94 960 338" role="img" aria-labelledby="title desc">
   <title id="title">交换“人”和“狗”的位置会交换施事与受事</title>
   <desc id="desc">人和狗沿两条互不重叠的弧线交换座位，句意从人咬狗变成狗咬人。右侧显示去掉座位编号后，两种顺序都会退化为相同的内容集合。</desc>
   <defs>
@@ -10,9 +10,7 @@
       text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:var(--text)}.muted{fill:var(--muted)}.panel{fill:var(--panel);stroke:var(--border);stroke-width:1.5}.slot{fill:var(--panel);stroke:var(--border);stroke-width:1.5;stroke-dasharray:5 5}.flow{fill:none;stroke-width:3;marker-end:url(#arrow)}.person{animation:person-swap 5.5s ease-in-out infinite alternate}.dog{animation:dog-swap 5.5s ease-in-out infinite alternate}@keyframes person-swap{0%,28%{transform:translate(0,0)}50%{transform:translate(165px,-60px)}72%,100%{transform:translate(330px,0)}}@keyframes dog-swap{0%,28%{transform:translate(0,0)}50%{transform:translate(-165px,60px)}72%,100%{transform:translate(-330px,0)}}@media(prefers-reduced-motion:reduce){.person,.dog{animation:none}}
     </style>
   </defs>
-  <rect width="960" height="500" rx="28" fill="url(#paper)"/>
-  <text x="42" y="48" font-size="25" font-weight="700">顺序不是装饰：交换座位，角色就会交换</text>
-  <text x="42" y="76" class="muted" font-size="14">动画只移动“人”和“狗”；两个 token 沿不同轨道交换，避免在中途重叠</text>
+  <rect x="0" y="94" width="960" height="338" rx="28" fill="url(#paper)"/>
 
   <g transform="translate(40 110)">
     <rect class="panel" width="530" height="310" rx="20"/>
@@ -71,8 +69,4 @@
     <text x="140" y="281" text-anchor="middle" class="muted" font-size="12">成员相同，但谁在前、谁在后已经丢失</text>
   </g>
 
-  <g transform="translate(40 434)">
-    <rect width="880" height="44" rx="13" fill="var(--panel)" stroke="var(--teal)" stroke-width="2"/>
-    <text x="440" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="var(--teal)">位置编码提供“座位号”，注意力才有证据恢复施事、动作和受事的关系</text>
-  </g>
 </svg>

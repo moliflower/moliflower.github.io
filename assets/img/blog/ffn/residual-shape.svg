@@ -1,22 +1,117 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" role="img" aria-labelledby="title desc">
-  <title id="title">残差连接像拉链，两条支路必须拥有相同数量的特征通道</title>
-  <desc id="desc">输入的四条特征通道分成恒等支路和 FFN 支路。FFN 中间扩展为十二条通道，但在与恒等支路逐元素相加前必须压回四条，否则通道无法一一对齐。</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" role="img" aria-labelledby="title desc">
+  <title id="title">FFN 降回模型维度后才能与残差支路逐元素相加</title>
+  <desc id="desc">输入 X 分成恒等支路和 FFN 支路。恒等支路始终保持 d_model，FFN 支路在内部从 d_model 扩展到 d_ff，再由 down projection 压回 d_model。两条形状相同的支路随后逐元素相加得到输出 Y。</desc>
   <defs>
-    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="var(--bg)"/><stop offset="1" stop-color="var(--wash)"/></linearGradient>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0L9 3L0 6Z" fill="context-stroke"/></marker>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="var(--bg)" />
+      <stop offset="1" stop-color="var(--wash)" />
+    </linearGradient>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+      <path d="M0 0L9 4.5L0 9Z" fill="context-stroke" />
+    </marker>
     <style>
       :root{--bg:#f4f8f7;--wash:#e8f3f0;--panel:#fff;--text:#142321;--muted:#60706d;--border:#b9cbc7;--teal:#0f766e;--teal-soft:#ccfbf1;--blue:#0369a1;--blue-soft:#e0f2fe;--amber:#b45309;--amber-soft:#fef3c7;--coral:#c2410c;--coral-soft:#ffedd5}
       @media(prefers-color-scheme:dark){:root{--bg:#101a1a;--wash:#132624;--panel:#182525;--text:#ecf7f5;--muted:#a7bbb7;--border:#45615c;--teal:#5eead4;--teal-soft:#134e4a;--blue:#7dd3fc;--blue-soft:#0c4a6e;--amber:#fbbf24;--amber-soft:#78350f;--coral:#fb923c;--coral-soft:#7c2d12}}
-      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:var(--text)}.muted{fill:var(--muted)}.mono{font-family:"SFMono-Regular",Consolas,monospace}.stage{fill:var(--panel);stroke:var(--border);stroke-width:1.5}
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:var(--text)}
+      .muted{fill:var(--muted)}.mono{font-family:"SFMono-Regular",Consolas,monospace}.panel{fill:var(--panel);stroke:var(--border);stroke-width:1.5}.flow{fill:none;stroke-width:2.5;stroke-linecap:round;marker-end:url(#arrow)}.cell{stroke-width:1.5}
     </style>
   </defs>
-  <rect width="960" height="560" rx="28" fill="url(#paper)"/>
-  <text x="44" y="49" font-size="25" font-weight="700">残差相加像拉拉链：两边必须一齿对一齿</text>
-  <text x="44" y="76" class="muted" font-size="14">中间可以展开得很宽，但合流前必须恢复同样的通道数</text>
-  <g transform="translate(44 228)"><rect class="stage" width="146" height="98" rx="18"/><text x="73" y="31" text-anchor="middle" font-size="14" font-weight="700">输入 X</text><g transform="translate(23 49)" stroke="var(--blue)" stroke-width="8" stroke-linecap="round"><path d="M0 0H100M0 13H100M0 26H100M0 39H100"/></g><text x="73" y="120" text-anchor="middle" class="mono" font-size="12">d_model = 4</text></g>
-  <g transform="translate(202 108)"><text font-size="13" font-weight="700" fill="var(--teal)">恒等支路 · 原样保留 4 条</text><g transform="translate(0 24)" stroke="var(--teal)" stroke-width="7" fill="none" stroke-linecap="round"><path d="M0 120C120 0 350 0 470 120M0 133C120 13 350 13 470 133M0 146C120 26 350 26 470 146M0 159C120 39 350 39 470 159"/></g></g>
-  <g transform="translate(202 324)"><text font-size="13" font-weight="700" fill="var(--amber)">FFN 支路 · 4 → 12 → 4</text><g transform="translate(0 22)" fill="none" stroke-linecap="round"><path d="M0 0C80 0 92-72 178-72H286C366-72 390 0 470 0" stroke="var(--amber)" stroke-width="7"/><path d="M0 13C80 13 92-50 178-50H286C366-50 390 13 470 13" stroke="var(--amber)" stroke-width="7"/><path d="M0 26C80 26 92 50 178 50H286C366 50 390 26 470 26" stroke="var(--amber)" stroke-width="7"/><path d="M0 39C80 39 92 72 178 72H286C366 72 390 39 470 39" stroke="var(--amber)" stroke-width="7"/><g stroke="var(--coral)" stroke-width="4" opacity=".75"><path d="M178-39H286M178-28H286M178-17H286M178-6H286M178 5H286M178 16H286M178 27H286M178 38H286"/></g></g><text x="232" y="116" text-anchor="middle" class="muted" font-size="11">更宽的中间表示只存在于 FFN 内部</text></g>
-  <g transform="translate(688 220)"><path d="M0 0C36 0 42 56 66 56M0 112C36 112 42 56 66 56" fill="none" stroke="var(--border)" stroke-width="3"/><g class="sum"><circle cx="98" cy="56" r="38" fill="var(--teal)"/><path d="M80 56h36M98 38v36" stroke="white" stroke-width="6" stroke-linecap="round"/></g><path d="M136 56H210" stroke="var(--teal)" stroke-width="5" marker-end="url(#arrow)"/><text x="174" y="39" text-anchor="middle" font-size="13" font-weight="700">Y</text></g>
-  <g transform="translate(700 370)"><rect width="204" height="86" rx="16" fill="var(--coral-soft)" stroke="var(--coral)"/><text x="16" y="25" font-size="12" font-weight="700" fill="var(--coral)">如果不降维</text><g transform="translate(16 42)" stroke-linecap="round"><path d="M0 0H54M0 10H54M0 20H54M0 30H54" stroke="var(--blue)" stroke-width="5"/><path d="M84-7H160M84 1H160M84 9H160M84 17H160M84 25H160M84 33H160" stroke="var(--amber)" stroke-width="3"/></g><path d="M76 44l22 22M98 44L76 66" stroke="var(--coral)" stroke-width="4"/><text x="102" y="78" text-anchor="middle" class="muted" font-size="10">4 与 12 无法逐元素配对</text></g>
-  <g transform="translate(44 500)"><rect width="872" height="36" rx="11" fill="var(--teal-soft)"/><text x="436" y="24" text-anchor="middle" class="mono" font-size="13" font-weight="700" fill="var(--teal)">Y = X + FFN(X)　要求 FFN(X).shape = X.shape</text></g>
+
+  <rect width="960" height="420" rx="28" fill="url(#paper)" />
+
+  <g aria-label="输入 X" transform="translate(40 155)">
+    <rect width="150" height="110" rx="18" class="panel" />
+    <text x="75" y="30" text-anchor="middle" font-size="14" font-weight="700">输入 X</text>
+    <g transform="translate(23 45)" fill="var(--blue-soft)" stroke="var(--blue)">
+      <rect class="cell" width="22" height="32" rx="6" />
+      <rect class="cell" x="27" width="22" height="32" rx="6" />
+      <rect class="cell" x="54" width="22" height="32" rx="6" />
+      <rect class="cell" x="81" width="22" height="32" rx="6" />
+    </g>
+    <text x="75" y="96" text-anchor="middle" class="mono muted" font-size="11">[B, S, d_model]</text>
+  </g>
+
+  <path d="M190 210H216" class="flow" stroke="var(--blue)" />
+  <circle cx="228" cy="210" r="8" fill="var(--blue)" />
+  <path d="M228 201C228 112 252 110 276 110" class="flow" stroke="var(--teal)" />
+  <path d="M228 219C228 306 252 307 276 307" class="flow" stroke="var(--amber)" />
+
+  <g aria-label="恒等支路保持模型维度" transform="translate(280 50)">
+    <rect width="330" height="120" rx="19" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.5" />
+    <text x="20" y="29" font-size="14" font-weight="700" fill="var(--teal)">恒等支路</text>
+    <text x="20" y="49" class="muted" font-size="11">原样保留，不改变通道数</text>
+    <g transform="translate(24 65)" fill="var(--panel)" stroke="var(--teal)">
+      <rect class="cell" width="30" height="32" rx="6" />
+      <rect class="cell" x="37" width="30" height="32" rx="6" />
+      <rect class="cell" x="74" width="30" height="32" rx="6" />
+      <rect class="cell" x="111" width="30" height="32" rx="6" />
+    </g>
+    <rect x="190" y="64" width="116" height="34" rx="10" fill="var(--panel)" stroke="var(--teal)" />
+    <text x="248" y="86" text-anchor="middle" class="mono" font-size="11">[B, S, d_model]</text>
+  </g>
+
+  <g aria-label="FFN 支路先扩展再压回模型维度" transform="translate(280 235)">
+    <rect width="390" height="145" rx="19" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="1.5" />
+    <text x="20" y="29" font-size="14" font-weight="700" fill="var(--amber)">FFN 支路</text>
+    <text x="98" y="29" class="mono muted" font-size="11">d_model → d_ff → d_model</text>
+
+    <g transform="translate(24 55)" fill="var(--panel)" stroke="var(--blue)">
+      <rect class="cell" width="18" height="30" rx="5" />
+      <rect class="cell" x="23" width="18" height="30" rx="5" />
+      <rect class="cell" x="46" width="18" height="30" rx="5" />
+      <rect class="cell" x="69" width="18" height="30" rx="5" />
+    </g>
+    <text x="67" y="111" text-anchor="middle" class="mono" font-size="10">d_model</text>
+
+    <path d="M120 70H145" class="flow" stroke="var(--amber)" />
+    <text x="133" y="55" text-anchor="middle" class="mono muted" font-size="9">up</text>
+
+    <g transform="translate(155 49)" fill="var(--panel)" stroke="var(--amber)">
+      <rect class="cell" width="15" height="15" rx="3" />
+      <rect class="cell" x="20" width="15" height="15" rx="3" />
+      <rect class="cell" x="40" width="15" height="15" rx="3" />
+      <rect class="cell" x="60" width="15" height="15" rx="3" />
+      <rect class="cell" y="20" width="15" height="15" rx="3" />
+      <rect class="cell" x="20" y="20" width="15" height="15" rx="3" />
+      <rect class="cell" x="40" y="20" width="15" height="15" rx="3" />
+      <rect class="cell" x="60" y="20" width="15" height="15" rx="3" />
+      <rect class="cell" y="40" width="15" height="15" rx="3" />
+      <rect class="cell" x="20" y="40" width="15" height="15" rx="3" />
+      <rect class="cell" x="40" y="40" width="15" height="15" rx="3" />
+      <rect class="cell" x="60" y="40" width="15" height="15" rx="3" />
+    </g>
+    <text x="193" y="125" text-anchor="middle" class="mono" font-size="10">d_ff</text>
+
+    <path d="M250 70H275" class="flow" stroke="var(--teal)" />
+    <text x="263" y="55" text-anchor="middle" class="mono muted" font-size="9">down</text>
+
+    <g transform="translate(286 55)" fill="var(--panel)" stroke="var(--teal)">
+      <rect class="cell" width="18" height="30" rx="5" />
+      <rect class="cell" x="23" width="18" height="30" rx="5" />
+      <rect class="cell" x="46" width="18" height="30" rx="5" />
+      <rect class="cell" x="69" width="18" height="30" rx="5" />
+    </g>
+    <text x="329" y="111" text-anchor="middle" class="mono" font-size="10">d_model</text>
+  </g>
+
+  <path d="M610 110C690 110 696 190 728 200" fill="none" stroke="var(--teal)" stroke-width="2.5" stroke-linecap="round" />
+  <path d="M670 307C704 307 705 230 728 220" fill="none" stroke="var(--teal)" stroke-width="2.5" stroke-linecap="round" />
+
+  <text x="760" y="158" text-anchor="middle" font-size="11" font-weight="700">逐元素相加</text>
+  <circle cx="760" cy="210" r="31" fill="var(--teal)" />
+  <path d="M744 210h32M760 194v32" stroke="var(--panel)" stroke-width="5" stroke-linecap="round" />
+  <text x="760" y="260" text-anchor="middle" class="muted" font-size="10">两侧形状相同</text>
+
+  <path d="M791 210H817" class="flow" stroke="var(--teal)" />
+  <g aria-label="输出 Y" transform="translate(822 155)">
+    <rect width="103" height="110" rx="18" class="panel" />
+    <text x="51.5" y="30" text-anchor="middle" font-size="14" font-weight="700">输出 Y</text>
+    <g transform="translate(13 45)" fill="var(--teal-soft)" stroke="var(--teal)">
+      <rect class="cell" width="17" height="32" rx="5" />
+      <rect class="cell" x="20" width="17" height="32" rx="5" />
+      <rect class="cell" x="40" width="17" height="32" rx="5" />
+      <rect class="cell" x="60" width="17" height="32" rx="5" />
+    </g>
+    <text x="51.5" y="96" text-anchor="middle" class="mono muted" font-size="10">d_model</text>
+  </g>
 </svg>
