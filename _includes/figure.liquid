@@ -7,7 +7,14 @@
     slot="{{ include.slot }}"
   {% endif %}
 >
-  <picture>
+  <picture
+    {% if include.panoramic %}
+      class="figure-scroll"
+      role="region"
+      tabindex="0"
+      aria-label="{{ include.pan_label | default: '横向滚动查看完整插图' }}"
+    {% endif %}
+  >
     <!-- Auto scaling with imagemagick -->
     <!--
       See https://www.debugbear.com/blog/responsive-images#w-descriptors-and-the-sizes-attribute and
@@ -21,7 +28,7 @@
             srcset="{% for i in site.imagemagick.widths %}{{ img_path | relative_url }}-{{ i }}.webp {{ i }}w,{% endfor %}"
             type="image/webp"
           {% else %}
-            srcset="{{ include.path | relative_url }}"
+            srcset="{% if include.cache_bust or ext == 'svg' %}{{ include.path | relative_url | bust_file_cache }}{% else %}{{ include.path | relative_url }}{% endif %}"
           {% endif %}
           {% if include.sizes %}
             sizes="{{ include.sizes }}"
@@ -32,7 +39,7 @@
       {% endunless %}
     {% endif %}
     <img
-      src="{% if include.url %}{{ include.url }}{% elsif include.cache_bust %}{{ include.path | relative_url | bust_file_cache }}{% else %}{{ include.path | relative_url }}{% endif %}"
+      src="{% if include.url %}{{ include.url }}{% elsif include.cache_bust or ext == 'svg' %}{{ include.path | relative_url | bust_file_cache }}{% else %}{{ include.path | relative_url }}{% endif %}"
       {% if include.class %}
         class="{{ include.class }}"
       {% endif %}

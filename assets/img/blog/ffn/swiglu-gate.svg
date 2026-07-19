@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 590" role="img" aria-labelledby="title desc">
+  <title id="title">SwiGLU 用一排可调百叶窗筛选候选特征</title>
+  <desc id="desc">up_proj 产生八个候选特征强度，gate_proj 经 SiLU 后产生八个放行比例。逐元素相乘像每个通道各有一扇百叶窗，最后 down_proj 把筛选后的特征混合回模型维度。</desc>
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="var(--bg)"/><stop offset="1" stop-color="var(--wash)"/></linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0L9 3L0 6Z" fill="context-stroke"/></marker>
+    <style>
+      :root{--bg:#f4f8f7;--wash:#e8f3f0;--panel:#fff;--text:#142321;--muted:#60706d;--border:#b9cbc7;--teal:#0f766e;--teal-soft:#ccfbf1;--blue:#0369a1;--blue-soft:#e0f2fe;--amber:#b45309;--amber-soft:#fef3c7;--coral:#c2410c;--coral-soft:#ffedd5}
+      @media(prefers-color-scheme:dark){:root{--bg:#101a1a;--wash:#132624;--panel:#182525;--text:#ecf7f5;--muted:#a7bbb7;--border:#45615c;--teal:#5eead4;--teal-soft:#134e4a;--blue:#7dd3fc;--blue-soft:#0c4a6e;--amber:#fbbf24;--amber-soft:#78350f;--coral:#fb923c;--coral-soft:#7c2d12}}
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:var(--text)}.muted{fill:var(--muted)}.mono{font-family:"SFMono-Regular",Consolas,monospace}.stage{fill:var(--panel);stroke:var(--border);stroke-width:1.5}.flow{fill:none;stroke-width:3;marker-end:url(#arrow)}.bar{animation:open 2.4s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:center bottom}@keyframes open{from{transform:scaleY(.25)}to{transform:scaleY(1)}}@media(prefers-reduced-motion:reduce){.bar{animation:none}}
+    </style>
+  </defs>
+  <rect width="960" height="590" rx="28" fill="url(#paper)"/>
+  <text x="44" y="49" font-size="25" font-weight="700">SwiGLU 像给每个候选特征装一扇独立的百叶窗</text>
+  <text x="44" y="76" class="muted" font-size="14">up_proj 负责“有什么”，gate_proj 负责“这次放行多少”</text>
+  <g transform="translate(44 110)">
+    <rect class="stage" width="872" height="386" rx="20"/>
+    <g transform="translate(22 156)"><rect width="104" height="64" rx="14" fill="var(--blue-soft)" stroke="var(--blue)"/><text x="52" y="28" text-anchor="middle" font-size="14" font-weight="700">输入 X</text><text x="52" y="49" text-anchor="middle" class="mono" font-size="11">d_model</text></g>
+    <path class="flow" d="M132 174C180 174 177 87 226 87" stroke="var(--amber)"/><path class="flow" d="M132 202C180 202 177 286 226 286" stroke="var(--blue)"/>
+    <g transform="translate(238 35)">
+      <text font-size="13" font-weight="700" fill="var(--amber)">gate_proj → SiLU：每个通道的开度</text>
+      <g transform="translate(0 22)"><g fill="var(--amber-soft)" stroke="var(--amber)"><rect width="48" height="62" rx="9"/><rect x="56" width="48" height="62" rx="9"/><rect x="112" width="48" height="62" rx="9"/><rect x="168" width="48" height="62" rx="9"/><rect x="224" width="48" height="62" rx="9"/><rect x="280" width="48" height="62" rx="9"/><rect x="336" width="48" height="62" rx="9"/><rect x="392" width="48" height="62" rx="9"/></g><g text-anchor="middle" class="mono" font-size="12"><text x="24" y="37">0.1</text><text x="80" y="37">0.9</text><text x="136" y="37">0.2</text><text x="192" y="37">1.0</text><text x="248" y="37">0.0</text><text x="304" y="37">0.7</text><text x="360" y="37">0.3</text><text x="416" y="37">0.8</text></g></g>
+    </g>
+    <g transform="translate(238 225)">
+      <text font-size="13" font-weight="700" fill="var(--blue)">up_proj：候选特征强度</text>
+      <g transform="translate(0 18)"><g fill="var(--blue-soft)" stroke="var(--blue)"><rect width="48" height="92" rx="9"/><rect x="56" width="48" height="92" rx="9"/><rect x="112" width="48" height="92" rx="9"/><rect x="168" width="48" height="92" rx="9"/><rect x="224" width="48" height="92" rx="9"/><rect x="280" width="48" height="92" rx="9"/><rect x="336" width="48" height="92" rx="9"/><rect x="392" width="48" height="92" rx="9"/></g><g fill="var(--blue)"><rect x="8" y="62" width="32" height="22" rx="5"/><rect x="64" y="21" width="32" height="63" rx="5"/><rect x="120" y="51" width="32" height="33" rx="5"/><rect x="176" y="8" width="32" height="76" rx="5"/><rect x="232" y="43" width="32" height="41" rx="5"/><rect x="288" y="30" width="32" height="54" rx="5"/><rect x="344" y="57" width="32" height="27" rx="5"/><rect x="400" y="16" width="32" height="68" rx="5"/></g></g>
+    </g>
+    <g transform="translate(704 134)"><circle cx="32" cy="50" r="32" fill="var(--teal)"/><text x="32" y="60" text-anchor="middle" font-size="30" fill="white">×</text><text x="32" y="94" text-anchor="middle" class="muted" font-size="10">逐元素相乘</text></g>
+    <path class="flow" d="M772 184H824" stroke="var(--teal)"/>
+    <g transform="translate(774 236)"><text x="39" text-anchor="middle" font-size="11" font-weight="700" fill="var(--teal)">筛选后</text><g transform="translate(0 14)"><path d="M0 78H82" stroke="var(--border)"/><rect class="bar" width="8" height="7" x="2" y="71" rx="2" fill="var(--teal)"/><rect class="bar" width="8" height="57" x="12" y="21" rx="2" fill="var(--teal)"/><rect class="bar" width="8" height="7" x="22" y="71" rx="2" fill="var(--teal)"/><rect class="bar" width="8" height="72" x="32" y="6" rx="2" fill="var(--teal)"/><rect class="bar" width="8" height="2" x="42" y="76" rx="1" fill="var(--teal)"/><rect class="bar" width="8" height="38" x="52" y="40" rx="2" fill="var(--teal)"/><rect class="bar" width="8" height="8" x="62" y="70" rx="2" fill="var(--teal)"/><rect class="bar" width="8" height="54" x="72" y="24" rx="2" fill="var(--teal)"/></g></g>
+    <g transform="translate(772 338)"><rect width="84" height="32" rx="9" fill="var(--teal-soft)" stroke="var(--teal)"/><text x="42" y="21" text-anchor="middle" class="mono" font-size="10">down_proj</text></g>
+  </g>
+  <g transform="translate(44 515)"><rect width="872" height="48" rx="13" fill="var(--teal-soft)"/><text x="22" y="20" class="mono" font-size="12" font-weight="700" fill="var(--teal)">SiLU(W_gate X) ⊙ W_up X</text><text x="22" y="38" class="muted" font-size="11">门控不是删除整条分支，而是对每个 token、每个中间特征给出不同放行比例；随后 down_proj 再混合回 d_model。</text></g>
+</svg>

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: 从 ViT 的 Patch 到 LLM 的 RoPE：理解位置编码
+title: 位置编码：从 ViT Patch 到 LLM RoPE
 date: 2026-07-19 00:31:29 +0800
 description: 从注意力的置换等变性出发，理解绝对位置、相对位置、ViT 的 patch 位置嵌入与大语言模型中的旋转位置编码 RoPE。
 tags: [Transformer, ViT, 位置编码, RoPE]
@@ -10,7 +10,7 @@ related_posts: false
 
 最近看 Vision Transformer（ViT）时，我又遇到了 patch 的位置编码；而之前看大语言模型时，也经常看到 RoPE。它们一个处理图像，一个处理文本，写法看起来也不一样，但解决的其实是同一个问题：**Transformer 只看内容之间是否匹配，并不会天然理解这些内容原本排在什么位置。**
 
-这篇文章从 Self-Attention 的性质出发，依次整理绝对位置编码、相对位置编码、ViT 中的二维 patch 位置，以及 LLM 中常用的旋转位置编码 RoPE。重点不是记住每一种公式，而是理解：位置信息究竟在注意力计算的哪一步发挥作用。
+这篇文章从 Self-Attention 的性质出发，依次整理绝对位置编码、相对位置编码、ViT 中的二维 patch 位置，以及 LLM 中常用的旋转位置编码 RoPE。
 
 ## 1. 为什么 Self-Attention 不认识顺序
 
@@ -38,6 +38,8 @@ $$
 
 对于带因果掩码的 LLM，mask 已经区分了“过去”和“未来”，但它仍没有充分表达两个历史 token 相隔多远，所以通常仍然需要专门的位置编码。
 
+{% include figure.liquid path="/assets/img/blog/position/attention-permutation.svg" alt="人和狗沿两条分离轨道交换座位，句意从人咬狗变成狗咬人；去掉位置编号后两句都只剩同一内容集合" caption="图中只有“人”和“狗”交换座位，“咬”保持不动。交换后施事与受事随座位改变；去掉座位号时，两种顺序则都会退化为同一内容集合。" loading="eager" panoramic=true %}
+
 ## 2. 位置信息可以加在哪里
 
 位置编码并不只有一种固定形式。按照它进入模型的位置，可以先分成三类：
@@ -49,6 +51,8 @@ $$
 | 旋转位置 RoPE | $q_i'=R_iq_i,\ k_j'=R_jk_j$   | 按位置旋转 Q、K，用夹角差表示距离 |
 
 绝对位置主要修改 Transformer 的输入；相对位置通常直接修改注意力分数；RoPE 则处在两者之间：它用绝对位置旋转每个向量，却让 Q、K 的点积呈现出相对位置。
+
+{% include figure.liquid path="/assets/img/blog/position/position-encoding-families.svg" alt="同一条注意力流水线上，绝对位置在输入端加入坐标，相对位置在分数处加入距离偏置，RoPE 在点积前旋转查询和键" caption="沿流水线看三种方法：绝对位置写进 token，相对位置写进 score，RoPE 写进 Q、K 的几何关系。" panoramic=true %}
 
 ## 3. 绝对位置编码：给每个 token 一个坐标
 
@@ -115,6 +119,8 @@ $$
 
 原始 ViT 使用的是可学习的一维位置嵌入。虽然形式上只是把二维网格按行编号，论文中的可视化发现，训练后的位置向量会呈现出二维结构：距离较近的 patch 往往具有更相似的位置向量，同一行或同一列也会表现出相似性。也就是说，模型可以从任务中重新学出图像网格的拓扑关系。
 
+{% include figure.liquid path="/assets/img/blog/position/vit-patch-position.svg" alt="一幅天空、山和水面的图像被切成 patch；外观相近的蓝色 patch 展平后，需要行列位置才能区分天空与水面" caption="同样的蓝色纹理，在画面上方可能是天空，在下方可能是水。位置向量像返程地址，让展平后的 token 仍能找回原来的二维邻接关系。" panoramic=true %}
+
 ### 分辨率变化时为什么要插值
 
 假设训练时图像被切成 $14\times14$ 个 patch，位置表中就有 $196$ 个 patch 位置。微调时如果分辨率变大，网格可能变成 $24\times24$，原来的位置表不够用了。
@@ -161,6 +167,8 @@ $$
 最后只剩下 $n-m$。这就是 RoPE 最关键的性质：**对单个 Q、K 来说，它们按照各自的绝对位置旋转；进入点积后，真正影响注意力关系的却是相对位置。**
 
 RoPE 通常只作用于 Q 和 K，而不作用于 V，因为位置主要需要影响“应该关注谁”的权重。旋转还会保持向量范数不变，因此不会仅仅因为位置变大就直接放大或缩小 Q、K。
+
+{% include figure.liquid path="/assets/img/blog/position/rope-rotation.svg" alt="位置二与五、位置七与十的绝对指针方向不同，但间隔都为三，因此 RoPE 保持相同角度差；多个快慢指针覆盖不同距离尺度" caption="把两个位置一起后移，指针的绝对朝向会变，夹角却不变。RoPE 正是用这种几何不变量把绝对位置转成相对距离。" panoramic=true %}
 
 ### 6.1 为什么要有许多旋转频率
 

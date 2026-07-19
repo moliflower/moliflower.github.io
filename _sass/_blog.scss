@@ -196,6 +196,38 @@
   .header-bar {
     border-radius: 18px;
   }
+
+  .post-detail #markdown-content .figure-scroll {
+    display: block;
+    max-width: 100%;
+    padding-bottom: 0.5rem;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-color: var(--global-theme-color) var(--global-divider-color);
+    scrollbar-width: thin;
+
+    &::before {
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      display: block;
+      width: max-content;
+      margin: 0 0 0.5rem;
+      padding: 0.35rem 0.6rem;
+      color: var(--global-theme-color);
+      border: 1px solid rgba(var(--global-theme-color-rgb), 0.22);
+      border-radius: 8px;
+      background: var(--global-card-bg-color);
+      content: "横向滑动查看完整插图";
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    img {
+      width: 960px !important;
+      max-width: none;
+    }
+  }
 }
 
 .featured-posts {

@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 500" role="img" aria-labelledby="title desc">
+  <title id="title">交换“人”和“狗”的位置会交换施事与受事</title>
+  <desc id="desc">人和狗沿两条互不重叠的弧线交换座位，句意从人咬狗变成狗咬人。右侧显示去掉座位编号后，两种顺序都会退化为相同的内容集合。</desc>
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="var(--bg)"/><stop offset="1" stop-color="var(--wash)"/></linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0L9 3L0 6Z" fill="context-stroke"/></marker>
+    <style>
+      :root{--bg:#f4f8f7;--wash:#e8f3f0;--panel:#fff;--text:#142321;--muted:#60706d;--border:#b9cbc7;--teal:#0f766e;--teal-soft:#ccfbf1;--blue:#0369a1;--blue-soft:#e0f2fe;--amber:#b45309;--amber-soft:#fef3c7;--coral:#c2410c;--coral-soft:#ffedd5}
+      @media(prefers-color-scheme:dark){:root{--bg:#101a1a;--wash:#132624;--panel:#182525;--text:#ecf7f5;--muted:#a7bbb7;--border:#45615c;--teal:#5eead4;--teal-soft:#134e4a;--blue:#7dd3fc;--blue-soft:#0c4a6e;--amber:#fbbf24;--amber-soft:#78350f;--coral:#fb923c;--coral-soft:#7c2d12}}
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:var(--text)}.muted{fill:var(--muted)}.panel{fill:var(--panel);stroke:var(--border);stroke-width:1.5}.slot{fill:var(--panel);stroke:var(--border);stroke-width:1.5;stroke-dasharray:5 5}.flow{fill:none;stroke-width:3;marker-end:url(#arrow)}.person{animation:person-swap 5.5s ease-in-out infinite alternate}.dog{animation:dog-swap 5.5s ease-in-out infinite alternate}@keyframes person-swap{0%,28%{transform:translate(0,0)}50%{transform:translate(165px,-60px)}72%,100%{transform:translate(330px,0)}}@keyframes dog-swap{0%,28%{transform:translate(0,0)}50%{transform:translate(-165px,60px)}72%,100%{transform:translate(-330px,0)}}@media(prefers-reduced-motion:reduce){.person,.dog{animation:none}}
+    </style>
+  </defs>
+  <rect width="960" height="500" rx="28" fill="url(#paper)"/>
+  <text x="42" y="48" font-size="25" font-weight="700">顺序不是装饰：交换座位，角色就会交换</text>
+  <text x="42" y="76" class="muted" font-size="14">动画只移动“人”和“狗”；两个 token 沿不同轨道交换，避免在中途重叠</text>
+
+  <g transform="translate(40 110)">
+    <rect class="panel" width="530" height="310" rx="20"/>
+    <text x="265" y="34" text-anchor="middle" font-size="15" font-weight="700">有位置坐标时：左边是施事，右边是受事</text>
+    <g transform="translate(36 72)">
+      <text x="62" y="0" text-anchor="middle" font-size="12" fill="var(--teal)">施事 · 谁在做</text>
+      <text x="229" y="0" text-anchor="middle" font-size="12" fill="var(--coral)">动作</text>
+      <text x="396" y="0" text-anchor="middle" font-size="12" fill="var(--amber)">受事 · 谁被作用</text>
+      <rect class="slot" x="14" y="18" width="96" height="82" rx="15"/>
+      <rect class="slot" x="181" y="18" width="96" height="82" rx="15"/>
+      <rect class="slot" x="348" y="18" width="96" height="82" rx="15"/>
+      <path class="flow" d="M111 59H173" stroke="var(--coral)"/>
+      <path class="flow" d="M278 59H340" stroke="var(--coral)"/>
+
+      <g transform="translate(26 31)">
+        <g class="person">
+          <rect width="72" height="56" rx="13" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="2"/>
+          <text x="36" y="36" text-anchor="middle" font-size="22" font-weight="700">人</text>
+        </g>
+      </g>
+      <g transform="translate(193 31)">
+        <rect width="72" height="56" rx="13" fill="var(--coral-soft)" stroke="var(--coral)" stroke-width="2"/>
+        <text x="36" y="36" text-anchor="middle" font-size="22" font-weight="700">咬</text>
+      </g>
+      <g transform="translate(360 31)">
+        <g class="dog">
+          <rect width="72" height="56" rx="13" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="2"/>
+          <text x="36" y="36" text-anchor="middle" font-size="22" font-weight="700">狗</text>
+        </g>
+      </g>
+    </g>
+    <g transform="translate(36 230)">
+      <rect width="218" height="70" rx="14" fill="var(--blue-soft)" opacity=".58"/>
+      <text x="18" y="27" font-size="12" class="muted">交换前</text>
+      <text x="109" y="53" text-anchor="middle" font-size="20" font-weight="700">人（施事）咬狗（受事）</text>
+      <rect x="240" width="218" height="70" rx="14" fill="var(--amber-soft)" opacity=".58"/>
+      <text x="258" y="27" font-size="12" class="muted">交换后</text>
+      <text x="349" y="53" text-anchor="middle" font-size="20" font-weight="700">狗（施事）咬人（受事）</text>
+    </g>
+  </g>
+
+  <path class="flow" d="M583 252H626" stroke="var(--muted)"/>
+  <text x="604" y="236" text-anchor="middle" class="muted" font-size="11">抹去位置</text>
+
+  <g transform="translate(640 110)">
+    <rect class="panel" width="280" height="310" rx="20"/>
+    <text x="140" y="34" text-anchor="middle" font-size="15" font-weight="700">只剩内容时：两句完全相同</text>
+    <circle cx="140" cy="146" r="88" fill="var(--teal-soft)" opacity=".38" stroke="var(--teal)" stroke-dasharray="6 6"/>
+    <rect x="54" y="105" width="62" height="48" rx="12" fill="var(--blue-soft)" stroke="var(--blue)"/>
+    <text x="85" y="135" text-anchor="middle" font-size="19" font-weight="700">人</text>
+    <rect x="164" y="105" width="62" height="48" rx="12" fill="var(--amber-soft)" stroke="var(--amber)"/>
+    <text x="195" y="135" text-anchor="middle" font-size="19" font-weight="700">狗</text>
+    <rect x="109" y="173" width="62" height="48" rx="12" fill="var(--coral-soft)" stroke="var(--coral)"/>
+    <text x="140" y="203" text-anchor="middle" font-size="19" font-weight="700">咬</text>
+    <text x="140" y="257" text-anchor="middle" font-size="16" font-weight="700" fill="var(--coral)">{ 人，咬，狗 }</text>
+    <text x="140" y="281" text-anchor="middle" class="muted" font-size="12">成员相同，但谁在前、谁在后已经丢失</text>
+  </g>
+
+  <g transform="translate(40 434)">
+    <rect width="880" height="44" rx="13" fill="var(--panel)" stroke="var(--teal)" stroke-width="2"/>
+    <text x="440" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="var(--teal)">位置编码提供“座位号”，注意力才有证据恢复施事、动作和受事的关系</text>
+  </g>
+</svg>

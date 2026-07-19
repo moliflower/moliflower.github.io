@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 98 960 344" role="img" aria-labelledby="title desc">
+  <title id="title">SSH 私钥在本地签名会话证明，服务器只用公钥验签</title>
+  <desc id="desc">服务器的 authorized_keys 预先保存公钥。连接时客户端用本地私钥对本次会话证明签名，服务器用公钥验证。网络上传输的是签名，不是私钥。</desc>
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="var(--bg)"/><stop offset="1" stop-color="var(--wash)"/></linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0L9 3L0 6Z" fill="context-stroke"/></marker>
+    <style>
+      :root{--bg:#f4f8f7;--wash:#e8f3f0;--panel:#fff;--text:#142321;--muted:#60706d;--border:#b9cbc7;--teal:#0f766e;--teal-soft:#ccfbf1;--blue:#0369a1;--blue-soft:#e0f2fe;--amber:#b45309;--amber-soft:#fef3c7;--coral:#c2410c;--coral-soft:#ffedd5}
+      @media(prefers-color-scheme:dark){:root{--bg:#101a1a;--wash:#132624;--panel:#182525;--text:#ecf7f5;--muted:#a7bbb7;--border:#45615c;--teal:#5eead4;--teal-soft:#134e4a;--blue:#7dd3fc;--blue-soft:#0c4a6e;--amber:#fbbf24;--amber-soft:#78350f;--coral:#fb923c;--coral-soft:#7c2d12}}
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:var(--text)}.muted{fill:var(--muted)}.mono{font-family:"SFMono-Regular",Consolas,monospace}.stage{fill:var(--panel);stroke:var(--border);stroke-width:1.5}.flow{fill:none;stroke-width:3;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect x="0" y="98" width="960" height="344" rx="28" fill="url(#paper)"/>
+  <g transform="translate(44 116)">
+    <rect class="stage" width="280" height="308" rx="20"/><text x="140" y="32" text-anchor="middle" font-size="14" font-weight="700" fill="var(--blue)">本地电脑</text>
+    <g transform="translate(30 61)"><rect width="220" height="150" rx="18" fill="var(--blue-soft)" stroke="var(--blue)"/><circle cx="58" cy="51" r="25" fill="none" stroke="var(--amber)" stroke-width="10"/><path d="M58 76v53H42v-14H29v-15h29" fill="none" stroke="var(--amber)" stroke-width="10" stroke-linejoin="round" stroke-linecap="square"/><text x="151" y="64" text-anchor="middle" font-size="12" font-weight="700">私钥</text><text x="151" y="84" text-anchor="middle" class="mono" font-size="10">id_ed25519</text><text x="151" y="111" text-anchor="middle" class="muted" font-size="10">保存在 ~/.ssh</text><text x="151" y="129" text-anchor="middle" class="muted" font-size="10">只在本地做签名</text></g>
+    <g transform="translate(30 232)"><rect width="220" height="48" rx="12" fill="var(--coral-soft)" stroke="var(--coral)"/><path d="M17 15l19 19M36 15L17 34" stroke="var(--coral)" stroke-width="4"/><text x="49" y="21" font-size="11" font-weight="700" fill="var(--coral)">网络上没有私钥这一步</text><text x="49" y="37" class="muted" font-size="9">不能上传、不能复制给别人</text></g>
+  </g>
+  <g transform="translate(636 116)">
+    <rect class="stage" width="280" height="308" rx="20"/><text x="140" y="32" text-anchor="middle" font-size="14" font-weight="700" fill="var(--amber)">远程服务器</text>
+    <g transform="translate(30 61)"><rect width="220" height="150" rx="18" fill="var(--amber-soft)" stroke="var(--amber)"/><path d="M28 32h164v93H28z" fill="var(--panel)" stroke="var(--amber)" stroke-width="2"/><path d="M43 54H177M43 75H177M43 96H142" stroke="var(--border)" stroke-width="6" stroke-linecap="round"/><text x="110" y="19" text-anchor="middle" class="mono" font-size="10">~/.ssh/authorized_keys</text><text x="110" y="143" text-anchor="middle" font-size="11" font-weight="700">保存公钥，负责验签</text></g>
+    <g transform="translate(30 232)"><rect width="220" height="48" rx="12" fill="var(--teal-soft)" stroke="var(--teal)"/><path d="M17 25l9 9 18-23" fill="none" stroke="var(--teal)" stroke-width="4"/><text x="54" y="21" font-size="11" font-weight="700" fill="var(--teal)">验签通过 → 允许登录</text><text x="54" y="37" class="muted" font-size="9">公钥不能反推出私钥</text></g>
+  </g>
+  <g transform="translate(348 117)">
+    <text x="132" y="0" text-anchor="middle" font-size="13" font-weight="700">一次认证的四个动作</text>
+    <g transform="translate(0 24)"><circle cx="18" cy="18" r="17" fill="var(--amber)"/><text x="18" y="23" text-anchor="middle" font-size="13" fill="white">1</text><text x="45" y="15" font-size="11" font-weight="700">服务器已有公钥</text><text x="45" y="31" class="muted" font-size="9">提前写入 authorized_keys</text></g>
+    <g transform="translate(0 86)"><circle cx="18" cy="18" r="17" fill="var(--blue)"/><text x="18" y="23" text-anchor="middle" font-size="13" fill="white">2</text><text x="45" y="15" font-size="11" font-weight="700">形成本次会话证明</text><text x="45" y="31" class="muted" font-size="9">绑定当前 SSH 会话</text></g>
+    <g transform="translate(0 148)"><circle cx="18" cy="18" r="17" fill="var(--amber)"/><text x="18" y="23" text-anchor="middle" font-size="13" fill="white">3</text><text x="45" y="15" font-size="11" font-weight="700">私钥在本地签名</text><text x="45" y="31" class="muted" font-size="9">只把签名结果发出去</text></g>
+    <g transform="translate(0 210)"><circle cx="18" cy="18" r="17" fill="var(--teal)"/><text x="18" y="23" text-anchor="middle" font-size="13" fill="white">4</text><text x="45" y="15" font-size="11" font-weight="700">公钥验证签名</text><text x="45" y="31" class="muted" font-size="9">证明你持有对应私钥</text></g>
+  </g>
+  <path class="flow" d="M592 292H626" stroke="var(--teal)"/><rect x="521" y="272" width="76" height="38" rx="9" fill="var(--teal-soft)" stroke="var(--teal)"/><text x="559" y="287" text-anchor="middle" font-size="9" font-weight="700">签名</text><text x="559" y="300" text-anchor="middle" class="mono" font-size="8">signature</text>
+</svg>

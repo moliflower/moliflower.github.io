@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 94 960 408" role="img" aria-labelledby="title desc">
+  <title id="title">HTTPS 和 SSH 是连接同一个 GitHub 仓库的两条路线</title>
+  <desc id="desc">本地 Git 仓库既可以使用 HTTPS 地址，通过 Token 或 Credential Manager 认证，也可以使用 SSH 地址，通过私钥和 GitHub 账号中的公钥认证。clone 时选择的地址会保存为 origin，之后的 pull 和 push 会继续使用同一条路线。</desc>
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="var(--bg)" />
+      <stop offset="1" stop-color="var(--wash)" />
+    </linearGradient>
+    <marker id="arrow-blue" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto-start-reverse">
+      <path d="M0 0L9 4.5L0 9Z" fill="var(--blue)" />
+    </marker>
+    <marker id="arrow-teal" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto-start-reverse">
+      <path d="M0 0L9 4.5L0 9Z" fill="var(--teal)" />
+    </marker>
+    <marker id="arrow-muted" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+      <path d="M0 0L9 4.5L0 9Z" fill="var(--muted)" />
+    </marker>
+    <style>
+      :root{--bg:#f4f8f7;--wash:#e8f3f0;--panel:#fff;--text:#142321;--muted:#60706d;--border:#b9cbc7;--teal:#0f766e;--teal-soft:#ccfbf1;--blue:#0369a1;--blue-soft:#e0f2fe;--amber:#b45309;--amber-soft:#fef3c7;--coral:#c2410c;--coral-soft:#ffedd5}
+      @media(prefers-color-scheme:dark){:root{--bg:#101a1a;--wash:#132624;--panel:#182525;--text:#ecf7f5;--muted:#a7bbb7;--border:#45615c;--teal:#5eead4;--teal-soft:#134e4a;--blue:#7dd3fc;--blue-soft:#0c4a6e;--amber:#fbbf24;--amber-soft:#78350f;--coral:#fb923c;--coral-soft:#7c2d12}}
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:var(--text)}
+      .muted{fill:var(--muted)}.mono{font-family:"SFMono-Regular",Consolas,monospace}.panel{fill:var(--panel);stroke:var(--border);stroke-width:1.5}.route{fill:none;stroke-width:2.5;stroke-linecap:round}
+    </style>
+  </defs>
+
+  <rect x="0" y="94" width="960" height="408" rx="28" fill="url(#paper)" />
+
+  <g aria-label="本地 Git 仓库">
+    <rect x="50" y="128" width="190" height="174" rx="20" class="panel" />
+    <rect x="76" y="154" width="138" height="82" rx="10" fill="var(--panel)" stroke="var(--border)" stroke-width="1.5" />
+    <path d="M76 178h138" stroke="var(--border)" />
+    <circle cx="91" cy="166" r="4" fill="var(--coral)" />
+    <circle cx="104" cy="166" r="4" fill="var(--amber)" />
+    <circle cx="117" cy="166" r="4" fill="var(--teal)" />
+    <text x="145" y="204" text-anchor="middle" class="mono" font-size="12">git clone</text>
+    <text x="145" y="223" text-anchor="middle" class="mono" font-size="12">pull / push</text>
+    <text x="145" y="263" text-anchor="middle" font-size="14" font-weight="700">本地 Git 仓库</text>
+    <text x="145" y="284" text-anchor="middle" class="muted" font-size="11">同一组提交与分支</text>
+  </g>
+
+  <g aria-label="HTTPS 路线">
+    <rect x="270" y="112" width="420" height="90" rx="17" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="1.5" />
+    <rect x="288" y="129" width="66" height="24" rx="12" fill="var(--panel)" />
+    <text x="321" y="146" text-anchor="middle" font-size="11" font-weight="700" fill="var(--blue)">HTTPS</text>
+    <text x="370" y="146" class="mono" font-size="11">https://github.com/OWNER/REPO.git</text>
+    <path d="M292 169H668" class="route" stroke="var(--blue)" marker-start="url(#arrow-blue)" marker-end="url(#arrow-blue)" />
+    <text x="480" y="190" text-anchor="middle" font-size="11">身份凭据：Personal Access Token / Credential Manager</text>
+  </g>
+
+  <g aria-label="SSH 路线">
+    <rect x="270" y="220" width="420" height="90" rx="17" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.5" />
+    <rect x="288" y="237" width="52" height="24" rx="12" fill="var(--panel)" />
+    <text x="314" y="254" text-anchor="middle" font-size="11" font-weight="700" fill="var(--teal)">SSH</text>
+    <text x="358" y="254" class="mono" font-size="11">git@github.com:OWNER/REPO.git</text>
+    <path d="M292 277H668" class="route" stroke="var(--teal)" marker-start="url(#arrow-teal)" marker-end="url(#arrow-teal)" />
+    <text x="480" y="298" text-anchor="middle" font-size="11">身份凭据：本机私钥 + GitHub 账号中的公钥</text>
+  </g>
+
+  <g aria-label="同一个 GitHub 仓库">
+    <rect x="720" y="128" width="190" height="174" rx="20" class="panel" />
+    <g transform="translate(780 151)" fill="none" stroke="var(--amber)" stroke-width="2">
+      <path d="M0 13h18l8 9h44v61H0z" fill="var(--amber-soft)" />
+      <circle cx="23" cy="47" r="5" fill="var(--panel)" />
+      <circle cx="50" cy="35" r="5" fill="var(--panel)" />
+      <circle cx="50" cy="62" r="5" fill="var(--panel)" />
+      <path d="M28 47h12c10 0 10-12 10-12M28 47h12c10 0 10 15 10 15" />
+    </g>
+    <text x="815" y="263" text-anchor="middle" font-size="14" font-weight="700">同一个 GitHub 仓库</text>
+    <text x="815" y="284" text-anchor="middle" class="muted" font-size="11">文件、分支、提交完全相同</text>
+  </g>
+
+  <text x="480" y="348" text-anchor="middle" font-size="13" font-weight="700">clone 时选中的 URL 会留下来，成为后续操作的路线</text>
+
+  <g transform="translate(50 370)" aria-label="clone 到 origin 再到 pull 和 push 的顺序">
+    <rect width="230" height="114" rx="18" class="panel" />
+    <circle cx="28" cy="28" r="14" fill="var(--blue-soft)" />
+    <text x="28" y="33" text-anchor="middle" font-size="12" font-weight="700" fill="var(--blue)">1</text>
+    <text x="52" y="32" font-size="13" font-weight="700">复制一种 clone URL</text>
+    <text x="20" y="65" class="muted" font-size="11">HTTPS 或 SSH 任选其一</text>
+    <text x="20" y="88" class="muted" font-size="11">公开仓库读取时可能无需认证</text>
+
+    <path d="M244 57H308" class="route" stroke="var(--muted)" marker-end="url(#arrow-muted)" />
+
+    <rect x="322" width="230" height="114" rx="18" class="panel" />
+    <circle cx="350" cy="28" r="14" fill="var(--amber-soft)" />
+    <text x="350" y="33" text-anchor="middle" font-size="12" font-weight="700" fill="var(--amber)">2</text>
+    <text x="374" y="32" font-size="13" font-weight="700">地址保存为 origin</text>
+    <rect x="342" y="54" width="190" height="35" rx="8" fill="var(--wash)" />
+    <text x="437" y="76" text-anchor="middle" class="mono" font-size="11">git remote -v</text>
+
+    <path d="M566 57H630" class="route" stroke="var(--muted)" marker-end="url(#arrow-muted)" />
+
+    <rect x="644" width="230" height="114" rx="18" class="panel" />
+    <circle cx="672" cy="28" r="14" fill="var(--teal-soft)" />
+    <text x="672" y="33" text-anchor="middle" font-size="12" font-weight="700" fill="var(--teal)">3</text>
+    <text x="696" y="32" font-size="13" font-weight="700">pull / push 重用它</text>
+    <text x="664" y="65" class="muted" font-size="11">HTTPS origin → Token 路线</text>
+    <text x="664" y="88" class="muted" font-size="11">SSH origin → SSH Key 路线</text>
+  </g>
+
+</svg>

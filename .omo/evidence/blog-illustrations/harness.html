@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Blog illustration visual QA</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        background: #eef4f2;
+        color: #142321;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px;
+      }
+
+      main {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 28px;
+        max-width: 1280px;
+        margin: 0 auto;
+      }
+
+      figure {
+        margin: 0;
+      }
+
+      img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 14px;
+      }
+
+      figcaption {
+        padding: 10px 2px 0;
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      @media (max-width: 700px) {
+        body {
+          padding: 12px;
+        }
+
+        main {
+          grid-template-columns: 1fr;
+          gap: 20px;
+        }
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          background: #0b1413;
+          color: #ecf7f5;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <figure><img src="http://localhost:8080/assets/img/blog/position/attention-permutation.svg" alt=""><figcaption>Position · permutation</figcaption></figure>
+      <figure><img src="http://localhost:8080/assets/img/blog/position/position-encoding-families.svg" alt=""><figcaption>Position · injection points</figcaption></figure>
+      <figure><img src="http://localhost:8080/assets/img/blog/position/vit-patch-position.svg" alt=""><figcaption>Position · ViT patches</figcaption></figure>
+      <figure><img src="http://localhost:8080/assets/img/blog/position/rope-rotation.svg" alt=""><figcaption>Position · RoPE</figcaption></figure>
+      <figure><img src="http://localhost:8080/assets/img/blog/ffn/ffn-expand-contract.svg" alt=""><figcaption>FFN · expand and contract</figcaption></figure>
+      <figure><img src="http://localhost:8080/assets/img/blog/ffn/nonlinear-workbench.svg" alt=""><figcaption>FFN · nonlinear lifting</figcaption></figure>
+      <figure><img src="http://localhost:8080/assets/img/blog/ffn/residual-shape.svg" alt=""><figcaption>FFN · residual alignment</figcaption></figure>
+      <figure><img src="http://localhost:8080/assets/img/blog/ffn/swiglu-gate.svg" alt=""><figcaption>FFN · SwiGLU gating</figcaption></figure>
+      <figure><img src="http://localhost:8080/assets/img/blog/ssh/ssh-connection-overview.svg" alt=""><figcaption>SSH · connection phases</figcaption></figure>
+      <figure><img src="http://localhost:8080/assets/img/blog/ssh/ssh-key-pair.svg" alt=""><figcaption>SSH · key proof</figcaption></figure>
+      <figure><img src="http://localhost:8080/assets/img/blog/ssh/https-vs-ssh.svg" alt=""><figcaption>SSH · remote URL routing</figcaption></figure>
+      <figure><img src="http://localhost:8080/assets/img/blog/ssh/ssh-relationship-map.svg" alt=""><figcaption>SSH · three identities</figcaption></figure>
+    </main>
+  </body>
+</html>

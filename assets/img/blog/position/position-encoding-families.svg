@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" role="img" aria-labelledby="title desc">
+  <title id="title">三类位置编码分别写入 Transformer 的输入、分数和查询键</title>
+  <desc id="desc">同一条从 token 到注意力分数的流水线上，绝对位置在输入端与内容相加，相对位置在注意力矩阵中加入距离偏置，RoPE 在点积前旋转查询与键。</desc>
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="var(--bg)"/><stop offset="1" stop-color="var(--wash)"/></linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0L9 3L0 6Z" fill="context-stroke"/></marker>
+    <style>
+      :root{--bg:#f4f8f7;--wash:#e8f3f0;--panel:#fff;--text:#142321;--muted:#60706d;--border:#b9cbc7;--teal:#0f766e;--teal-soft:#ccfbf1;--blue:#0369a1;--blue-soft:#e0f2fe;--amber:#b45309;--amber-soft:#fef3c7;--coral:#c2410c;--coral-soft:#ffedd5}
+      @media(prefers-color-scheme:dark){:root{--bg:#101a1a;--wash:#132624;--panel:#182525;--text:#ecf7f5;--muted:#a7bbb7;--border:#45615c;--teal:#5eead4;--teal-soft:#134e4a;--blue:#7dd3fc;--blue-soft:#0c4a6e;--amber:#fbbf24;--amber-soft:#78350f;--coral:#fb923c;--coral-soft:#7c2d12}}
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:var(--text)}.muted{fill:var(--muted)}.mono{font-family:"SFMono-Regular",Consolas,monospace}.lane{fill:var(--panel);stroke:var(--border);stroke-width:1.5}.pipe{fill:none;stroke:var(--border);stroke-width:6;stroke-linecap:round;marker-end:url(#arrow)}.insert{fill:none;stroke:var(--amber);stroke-width:3;marker-end:url(#arrow)}.hot{filter:url(#lift)}
+    </style>
+    <filter id="lift" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#0f3f39" flood-opacity=".16"/></filter>
+  </defs>
+  <rect width="960" height="560" rx="28" fill="url(#paper)"/>
+  <text x="44" y="49" font-size="25" font-weight="700">不是三套“版本”，而是三个不同的写入位置</text>
+  <text x="44" y="76" class="muted" font-size="14">沿同一条注意力流水线看，区别会比背公式更直观</text>
+  <g transform="translate(44 108)">
+    <g transform="translate(0 0)"><rect class="lane" width="872" height="118" rx="18"/><rect width="10" height="118" rx="5" fill="var(--blue)"/><text x="30" y="31" font-size="16" font-weight="700" fill="var(--blue)">绝对位置 · 先给内容贴座位号</text>
+      <path class="pipe" d="M190 73H785"/><g class="hot"><rect x="144" y="49" width="112" height="48" rx="12" fill="var(--blue-soft)" stroke="var(--blue)"/><text x="200" y="79" text-anchor="middle" font-size="14">内容 xᵢ</text><circle cx="278" cy="73" r="16" fill="var(--teal)"/><text x="278" y="79" text-anchor="middle" font-size="20" fill="white">＋</text></g>
+      <path class="insert" d="M278 24V48"/><rect x="244" y="3" width="68" height="28" rx="8" fill="var(--amber-soft)" stroke="var(--amber)"/><text x="278" y="22" text-anchor="middle" font-size="12">坐标 pᵢ</text>
+      <g><rect x="346" y="49" width="104" height="48" rx="12" fill="var(--teal-soft)" stroke="var(--teal)"/><text x="398" y="79" text-anchor="middle" font-size="14">zᵢ</text><rect x="516" y="49" width="112" height="48" rx="12" fill="var(--panel)" stroke="var(--border)"/><text x="572" y="79" text-anchor="middle" font-size="14">Q · K</text><rect x="694" y="49" width="112" height="48" rx="12" fill="var(--panel)" stroke="var(--border)"/><text x="750" y="79" text-anchor="middle" font-size="14">scoreᵢⱼ</text></g>
+    </g>
+    <g transform="translate(0 136)"><rect class="lane" width="872" height="118" rx="18"/><rect width="10" height="118" rx="5" fill="var(--coral)"/><text x="30" y="31" font-size="16" font-weight="700" fill="var(--coral)">相对位置 · 在两两比较时直接报距离</text>
+      <path class="pipe" d="M190 73H785"/><rect x="144" y="49" width="112" height="48" rx="12" fill="var(--blue-soft)" stroke="var(--blue)"/><text x="200" y="79" text-anchor="middle" font-size="14">内容 xᵢ</text><rect x="346" y="49" width="104" height="48" rx="12" fill="var(--panel)" stroke="var(--border)"/><text x="398" y="79" text-anchor="middle" font-size="14">Q · K</text>
+      <g class="hot"><circle cx="560" cy="73" r="20" fill="var(--teal)"/><text x="560" y="79" text-anchor="middle" font-size="20" fill="white">＋</text><path class="insert" d="M560 24V48"/><rect x="512" y="3" width="96" height="28" rx="8" fill="var(--amber-soft)" stroke="var(--amber)"/><text x="560" y="22" text-anchor="middle" font-size="12">距离 bᵢ₋ⱼ</text></g>
+      <rect x="694" y="49" width="112" height="48" rx="12" fill="var(--coral-soft)" stroke="var(--coral)"/><text x="750" y="79" text-anchor="middle" font-size="13">score + bias</text>
+    </g>
+    <g transform="translate(0 272)"><rect class="lane" width="872" height="118" rx="18"/><rect width="10" height="118" rx="5" fill="var(--teal)"/><text x="30" y="31" font-size="16" font-weight="700" fill="var(--teal)">RoPE · 点积前先转动 Q、K 的坐标系</text>
+      <path class="pipe" d="M190 73H785"/><rect x="144" y="49" width="112" height="48" rx="12" fill="var(--blue-soft)" stroke="var(--blue)"/><text x="200" y="79" text-anchor="middle" font-size="14">内容 xᵢ</text>
+      <g class="hot" transform="translate(334 42)"><circle cx="32" cy="31" r="28" fill="var(--blue-soft)" stroke="var(--blue)"/><path d="M32 31L52 17" stroke="var(--blue)" stroke-width="4" stroke-linecap="round"/><text x="32" y="70" text-anchor="middle" font-size="11">Rₘq</text><circle cx="108" cy="31" r="28" fill="var(--amber-soft)" stroke="var(--amber)"/><path d="M108 31L114 8" stroke="var(--amber)" stroke-width="4" stroke-linecap="round"/><text x="108" y="70" text-anchor="middle" font-size="11">Rₙk</text></g>
+      <rect x="538" y="49" width="112" height="48" rx="12" fill="var(--teal-soft)" stroke="var(--teal)"/><text x="594" y="79" text-anchor="middle" font-size="13">(Rₘq) · (Rₙk)</text><rect x="694" y="49" width="112" height="48" rx="12" fill="var(--panel)" stroke="var(--border)"/><text x="750" y="79" text-anchor="middle" font-size="13">只含 n−m</text>
+    </g>
+  </g>
+  <g transform="translate(44 518)"><path d="M0 0H872" stroke="var(--border)"/><text x="436" y="23" text-anchor="middle" class="muted" font-size="13">选方法时先问：我要给单个 token 坐标，还是给 token 对之间的距离？</text></g>
+</svg>
