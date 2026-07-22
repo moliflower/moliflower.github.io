@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 500" role="img" aria-labelledby="title desc">
+  <title id="title">SAM 2 的 Hiera 与 FpnNeck 数据流</title>
+  <desc id="desc">Hiera-L 输出 stride 4、8、16、32 四层特征。所有层先投影到 256 通道，只有 stride 32 上采样并融合进 stride 16。stride 16 进入 memory attention，stride 4 和 8 作为高分辨率特征送入 mask decoder。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="var(--bg)"/><stop offset="1" stop-color="var(--wash)"/></linearGradient>
+    <marker id="arrow-teal" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="var(--teal)"/></marker>
+    <marker id="arrow-blue" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="var(--blue)"/></marker>
+    <marker id="arrow-amber" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="var(--amber)"/></marker>
+    <style>
+      :root{--bg:#f4f8f7;--wash:#e8f3f0;--panel:#fff;--text:#142321;--muted:#60706d;--border:#b9cbc7;--teal:#0f766e;--teal-soft:#ccfbf1;--blue:#0369a1;--blue-soft:#e0f2fe;--amber:#b45309;--amber-soft:#fef3c7;--coral:#c2410c;--coral-soft:#ffedd5}
+      @media(prefers-color-scheme:dark){:root{--bg:#101a1a;--wash:#132624;--panel:#182525;--text:#ecf7f5;--muted:#a7bbb7;--border:#45615c;--teal:#5eead4;--teal-soft:#134e4a;--blue:#7dd3fc;--blue-soft:#0c4a6e;--amber:#fbbf24;--amber-soft:#78350f;--coral:#fb923c;--coral-soft:#7c2d12}}
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:var(--text)}.panel{fill:var(--panel);stroke:var(--border);stroke-width:1.5}.muted{fill:var(--muted)}.on-accent{fill:var(--panel)}.mono{font-family:"SFMono-Regular",Consolas,monospace}.flow{fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}.flow[stroke="var(--teal)"]{marker-end:url(#arrow-teal)}.flow[stroke="var(--blue)"]{marker-end:url(#arrow-blue)}.flow[stroke="var(--amber)"]{marker-end:url(#arrow-amber)}
+    </style>
+  </defs>
+
+  <rect width="960" height="500" rx="28" fill="url(#bg)"/>
+
+  <g font-size="12" font-weight="700" text-anchor="middle">
+    <text x="110" y="34">Hiera-L stage 输出</text>
+    <text x="325" y="34">FpnNeck 横向投影</text>
+    <text x="595" y="34">neck 输出</text>
+    <text x="842" y="34">下游用途</text>
+  </g>
+
+  <g>
+    <g transform="translate(25 58)"><rect class="panel" width="170" height="64" rx="11"/><text x="16" y="27" font-size="13" font-weight="700">Stage 1 · stride 4</text><text x="16" y="48" class="mono muted" font-size="11">144 × 256 × 256</text></g>
+    <g transform="translate(25 148)"><rect class="panel" width="170" height="64" rx="11"/><text x="16" y="27" font-size="13" font-weight="700">Stage 2 · stride 8</text><text x="16" y="48" class="mono muted" font-size="11">288 × 128 × 128</text></g>
+    <g transform="translate(25 258)"><rect class="panel" width="170" height="64" rx="11"/><text x="16" y="27" font-size="13" font-weight="700">Stage 3 · stride 16</text><text x="16" y="48" class="mono muted" font-size="11">576 × 64 × 64</text></g>
+    <g transform="translate(25 378)"><rect class="panel" width="170" height="64" rx="11"/><text x="16" y="27" font-size="13" font-weight="700">Stage 4 · stride 32</text><text x="16" y="48" class="mono muted" font-size="11">1152 × 32 × 32</text></g>
+  </g>
+
+  <g fill="var(--amber-soft)" stroke="var(--amber)">
+    <rect x="250" y="69" width="150" height="42" rx="9"/><rect x="250" y="159" width="150" height="42" rx="9"/><rect x="250" y="269" width="150" height="42" rx="9"/><rect x="250" y="389" width="150" height="42" rx="9"/>
+  </g>
+  <g text-anchor="middle" class="mono" font-size="11">
+    <text x="325" y="94">1×1 → 256 ch</text><text x="325" y="184">1×1 → 256 ch</text><text x="325" y="294">1×1 → 256 ch</text><text x="325" y="414">1×1 → 256 ch</text>
+  </g>
+  <g class="flow" stroke="var(--amber)"><path d="M195 90H242"/><path d="M195 180H242"/><path d="M195 290H242"/><path d="M195 410H242"/></g>
+
+  <g>
+    <path d="M400 90H477" class="flow" stroke="var(--blue)"/>
+    <path d="M400 180H477" class="flow" stroke="var(--blue)"/>
+    <g transform="translate(485 58)"><rect width="220" height="64" rx="11" fill="var(--blue-soft)" stroke="var(--blue)"/><text x="16" y="27" font-size="13" font-weight="700">High-res feature · stride 4</text><text x="16" y="49" class="mono muted" font-size="11">256 × 256 × 256</text></g>
+    <g transform="translate(485 148)"><rect width="220" height="64" rx="11" fill="var(--blue-soft)" stroke="var(--blue)"/><text x="16" y="27" font-size="13" font-weight="700">High-res feature · stride 8</text><text x="16" y="49" class="mono muted" font-size="11">256 × 128 × 128</text></g>
+  </g>
+
+  <path d="M400 290H438" stroke="var(--amber)" stroke-width="2.4"/>
+  <circle cx="458" cy="290" r="17" fill="var(--teal)" stroke="var(--panel)" stroke-width="2"/>
+  <text x="458" y="296" text-anchor="middle" class="on-accent" font-size="18" font-weight="700">+</text>
+  <path d="M400 410H435Q458 410 458 387V314" class="flow" stroke="var(--teal)"/>
+  <text x="470" y="361" class="muted" font-size="11">nearest 2×</text>
+  <path d="M475 290H485" stroke="var(--teal)" stroke-width="2.4"/>
+  <g transform="translate(485 253)"><rect width="220" height="74" rx="12" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="2"/><text x="16" y="29" font-size="13" font-weight="700">Main image embedding</text><text x="16" y="53" class="mono muted" font-size="11">256 × 64 × 64 · stride 16</text></g>
+
+  <g transform="translate(760 82)">
+    <rect width="168" height="108" rx="13" fill="var(--blue-soft)" stroke="var(--blue)"/>
+    <text x="84" y="32" text-anchor="middle" font-size="14" font-weight="700">Mask decoder</text>
+    <text x="84" y="58" text-anchor="middle" class="muted" font-size="11">stride 4 / 8 旁路</text>
+    <text x="84" y="79" text-anchor="middle" class="muted" font-size="11">补回边界与局部细节</text>
+  </g>
+  <path d="M705 90H726Q742 90 742 106V119H752" class="flow" stroke="var(--blue)"/>
+  <path d="M705 180H726Q742 180 742 164V153H752" class="flow" stroke="var(--blue)"/>
+
+  <g transform="translate(760 253)">
+    <rect width="168" height="74" rx="13" fill="var(--teal-soft)" stroke="var(--teal)"/>
+    <text x="84" y="30" text-anchor="middle" font-size="14" font-weight="700">Memory attention</text>
+    <text x="84" y="53" text-anchor="middle" class="muted" font-size="11">当前帧与视频记忆交互</text>
+  </g>
+  <path d="M705 290H752" class="flow" stroke="var(--teal)"/>
+
+  <g transform="translate(485 385)">
+    <rect width="443" height="58" rx="11" fill="var(--panel)" stroke="var(--border)"/>
+    <text x="18" y="24" font-size="12" font-weight="700">scalp: 1 删除 stride 32 的独立输出</text>
+    <text x="18" y="44" class="muted" font-size="11">它传给 stride 16 的语义已经保留，不再单独送往下游。</text>
+  </g>
+</svg>
