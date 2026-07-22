@@ -41,6 +41,12 @@
             {% endif %}
           </a>
         {% endif %}
+        {% if project.docs %}
+          <a href="{{ project.docs }}" target="_blank" rel="noopener noreferrer" aria-label="查看 {{ project.title }} API 文档">
+            <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+            API 文档
+          </a>
+        {% endif %}
       </div>
     </div>
   </article>

@@ -5,6 +5,7 @@ description: 面向 PyTorch 的 CUDA 加速批量并行形态学变换库。
 importance: 1
 category: 开源项目
 github: https://github.com/intcomp/torchmorph
+docs: https://intcomp.github.io/tm/
 related_publications: false
 ---
 
@@ -29,6 +30,7 @@ related_publications: false
 ## 项目链接
 
 - [GitHub 仓库](https://github.com/intcomp/torchmorph)
+- [API 文档](https://intcomp.github.io/tm/)
 - [查看源代码与最新进展](https://github.com/intcomp/torchmorph/commits/main/)
 
-> 项目仍在持续开发中，后续将根据算子实现和性能测试进展继续更新本页面。
+> 项目和 API 文档仍在持续更新中，后续将根据算子实现和性能测试进展继续完善。
