@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" role="img" aria-labelledby="title desc">
+  <title id="title">四种多尺度视觉特征方案</title>
+  <desc id="desc">对比图像金字塔、单层深特征、直接使用骨干多层特征和 FPN。FPN 只运行一次骨干，并通过自顶向下融合让多种分辨率的输出都获得较强语义。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="var(--bg)"/>
+      <stop offset="1" stop-color="var(--wash)"/>
+    </linearGradient>
+    <marker id="arrow-teal" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="var(--teal)"/></marker>
+    <marker id="arrow-amber" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="var(--amber)"/></marker>
+    <style>
+      :root{--bg:#f4f8f7;--wash:#e8f3f0;--panel:#fff;--text:#142321;--muted:#60706d;--border:#b9cbc7;--teal:#0f766e;--teal-soft:#ccfbf1;--blue:#0369a1;--blue-soft:#e0f2fe;--amber:#b45309;--amber-soft:#fef3c7;--coral:#c2410c;--coral-soft:#ffedd5}
+      @media(prefers-color-scheme:dark){:root{--bg:#101a1a;--wash:#132624;--panel:#182525;--text:#ecf7f5;--muted:#a7bbb7;--border:#45615c;--teal:#5eead4;--teal-soft:#134e4a;--blue:#7dd3fc;--blue-soft:#0c4a6e;--amber:#fbbf24;--amber-soft:#78350f;--coral:#fb923c;--coral-soft:#7c2d12}}
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:var(--text)}
+      .panel{fill:var(--panel);stroke:var(--border);stroke-width:1.5}.muted{fill:var(--muted)}.line{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.line[stroke="var(--teal)"]{marker-end:url(#arrow-teal)}.line[stroke="var(--amber)"]{marker-end:url(#arrow-amber)}.label{font-size:12px}.small{font-size:11px}
+    </style>
+  </defs>
+
+  <rect width="960" height="420" rx="28" fill="url(#bg)"/>
+
+  <g transform="translate(28 38)">
+    <rect class="panel" width="210" height="344" rx="18"/>
+    <text x="105" y="34" text-anchor="middle" font-size="15" font-weight="700">图像金字塔</text>
+    <g transform="translate(30 67)">
+      <rect x="0" y="0" width="88" height="62" rx="8" fill="var(--blue-soft)" stroke="var(--blue)"/>
+      <path d="M14 47l21-22 17 16 14-12 13 18" class="line" stroke="var(--blue)"/>
+      <rect x="19" y="81" width="69" height="49" rx="7" fill="var(--blue-soft)" stroke="var(--blue)"/>
+      <path d="M31 117l16-17 13 12 10-9 9 14" class="line" stroke="var(--blue)"/>
+      <rect x="40" y="148" width="48" height="34" rx="6" fill="var(--blue-soft)" stroke="var(--blue)"/>
+      <path d="M88 31H137M88 105H137M88 165H137" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round"/>
+      <rect x="145" y="18" width="30" height="160" rx="9" fill="var(--amber-soft)" stroke="var(--amber)"/>
+      <text x="160" y="101" text-anchor="middle" font-size="11" transform="rotate(-90 160 101)">同一 backbone 跑三次</text>
+    </g>
+    <text x="105" y="286" text-anchor="middle" class="label">每个尺度都有深层语义</text>
+    <text x="105" y="310" text-anchor="middle" class="small muted">但重复计算，速度和显存代价高</text>
+  </g>
+
+  <g transform="translate(260 38)">
+    <rect class="panel" width="210" height="344" rx="18"/>
+    <text x="105" y="34" text-anchor="middle" font-size="15" font-weight="700">单层深特征</text>
+    <g transform="translate(30 82)">
+      <rect x="0" y="36" width="82" height="82" rx="9" fill="var(--blue-soft)" stroke="var(--blue)"/>
+      <path d="M14 101l19-25 16 14 14-18 10 29" class="line" stroke="var(--blue)"/>
+      <path d="M88 77H128" class="line" stroke="var(--teal)"/>
+      <rect x="136" y="58" width="36" height="36" rx="7" fill="var(--teal-soft)" stroke="var(--teal)"/>
+      <path d="M148 58v36M160 58v36M136 70h36M136 82h36" class="line" stroke="var(--teal)"/>
+      <circle cx="154" cy="76" r="5" fill="var(--coral)"/>
+    </g>
+    <text x="105" y="286" text-anchor="middle" class="label">只在最深层做预测</text>
+    <text x="105" y="310" text-anchor="middle" class="small muted">计算快，但小目标可能只剩一个点</text>
+  </g>
+
+  <g transform="translate(492 38)">
+    <rect class="panel" width="210" height="344" rx="18"/>
+    <text x="105" y="34" text-anchor="middle" font-size="15" font-weight="700">直接使用多层</text>
+    <g transform="translate(42 65)">
+      <rect x="0" y="0" width="126" height="42" rx="8" fill="var(--coral-soft)" stroke="var(--coral)"/>
+      <rect x="10" y="55" width="106" height="42" rx="8" fill="var(--amber-soft)" stroke="var(--amber)"/>
+      <rect x="22" y="110" width="82" height="42" rx="8" fill="var(--blue-soft)" stroke="var(--blue)"/>
+      <rect x="34" y="165" width="58" height="42" rx="8" fill="var(--teal-soft)" stroke="var(--teal)"/>
+      <g text-anchor="middle" font-size="12" font-weight="700">
+        <text x="63" y="26">C2 · 高分辨率</text><text x="63" y="81">C3</text><text x="63" y="136">C4</text><text x="63" y="191">C5</text>
+      </g>
+      <text x="100" y="191" font-size="11" class="muted">强语义</text>
+    </g>
+    <text x="105" y="286" text-anchor="middle" class="label">尺度齐全，语义却不齐</text>
+    <text x="105" y="310" text-anchor="middle" class="small muted">浅层适合定位，却不一定认得物体</text>
+  </g>
+
+  <g transform="translate(724 38)">
+    <rect width="210" height="344" rx="18" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="2"/>
+    <text x="105" y="34" text-anchor="middle" font-size="15" font-weight="700">FPN</text>
+    <g transform="translate(37 61)">
+      <path d="M136 188V25" class="line" stroke="var(--teal)"/>
+      <g fill="var(--panel)" stroke="var(--teal)">
+        <rect x="0" y="0" width="106" height="42" rx="8"/><rect x="10" y="55" width="96" height="42" rx="8"/><rect x="22" y="110" width="84" height="42" rx="8"/><rect x="34" y="165" width="72" height="42" rx="8"/>
+      </g>
+      <g text-anchor="middle" font-size="12" font-weight="700">
+        <text x="53" y="26">P2 · 细</text><text x="58" y="81">P3</text><text x="64" y="136">P4</text><text x="70" y="191">P5 · 粗</text>
+      </g>
+      <g stroke="var(--teal)" stroke-width="2"><path d="M106 21H130"/><path d="M106 76H130"/><path d="M106 131H130"/><path d="M106 186H130"/></g>
+    </g>
+    <text x="105" y="286" text-anchor="middle" class="label">一次 backbone，多尺度强语义</text>
+    <text x="105" y="310" text-anchor="middle" class="small muted">深层语义沿 top-down 路径逐级回流</text>
+  </g>
+</svg>

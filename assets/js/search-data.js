@@ -30,7 +30,18 @@ ninja.data = [{
           handler: () => {
             window.location.href = "/cv/";
           },
-        },{id: "post-位置编码-从-vit-patch-到-llm-rope",
+        },{id: "post-从-fpn-到-sam-2-理解特征金字塔网络",
+        
+          title: "从 FPN 到 SAM 2：理解特征金字塔网络",
+        
+        description: "从多尺度目标的矛盾出发，理解 FPN 的原始贡献、完整工作流程，以及 SAM 2 如何用 Hiera 与改造后的 FPN neck 兼顾记忆建模和高分辨率分割。",
+        section: "Posts",
+        handler: () => {
+          
+            window.location.href = "/blog/2026/%E4%BB%8E-fpn-%E5%88%B0-sam2-%E7%90%86%E8%A7%A3%E7%89%B9%E5%BE%81%E9%87%91%E5%AD%97%E5%A1%94%E7%BD%91%E7%BB%9C/";
+          
+        },
+      },{id: "post-位置编码-从-vit-patch-到-llm-rope",
         
           title: "位置编码：从 ViT Patch 到 LLM RoPE",
         
