@@ -52,4 +52,4 @@ latest_posts:
 
 我对**高性能人工智能系统**充满兴趣，希望通过软硬件协同优化，让大规模模型运行得更快、占用更少的显存。
 
-如果你也在关注高性能人工智能系统，欢迎通过 [GitHub](https://github.com/moliflower) 或邮件 **18870788548@shu.edu.cn** 与我交流。
+如果你也在关注高性能人工智能系统，欢迎通过 [GitHub](https://github.com/moliflower) 或邮件 **yhdeng@shu.edu.cn** 与我交流。
