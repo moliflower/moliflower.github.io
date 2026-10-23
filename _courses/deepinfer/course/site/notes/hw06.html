@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HW6：延迟、聚合与 SLO goodput · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../../../#/calendar">← 返回周历</a>
+    <span class="doc-category">作业</span>
+    <a class="doc-back" href="../../../#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">作业 6</div>
+      <h1>HW6：延迟、聚合与 SLO goodput</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 4 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../hw/hw06/README.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      <div class="doc-actions"><button id="doc-done" class="doc-done" type="button" data-key="w6-hw6">标记完成</button><span id="doc-done-hint" class="doc-hint"></span></div>
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">1. Q1：单请求指标</a><a class="toc-level-2" href="#h-2">2. Q2：请求等权聚合</a><a class="toc-level-2" href="#h-3">3. Q3：达标请求吞吐</a><a class="toc-level-2" href="#h-4">4. 运行与书面推导</a>
+      </aside>
+      <article class="doc-content">
+        <p>先修 <a href="lec12.html">L12</a>。约 2–3 小时。修改 <a href="../../hw/hw06/hw06.py">hw06.py</a>，用 <a href="../../hw/hw06/test_hw06.py">test_hw06.py</a> 验证。独立于调度器，仅根据已有时间戳计算指标。</p>
+<h2 id="h-1">1. Q1：单请求指标</h2>
+<p><code>request_metrics(arrival,token_times)</code> 返回 <code>{"ttft":值,"tpot":值或None,"e2e":值}</code>。</p>
+<ul><li>arrival 和每个时间必须是 Python int 或 float，有限且非负；bool、NaN、无穷、字符串拒绝。</li><li>token_times 是非空 list，严格递增，每项 &gt;= arrival；允许首 token 时间等于 arrival。</li><li>TTFT=首时间-arrival；E2E=末时间-arrival；TPOT=(末-首)/(token数-1)。单 token 的 TPOT 是 None。</li><li>不修改输入；非法值抛 ValueError。正常测试使用可安全表示的有限数，不研究浮点溢出。</li></ul>
+<p>手算 arrival=2，token_times=[5,7,11]，得到 TTFT=3、TPOT=3、E2E=9。请解释为何不能用 9/3 作为定义上的 TPOT，即使这一组碰巧也是 3；再换 arrival=0、times=[5,7,11] 反驳该错误公式。</p>
+<h2 id="h-2">2. Q2：请求等权聚合</h2>
+<p><code>aggregate_metrics(records)</code>：records 是 list，每项 tuple/list 恰含 <code>(arrival,token_times)</code>，沿用 Q1 契约，返回 <code>{"mean_ttft":值或None,"mean_tpot":值或None}</code>。</p>
+<p>TTFT 对所有请求等权平均；TPOT 仅对有两个及以上输出的请求等权平均。空 records 两项都为 None；全是单 token 时 mean_tpot=None，不能把“无定义”伪装成零延迟。任何非法记录都抛 ValueError，不可先过滤掉它。不修改输入。</p>
+<p><code>[(0,[1,5]),(0,[2,3,4,5]),(1,[2])]</code>：mean_ttft=4/3，mean_tpot=(4+1)/2=2.5。按所有 token 间隔加权会得到 1.75，那是另一个统计量。</p>
+<h2 id="h-3">3. Q3：达标请求吞吐</h2>
+<p><code>slo_goodput(records,ttft_limit,tpot_limit,duration)</code> 返回达标请求数 / duration。</p>
+<ul><li>records 沿用 Q2；两个 limit 是有限非负 int/float，不含 bool；duration 同类型但必须 &gt;0。</li><li>窗口固定 <code>[0,duration]</code>，所有 arrival 和输出时间必须落在窗口内，包括不达标的请求。</li><li>TTFT &lt;= ttft_limit 且 TPOT &lt;= tpot_limit 才达标，等号算通过。单 token 请求只检查 TTFT。</li><li>空 records 返回 0，但仍验证全部参数；非法输入 ValueError；保留输入。</li></ul>
+<p>窗口 6、限制 2/2：<code>[(0,[2,4]),(0,[2,6]),(1,[2])]</code> 有两条通过，返回 2/6。若窗口改成 5，应该报错，而不是把第二条悄悄丢掉。</p>
+<h2 id="h-4">4. 运行与书面推导</h2>
+<p>从课程根目录运行（个人主页仓库先进入 <code>_courses/deepinfer</code>）：</p>
+<pre><code class="language-bash">python course/tools/grade.py hw06 --question q1 --unlock
+python course/tools/grade.py hw06 --question q2 --hint 1
+python course/tools/grade.py hw06</code></pre>
+<p>在自己的笔记中完成：单请求公式推导；请求平均与间隔平均的反例；单 token 策略；改变观察窗口后 goodput 的变化；为什么 Python 运行秒数不等于模拟器 tick。时间单位始终写在表头。</p>
+<p>本批 HW6 30 分：Q1/Q2/Q3 各 5；公式和单位 6；两个错误口径的反例 6；不用答案口头说明 singleton 和窗口边界 3。测试只占代码部分，不会自动批改书面推导。</p>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <a class="doc-nav-card" href="hw05.html"><span>← 上一篇</span><strong>HW5：前缀命中与容量推导</strong></a><span class="doc-nav-card disabled"><span>下一篇 →</span><strong>没有了</strong></span>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>

@@ -66,6 +66,12 @@ DOCS = [
     dict(src="course/hw/hw05/README.md", out="hw05.html", category="作业", label="作业 5", key="w5-hw5", title_zh="HW5：前缀命中与容量推导"),
     dict(src="course/projects/project2/README.md", out="project2.html", category="项目", label="项目 2 Phase1", key="w5-p2phase1", title_zh="Project2 Phase1：请求生命周期"),
     dict(src="course/projects/project2/report_template.md", out="project2-report.html", category="报告模板", label="项目 2 报告", key=None, title_zh="Project2 Phase1 报告模板"),
+    dict(src="course/lectures/lec11.md", out="lec11.html", category="讲义", label="讲义 11", key="w6-l11", title_zh="第 11 讲：Continuous batching"),
+    dict(src="course/lectures/lec12.md", out="lec12.html", category="讲义", label="讲义 12", key="w6-l12", title_zh="第 12 讲：Chunked prefill 与延迟指标"),
+    dict(src="course/labs/lab05/README.md", out="lab05.html", category="实验", label="实验 5", key="w6-lab5", title_zh="Lab5：Decode 优先与分块预填充"),
+    dict(src="course/hw/hw06/README.md", out="hw06.html", category="作业", label="作业 6", key="w6-hw6", title_zh="HW6：延迟、聚合与 SLO goodput"),
+    dict(src="course/projects/project2_scheduler/README.md", out="project2-scheduler.html", category="项目", label="项目 2 Phase2", key="w6-p2phase2", title_zh="Project2 Phase2：逐迭代调度"),
+    dict(src="course/projects/project2_scheduler/report_template.md", out="project2-scheduler-report.html", category="报告模板", label="Phase2 报告", key=None, title_zh="Project2 Phase2 报告模板"),
 ]
 
 for doc in DOCS:
@@ -428,7 +434,7 @@ def build_page(doc: dict, body: str, headings: list[tuple[int, str, str]]) -> st
         <span>源文件：<a href="{html.escape(source_rel)}">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
-      {actions}
+{("      " + actions) if actions else ""}
     </div>
 
     <div class="doc-layout">

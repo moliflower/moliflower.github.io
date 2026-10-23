@@ -37,6 +37,9 @@ ASSIGNMENTS = {
     "lab04": COURSE_ROOT / "labs" / "lab04",
     "hw05": COURSE_ROOT / "hw" / "hw05",
     "project2": COURSE_ROOT / "projects" / "project2",
+    "lab05": COURSE_ROOT / "labs" / "lab05",
+    "hw06": COURSE_ROOT / "hw" / "hw06",
+    "project2_scheduler": COURSE_ROOT / "projects" / "project2_scheduler",
 }
 
 # Selectors are explicit: a misspelled question must never silently run 0 tests.

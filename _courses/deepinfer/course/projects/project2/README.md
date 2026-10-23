@@ -1,6 +1,6 @@
 # Project2：Mini Engine · Phase1 请求生命周期
 
-本次仅发布 Phase1：有限容量下的 FIFO 准入、等待、结束和释放。约 3–4 小时。先修 Lab4、HW5；纯 Python，无模型权重或 GPU。后续阶段的逐 token 执行、continuous batching、chunked prefill、sampling 与 benchmark 尚未发布，不算本阶段通过条件。
+本页是 Phase1：有限容量下的 FIFO 准入、等待、结束和释放。约 3–4 小时。先修 Lab4、HW5；纯 Python，无模型权重或 GPU。[Phase2 逐迭代调度](../project2_scheduler/README.md) 已单独发布，保持本阶段代码和通过条件不变。Sampling、真实设备 benchmark 与模型执行集成仍待后续发布。
 
 ## 1. 把输入事件变成可观察的状态
 
@@ -58,4 +58,4 @@ python course/tools/grade.py project2
 
 复制 [报告模板](report_template.md) 写一页报告。交付代码、上表的实际快照、一次调试记录，以及一个自己设计的队首阻塞案例。阶段自评 50 分：Q1 10、Q2 20、守恒/快照解释 10、报告与反例 10，不并入 Unit1 分母。
 
-必须讲清：什么时候释放容量；为什么每条请求独立向上取整；为何历史快照要复制；为什么这里没有测到 TTFT/TPOT。后续发布从 L11/L12 与 Lab5 调度开始，不提前要求你完成未发布接口。
+必须讲清：什么时候释放容量；为什么每条请求独立向上取整；为何历史快照要复制；为什么这里没有测到 TTFT/TPOT。完成后按 [L11](../../lectures/lec11.md) → [L12](../../lectures/lec12.md) → [Lab5](../../labs/lab05/README.md) → [Phase2](../project2_scheduler/README.md) 继续；Phase2 暂不接入页池，不能把并发数当显存容量。

@@ -70,6 +70,15 @@ function render(route, entry = path.join(site, "index.html")) {
   return { course: context.window.COURSE, html };
 }
 const { course } = render("home");
+const weekSix = course.weeks.find((week) => week.n === 6);
+assert.equal(weekSix.items.length, 5);
+for (const item of weekSix.items) {
+  assert.ok(!item.soon && item.key && item.link, `Week 6 item is not published: ${item.title}`);
+}
+const practiceHtml = render("practice").html;
+for (const note of ["lab05.html", "hw06.html", "project2-scheduler.html"]) {
+  assert.ok(practiceHtml.includes(`href="notes/${note}"`), `practice center omits ${note}`);
+}
 for (const week of course.weeks)
   for (const item of week.items) {
     if (item.soon) assert.ok(!item.title.includes("已发布"), `contradictory release state: ${item.title}`);

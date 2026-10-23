@@ -5,6 +5,19 @@ Prediction answers are strings; the grader never evaluates input as code.
 """
 
 SPECS = {
+    "lab05": {
+        "q1": ("TestDecode", "两条 ready decode，预算为 1，本轮选几条？", "1", "每条 decode 消耗一个 token 预算。", "先验证全部输入，再按顺序筛选 prefill==0。", "返回 ready ID 列表的前 token_budget 项，不改 active。"),
+        "q2": ("TestPlan", "预算 4，decode 用掉 1，prefill 剩余 5，chunk=2，给它几个 token？", "2", "同时看三种限制。", "先分配 decode，再按原顺序分配 prefill。", "每条 min(prefill,chunk,剩余预算)，只选一次，不重复填 chunk。"),
+    },
+    "hw06": {
+        "q1": ("TestLatency", "arrival=2，输出时间 [5,7,11]，TTFT？", "3", "首 token 时间减到达时间。", "TPOT 不包括等待首 token 的时间。", "TTFT=首-arrival；TPOT=(末-首)/(n-1)，n=1 返回 None。"),
+        "q2": ("TestAggregate", "两个请求 TPOT 分别为 4 和 1，请求等权均值？", "2.5", "不是按 token 数加权。", "先算各请求指标，再分别平均。", "TPOT 排除 None；无有效数据时返回 None，不能填零。"),
+        "q3": ("TestGoodput", "10 秒窗口中 3 条请求满足两项 SLO，goodput？", "0.3", "单位是请求/秒。", "等号满足 SLO，单输出只判断 TTFT。", "先验证所有记录和窗口，再数达标请求，除以 duration。"),
+    },
+    "project2_scheduler": {
+        "q1": ("TestPolicy", "请求本轮 prefill 刚完成，还能同轮再执行 decode 吗？输入 yes/no", "no", "一轮只按轮开始状态决策一次。", "迁移 Lab5 的纯函数。", "先验证，再做 decode 与 prefill 两轮选择；每 ID 只出现一次。"),
+        "q2": ("TestSimulation", "t=0 开始、prompt=1、输出长度=1，首输出在第几 tick？", "1", "最后一个 prefill chunk 就能产生首输出。", "先加入到达请求、准入、决策，再统一执行到 t+1。", "轮末记录输出并移出完成者；下一轮补位；无工作则跳到下一到达；复制每张快照。"),
+    },
     "lab04": {
         "q1": ("TestAllocate", "容量 3，已用 2，再申请 2 是否成功？输入 yes/no", "no", "先检查总空闲数。", "失败前不能改 refs。", "按 ID 升序选 refs==0 的块，全部可用后设置为 1。"),
         "q2": ("TestRetain", "引用数 1 的块再被一个请求引用，引用数？", "2", "共享不复制物理块。", "先验证整批 ID。", "拒绝重复、空闲与越界 ID，再统一加一。"),

@@ -61,7 +61,7 @@
 | 3 | [L5 Attention](lectures/lec05.md) · [L6 FlashAttention](lectures/lec06.md) | [Lab2](labs/lab02/README.md) | Lab2 Q7/Q8 代价练习 | P1 Phase2 |
 | 4 | [L7 KV cache](lectures/lec07.md) · [L8 Quantization](lectures/lec08.md) | [Lab3](labs/lab03/README.md) | [HW1](hw/hw01/README.md) · [HW2](hw/hw02/README.md) · [Quiz2](quizzes/quiz02.md)，可延长节奏 | P1 报告 |
 | 5 | [L9 共享块池](lectures/lec09.md) · [L10 前缀缓存](lectures/lec10.md) | [Lab4 有限块池](labs/lab04/README.md) | [HW5 前缀与容量](hw/hw05/README.md) | [Project2 Phase1](projects/project2/README.md)：准入与释放 |
-| 6 | L11 Continuous batching · L12 Chunked prefill | Lab 5: Scheduler（待发布） | HW 6: Scheduling（待发布） | P2 checkpoint 1 |
+| 6 | [L11 Continuous batching](lectures/lec11.md) · [L12 Chunked prefill](lectures/lec12.md) | [Lab5 调度器](labs/lab05/README.md) | [HW6 延迟与 goodput](hw/hw06/README.md) | [P2 Phase2](projects/project2_scheduler/README.md)：轨迹与实验 |
 | 7 | L13 Sampling · L14 Speculative decoding | Lab 6: Spec decode（待发布） | HW 7: Sampling（待发布） | P2 checkpoint 2 |
 | 8 | L15 Engine architecture · L16 Async/CUDA Graph | Lab 7: Engine trace（待发布） | HW 8: Engine（待发布） | **P2 due** |
 | 9 | L17 MoE · L18 EP/EPLB | Lab 8: Top-k gate（待发布） | HW 9: MoE（待发布） | Project 3: EPLB Simulator 发布 |
@@ -72,7 +72,7 @@
 | 14 | L27 Final workshop · L28 Mock interview | — | — | Final project |
 | 15 | L29 Presentations · L30 Wrap-up | — | — | **Final due** |
 
-> **发布状态（2026-10-23）**：Python 起步、预备、Unit1，以及 Unit2 第 5 周已发布。第 5 周包含 L9/L10、Lab4、HW5 和 Project2 Phase1；第 6–15 周及 Project2 后续阶段待发布。15 周是蓝图；零基础起步另计，第 4 周内容建议拆成多周。新批次验收与 Unit1 的 100 分分开。
+> **发布状态（2026-10-24）**：Python 起步、预备、Unit1，以及 Unit2 第 5–6 周已发布。第 6 周新增 L11/L12、Lab5、HW6、Project2 Phase2 与 18 组模拟实验；第 7–15 周及 Project2 后续阶段待发布。15 周是蓝图；零基础起步另计，第 4 周内容建议拆成多周。每批验收与 Unit1 的 100 分分开。
 
 ---
 
@@ -86,7 +86,7 @@
 | Quiz1–2 | 10 | 两份原始成绩合计乘 0.5 |
 | 总分 | 100 | 只计算已发布的 Unit1 |
 
-详细规则见 [掌握度与评分](ASSESSMENT.md)。Python 起步与调试预备不计分；Unit2 第 5 周单独验收，不进入 Unit1 分母。自动测试与浏览器勾选都不能代替书面推导和口头解释。
+详细规则见 [掌握度与评分](ASSESSMENT.md)。Python 起步与调试预备不计分；Unit2 第 5、6 周分别验收，不进入 Unit1 分母。自动测试与浏览器勾选都不能代替书面推导和口头解释。
 
 ---
 

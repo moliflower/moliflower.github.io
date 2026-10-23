@@ -29,6 +29,9 @@
 | [L9 共享块池](lectures/lec09.md) | L7、Lab3、HW2 | Lab4 | 失败无部分修改、引用数与所有者一致 |
 | [L10 前缀缓存](lectures/lec10.md) | L9、Lab4 | HW5 | 区分公共前缀、完整块命中、共享容量与淘汰 |
 | [Mini Engine Phase1](projects/project2/README.md) | Lab4、HW5 | Q1/Q2、轨迹与报告 | 容量守恒、FIFO 等待、释放重试与独立快照 |
+| [L11 Continuous batching](lectures/lec11.md) | Phase1、L9/L10 | Lab5 Q1 | 迭代边界、并发数与 token 预算不能混淆 |
+| [L12 Chunked prefill](lectures/lec12.md) | L11 | Lab5 Q2、HW6 | 首 token、请求等权 TPOT、SLO 与统计窗口 |
+| [Mini Engine Phase2](projects/project2_scheduler/README.md) | Lab5、HW6 | Q1/Q2、18 组实验与报告 | 精确时间轨迹、独立快照、模型局限 |
 
 “会讲一个结论”还不够。每章至少写一个正常输入、一个边界输入，并说明测试期望从哪里来。可复用 [作业记录模板](WORKSHEET.md)。
 
@@ -51,6 +54,6 @@
 
 先把“读过 DeepInfer”变成具体证据：能重现一个失败、解释一个数据布局、从假设推导成本、复现实验并说出结论的适用范围。Kernel Zoo 报告是第一份这样的作品。
 
-本仓库的 15 周是课程蓝图，零基础起步与补课时间另计。当前可运行材料覆盖 Unit1 和 Unit2 第 5 周；逐 token 调度、通信与负载均衡、后续 C++/GPU 桥接仍待发布。未发布部分没有被现有测试验证，也不计入成绩。长期准备还需要数据结构、Linux/C++、体系结构、并发和网络，见 [长期路线](../doc/study_plan_zh.md)。
+本仓库的 15 周是课程蓝图，零基础起步与补课时间另计。当前可运行材料覆盖 Unit1 和 Unit2 第 5–6 周；采样、通信与负载均衡、后续 C++/GPU 桥接仍待发布。逐迭代调度目前仅为固定 tick 模型，不含真实设备或 KV 集成。未发布部分没有被现有测试验证，也不计入成绩。长期准备还需要数据结构、Linux/C++、体系结构、并发和网络，见 [长期路线](../doc/study_plan_zh.md)。
 
 每完成一个阶段保留四样材料：自己的实现、能说明问题的测试、可重跑的实验命令、含局限性的解释。招聘时间按目标公司的实际公告确认；这里不把“28 届”推断成固定报名日期。
