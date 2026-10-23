@@ -3,6 +3,12 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 const site = process.argv[2] ? path.resolve(process.argv[2]) : path.resolve(__dirname, "../deepinfer/course/site");
+const rootEntry = path.resolve(site, "../../index.html");
+const rootHtml = fs.readFileSync(rootEntry, "utf8");
+assert.ok(rootHtml.includes('id="content"'), "root entry must contain the course application");
+assert.ok(rootHtml.includes('data-course-base="course/site/"'), "root entry must declare its asset prefix");
+assert.match(rootHtml, /course\/site\/app\.js\?v=[a-f0-9]{12}/, "root entry must invalidate outdated script caches");
+assert.ok(!/http-equiv\s*=\s*["']refresh|<iframe|<base\s/i.test(rootHtml), "root entry must not redirect or wrap another page");
 const scripts = Object.fromEntries(["data", "storage", "app"].map((name) => [name, fs.readFileSync(path.join(site, `${name}.js`), "utf8")]));
 let links = 0;
 const checked = new Set();
@@ -10,7 +16,8 @@ function checkLinks(html, file) {
   for (const match of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
     const url = match[1].replaceAll("&amp;", "&");
     if (/^(https?:|mailto:|#\/)/.test(url)) continue;
-    const [name, fragment] = url.split("#");
+    const [resource, fragment] = url.split("#");
+    const name = resource.split("?")[0];
     const target = name ? path.resolve(path.dirname(file), decodeURIComponent(name)) : file;
     assert.ok(fs.existsSync(target), `${file}: missing ${url}`);
     if (fragment && !fragment.startsWith("/") && target.endsWith(".html")) {
@@ -20,7 +27,7 @@ function checkLinks(html, file) {
     links++;
   }
 }
-function render(route) {
+function render(route, entry = path.join(site, "index.html")) {
   const elements = new Map();
   function element(selector) {
     if (!elements.has(selector))
@@ -37,6 +44,9 @@ function render(route) {
         },
         addEventListener() {},
         setAttribute() {},
+        getAttribute(name) {
+          return selector === "html" && name === "data-course-base" && entry === rootEntry ? "course/site/" : null;
+        },
         focus() {},
       });
     return elements.get(selector);
@@ -51,16 +61,35 @@ function render(route) {
   const html = elements.get("#content").innerHTML;
   assert.ok(html.includes("<h1>"), `route ${route} did not render`);
   assert.ok(!html.includes("undefined"), `route ${route} has missing data`);
-  checkLinks(html, path.join(site, "index.html"));
-  return context.window.COURSE;
+  checkLinks(html, entry);
+  const navigation = elements.get("#nav").innerHTML;
+  assert.ok(
+    [...navigation.matchAll(/href="([^"]+)"/g)].every((match) => match[1].startsWith("#/")),
+    "navigation must stay on the current entry"
+  );
+  return { course: context.window.COURSE, html };
 }
-const course = render("home");
+const { course } = render("home");
 for (const week of course.weeks)
   for (const item of week.items) {
     if (item.soon) assert.ok(!item.title.includes("已发布"), `contradictory release state: ${item.title}`);
   }
 for (const item of course.nav) {
-  render(item.id);
+  const legacy = render(item.id);
+  const root = render(item.id, rootEntry);
+  const legacyLinks = [...legacy.html.matchAll(/(?:href|src)="([^"]+)"/g)].map((match) => match[1]);
+  const rootLinks = [...root.html.matchAll(/(?:href|src)="([^"]+)"/g)].map((match) => match[1]);
+  assert.equal(rootLinks.length, legacyLinks.length);
+  rootLinks.forEach((link, index) => {
+    const actual = new URL(link.replaceAll("&amp;", "&"), "https://example.com/deepinfer/");
+    if (legacyLinks[index].startsWith("#")) {
+      assert.equal(actual.pathname, "/deepinfer/", "hash navigation must retain the short address");
+      assert.equal(actual.hash, legacyLinks[index]);
+    } else {
+      const expected = new URL(legacyLinks[index].replaceAll("&amp;", "&"), "https://example.com/deepinfer/course/site/index.html");
+      assert.equal(actual.href, expected.href, `${item.id}: root entry changed link target`);
+    }
+  });
   checked.add(item.id);
 }
 assert.equal(checked.size, course.nav.length);
@@ -70,10 +99,13 @@ for (const name of notes) {
   const file = path.join(site, "notes", name);
   const html = fs.readFileSync(file, "utf8");
   checkLinks(html, file);
+  const returnPath = process.argv.includes("--offline") ? "../../../index.html" : "../../../";
+  assert.ok(html.includes(`href="${returnPath}#/calendar"`), `${name}: return link must use the root entry`);
   const key = html.match(/id="doc-done"[^>]+data-key="([^"]+)"/);
   if (key) assert.ok(progressKeys.has(key[1]), `orphan progress key ${key[1]}`);
 }
 checkLinks(fs.readFileSync(path.join(site, "index.html"), "utf8"), path.join(site, "index.html"));
+checkLinks(rootHtml, rootEntry);
 console.log(
-  `PASS: ${checked.size} routes render, ${notes.length} notes, ${links} local references, progress keys valid (structural checks; no browser layout)`
+  `PASS: ${checked.size} routes at both entries, no redirect, equivalent link targets, ${notes.length} notes, ${links} local references, progress keys valid (structural checks; no browser layout)`
 );

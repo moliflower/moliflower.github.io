@@ -4,6 +4,8 @@
 
 The leading underscore keeps these files out of Jekyll processing. The deployment workflow copies them into `_site/deepinfer/` after Jekyll and PurgeCSS finish, preserving Markdown downloads, relative links, and the course's independent styles.
 
+The builder generates a complete homepage at `deepinfer/index.html`, not a redirect or iframe. It reuses `course/site/index.html` as its template and keeps a relative asset prefix for both online and offline use. Hash navigation stays at `/deepinfer/#/...`, and lecture return links point back to this entry. The old `course/site/index.html` remains functional for existing bookmarks; edit the template rather than the generated root entry. The ZIP also includes the root entry.
+
 Edit Markdown, Python assignments, and the course site's HTML/CSS/JS directly under `deepinfer/course/`. Run these commands from this repository's root:
 
 ```powershell

@@ -1,1 +1,74 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DeepInfer 101 · 从算子到推理系统</title><meta http-equiv="refresh" content="0;url=course/site/index.html"></head><body><a href="course/site/index.html">进入 DeepInfer 101 课程</a></body></html>
+<!doctype html>
+<html data-course-base="course/site/" lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DeepInfer 101: a CS61A-style course for GPU kernels and LLM inference.">
+  <title>DeepInfer 101 · 从算子到推理系统</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="course/site/styles.css?v=c2d2a71e7b27">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="course-sidebar">
+      <div class="brand">
+        <div class="brand-mark">DI</div>
+        <div>
+          <div class="brand-title">DeepInfer 101</div>
+          <div class="brand-sub">算子 → 推理系统</div>
+        </div>
+      </div>
+
+      <nav id="nav" class="nav" aria-label="课程导航"></nav>
+
+      <div class="progress-card">
+        <div class="progress-head">
+          <span>学习进度</span>
+          <span id="progress-text">0%</span>
+        </div>
+        <div class="progress-bar" aria-hidden="true"><div id="progress-fill"></div></div>
+        <button id="reset-progress" class="link-btn" type="button">重置进度</button>
+      </div>
+
+      <div class="sidebar-footer">
+        <button id="theme-toggle" class="theme-btn" type="button">☀️ 亮色</button>
+        <a href="deepinfer-101-course.zip" download>下载课程代码</a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button id="menu-toggle" class="menu-btn" type="button" aria-label="打开菜单" aria-controls="course-sidebar" aria-expanded="false">☰</button>
+        <div id="crumbs" class="crumbs">首页</div>
+        <div class="top-actions">
+          <a class="ghost-btn" href="START_HERE.md">从这里开始</a>
+          <a class="ghost-btn" href="doc/study_plan_zh.md">46 周路线</a>
+        </div>
+      </header>
+
+      <div id="content" class="content" tabindex="-1"></div>
+      <p id="storage-status" class="small muted" role="status"></p>
+
+      <footer class="footer">
+        <span>DeepInfer 101 · 公开自学课程 · 灵感来自 <a href="https://cs61a.org/">CS61A</a></span>
+        <span>先写对，再写快，再讲清楚。</span>
+      </footer>
+    </main>
+  </div>
+
+  <noscript>
+    <p style="padding: 24px; color: #fff; background: #111;">
+      这个网站需要 JavaScript 才能渲染课程页面。请用现代浏览器打开，
+      或直接阅读 <code>course/README.md</code> 里的 Markdown 文件。
+    </p>
+  </noscript>
+
+  <script src="course/site/storage.js?v=548aeeba52ac"></script>
+  <script src="course/site/data.js?v=f38ddb0d48d3"></script>
+  <script src="course/site/app.js?v=2f9ed05f2cc1"></script>
+</body>
+</html>
