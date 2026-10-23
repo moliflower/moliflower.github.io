@@ -53,7 +53,13 @@ function render(route, entry = path.join(site, "index.html")) {
   }
   const context = {
     window: { addEventListener() {}, scrollTo() {} },
-    document: { readyState: "complete", documentElement: element("html"), querySelector: element, querySelectorAll: () => [], addEventListener() {} },
+    document: {
+      readyState: "complete",
+      documentElement: element("html"),
+      querySelector: element,
+      querySelectorAll: () => [],
+      addEventListener() {},
+    },
     location: { hash: `#/${route}` },
     localStorage: { getItem: () => "null", setItem() {} },
   };
@@ -107,6 +113,8 @@ const notes = fs.readdirSync(path.join(site, "notes")).filter((name) => name.end
 for (const name of notes) {
   const file = path.join(site, "notes", name);
   const html = fs.readFileSync(file, "utf8");
+  assert.match(html, /\.\.\/doc\.js\?v=[a-f0-9]{12}/, `${name}: reader code must be cache-versioned`);
+  assert.ok(html.includes('id="doc-toc"'), `${name}: accessible chapter contents missing`);
   checkLinks(html, file);
   const returnPath = process.argv.includes("--offline") ? "../../../index.html" : "../../../";
   assert.ok(html.includes(`href="${returnPath}#/calendar"`), `${name}: return link must use the root entry`);

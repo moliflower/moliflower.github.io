@@ -9,7 +9,7 @@
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=735a586a6ca2">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -25,7 +25,7 @@
       <div class="eyebrow">作业 6</div>
       <h1>HW6：延迟、聚合与 SLO goodput</h1>
       <div class="doc-meta">
-        <span>纯阅读约 4 分钟 · 动手另计</span>
+        <span>浏览文字约 8 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../hw/hw06/README.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -33,31 +33,47 @@
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
-        <a class="toc-level-2" href="#h-1">1. Q1：单请求指标</a><a class="toc-level-2" href="#h-2">2. Q2：请求等权聚合</a><a class="toc-level-2" href="#h-3">3. Q3：达标请求吞吐</a><a class="toc-level-2" href="#h-4">4. 运行与书面推导</a>
-      </aside>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 6 节</summary>
+        <nav aria-label="本页章节">
+        <a class="toc-level-2" href="#h-1">1. 先画一条请求的一生</a><a class="toc-level-2" href="#h-2">2. Q1：单请求指标</a><a class="toc-level-2" href="#h-3">3. Q2：请求等权，分母由问题决定</a><a class="toc-level-2" href="#h-4">4. Q3：SLO goodput 数的是达标请求</a><a class="toc-level-2" href="#h-5">5. 渐进自测</a><a class="toc-level-2" href="#h-6">6. 运行与交付</a>
+        </nav>
+      </details>
       <article class="doc-content">
-        <p>先修 <a href="lec12.html">L12</a>。约 2–3 小时。修改 <a href="../../hw/hw06/hw06.py">hw06.py</a>，用 <a href="../../hw/hw06/test_hw06.py">test_hw06.py</a> 验证。独立于调度器，仅根据已有时间戳计算指标。</p>
-<h2 id="h-1">1. Q1：单请求指标</h2>
-<p><code>request_metrics(arrival,token_times)</code> 返回 <code>{"ttft":值,"tpot":值或None,"e2e":值}</code>。</p>
-<ul><li>arrival 和每个时间必须是 Python int 或 float，有限且非负；bool、NaN、无穷、字符串拒绝。</li><li>token_times 是非空 list，严格递增，每项 &gt;= arrival；允许首 token 时间等于 arrival。</li><li>TTFT=首时间-arrival；E2E=末时间-arrival；TPOT=(末-首)/(token数-1)。单 token 的 TPOT 是 None。</li><li>不修改输入；非法值抛 ValueError。正常测试使用可安全表示的有限数，不研究浮点溢出。</li></ul>
-<p>手算 arrival=2，token_times=[5,7,11]，得到 TTFT=3、TPOT=3、E2E=9。请解释为何不能用 9/3 作为定义上的 TPOT，即使这一组碰巧也是 3；再换 arrival=0、times=[5,7,11] 反驳该错误公式。</p>
-<h2 id="h-2">2. Q2：请求等权聚合</h2>
-<p><code>aggregate_metrics(records)</code>：records 是 list，每项 tuple/list 恰含 <code>(arrival,token_times)</code>，沿用 Q1 契约，返回 <code>{"mean_ttft":值或None,"mean_tpot":值或None}</code>。</p>
-<p>TTFT 对所有请求等权平均；TPOT 仅对有两个及以上输出的请求等权平均。空 records 两项都为 None；全是单 token 时 mean_tpot=None，不能把“无定义”伪装成零延迟。任何非法记录都抛 ValueError，不可先过滤掉它。不修改输入。</p>
-<p><code>[(0,[1,5]),(0,[2,3,4,5]),(1,[2])]</code>：mean_ttft=4/3，mean_tpot=(4+1)/2=2.5。按所有 token 间隔加权会得到 1.75，那是另一个统计量。</p>
-<h2 id="h-3">3. Q3：达标请求吞吐</h2>
+        <p>先修 <a href="lec12.html">L12</a>。建议 2–3 小时，先手算后编码。修改 <a href="../../hw/hw06/hw06.py">hw06.py</a>，用 <a href="../../hw/hw06/test_hw06.py">test_hw06.py</a> 验证。此作业独立于调度器，接受已有的完成请求时间戳，不需要运行模型，也不把 Python 执行耗时当成请求延迟。</p>
+<h2 id="h-1">1. 先画一条请求的一生</h2>
+<figure class="textbook-figure"><a href="../../figures/week06-metrics.svg" target="_blank" rel="noopener" aria-label="查看大图：从原始输出时间戳推导TTFT、TPOT和E2E"><img src="../../figures/week06-metrics.svg" alt="从原始输出时间戳推导TTFT、TPOT和E2E" loading="lazy"></a><figcaption>从原始输出时间戳推导TTFT、TPOT和E2E<span class="figure-zoom">小屏可横向滑动图解；点击图解可查看原图</span></figcaption></figure>
+<p>到达 2，首输出 5，后续输出 7、11。先在纸上写三个区间：等待首输出为 3，两个输出间隔为 2、4；最后才做平均。对照图中的刻度，确认你的 TPOT 分母为什么是 2 而不是 3。后面每题都沿用“先核实数据 → 逐请求算指标 → 再聚合”的顺序。</p>
+<h2 id="h-2">2. Q1：单请求指标</h2>
+<p><code>request_metrics(arrival,token_times)</code> 返回 <code>{"ttft":值,"tpot":值或None,"e2e":值}</code>。接口与原题一致：</p>
+<ul><li>arrival 和每个时间必须是 Python int/float，有限且非负；拒绝 bool、NaN、无穷、字符串。</li><li>token_times 是非空 list、严格递增，每项 &gt;= arrival；允许首时间等于 arrival。</li><li>TTFT=首时间−arrival；E2E=末时间−arrival；TPOT=(末−首)/(token数−1)。单输出 TPOT=None。</li><li>不修改输入；非法值抛 ValueError。正常测试使用可安全表示的有限数，不研究浮点溢出。</li></ul>
+<p>先完成一个只检查合法两输出数据的最小版本：<code>arrival=1, times=[3,7]</code>，三个结果应是 2、4、6。然后加入多输出，再专门处理单输出；最后加入容器、数值、顺序验证。不要先过滤掉非法时间，因为过滤会悄悄改变 token 数和统计意义。</p>
+<table><thead><tr><th>手算输入</th><th>TTFT</th><th>TPOT</th><th>E2E</th><th>学习目的</th></tr></thead><tbody><tr><td>2，[5,7,11]</td><td>3</td><td>3</td><td>9</td><td>逐间隔均值等于端点公式</td></tr><tr><td>0，[5,7,11]</td><td>5</td><td>3</td><td>11</td><td>排队改变不应改变 TPOT</td></tr><tr><td>1，[4]</td><td>3</td><td>None</td><td>3</td><td>无间隔不是零间隔</td></tr><tr><td>0，[0]</td><td>0</td><td>None</td><td>0</td><td>通用指标允许零 TTFT</td></tr></tbody></table>
+<p>最小反例：<code>E2E/n</code> 在第一行碰巧为 3，但在第二行变为 11/3，击穿错误公式。<code>times=[2,2]</code> 违反严格递增，不能靠排序或去重修复。检查点：每个 n&gt;1 合法例子都应满足 <code>E2E=TTFT+(n−1)*TPOT</code>；单输出不要把 None 参与乘法。</p>
+<h2 id="h-3">3. Q2：请求等权，分母由问题决定</h2>
+<p><code>aggregate_metrics(records)</code> 的 records 必须为 list，每项 tuple/list 恰含 <code>(arrival,token_times)</code>，沿用 Q1 契约。返回 <code>{"mean_ttft":值或None,"mean_tpot":值或None}</code>。TTFT 对全部请求等权；TPOT 仅对有两个及以上输出的请求等权。空 records 两项 None；全是单输出时 mean_tpot=None。任何非法记录都要抛 ValueError，不修改输入。</p>
+<p>思考顺序：先复用 Q1 得到逐请求字典；把所有 TTFT 放入一列，把非 None 的 TPOT 放另一列；分别记录两个分母；最后求均值。不要一边遍历一边把 token 数加进请求分母，也不要用 <code>value or 0</code> 抹去“无定义”。</p>
+<pre><code class="language-text">records = [(0,[1,5]), (0,[2,3,4,5]), (1,[2])]
+TTFT 列 = [1,2,1]             → 4/3
+有定义的 TPOT 列 = [4,1]     → 2.5
+全部 ITL = [4,1,1,1]          → 1.75（不是本题口径）</code></pre>
+<p>这是最小的有区分力练习：两个非单输出请求有不同数量的间隔，才能辨别请求平均与间隔平均；再加一个单输出，才能辨别 None 的排除规则。检查点：追加一条单输出请求会改变 mean_ttft，却不改变 mean_tpot；给所有 arrival 和输出时间统一加 10，各项延迟均不变。</p>
+<h2 id="h-4">4. Q3：SLO goodput 数的是达标请求</h2>
 <p><code>slo_goodput(records,ttft_limit,tpot_limit,duration)</code> 返回达标请求数 / duration。</p>
-<ul><li>records 沿用 Q2；两个 limit 是有限非负 int/float，不含 bool；duration 同类型但必须 &gt;0。</li><li>窗口固定 <code>[0,duration]</code>，所有 arrival 和输出时间必须落在窗口内，包括不达标的请求。</li><li>TTFT &lt;= ttft_limit 且 TPOT &lt;= tpot_limit 才达标，等号算通过。单 token 请求只检查 TTFT。</li><li>空 records 返回 0，但仍验证全部参数；非法输入 ValueError；保留输入。</li></ul>
-<p>窗口 6、限制 2/2：<code>[(0,[2,4]),(0,[2,6]),(1,[2])]</code> 有两条通过，返回 2/6。若窗口改成 5，应该报错，而不是把第二条悄悄丢掉。</p>
-<h2 id="h-4">4. 运行与书面推导</h2>
-<p>从课程根目录运行（个人主页仓库先进入 <code>_courses/deepinfer</code>）：</p>
+<p>records 沿用 Q2；两个 limit 是有限非负 int/float，拒绝 bool；duration 同类型但必须 &gt;0。窗口固定 <code>[0,duration]</code>，所有 arrival 和输出时间必须落在其中，连不达标的请求也必须合法。TTFT&lt;=limit 且 TPOT&lt;=limit 才达标，等号通过；单输出只检查 TTFT。空 records 返回 0，但仍验证全部参数。非法 ValueError，不修改输入。</p>
+<p>按三层责任实现：第一层检查参数与所有原始记录；第二层核实每条记录都在窗口内；第三层才计算通过条件并计数。否则你可能把一个越界请求当成“不达标所以不用看”，掩盖无效数据。</p>
+<table><thead><tr><th>窗口 6、限制 2/2</th><th>TTFT</th><th>TPOT</th><th>达标？</th></tr></thead><tbody><tr><td>(0,[2,4])</td><td>2</td><td>2</td><td>是，等号通过</td></tr><tr><td>(0,[2,6])</td><td>2</td><td>4</td><td>否</td></tr><tr><td>(1,[2])</td><td>1</td><td>None</td><td>是，只查 TTFT</td></tr></tbody></table>
+<p>结果是 2/6 请求/时间单位，不是 5/6；5 是输出 token 总数，属于输出吞吐的分子。把窗口改为 5 应报错，因为最后时间 6 越界；改成 8 则结果为 2/8，额外空闲也算观察窗口。最小反例 <code>[(1,[9])]</code>、limit=0/0、duration=8：即使显然不达标，也必须报越界错误。</p>
+<h2 id="h-5">5. 渐进自测</h2>
+<p>先独立回答：为什么 NaN 不适合拿来比较 SLO？为什么空 records、duration=0 仍要报错？若所有时间与 duration 同乘 1000、SLO 也同乘 1000，达标条数与 goodput 数值分别如何变化？</p>
+<details class="study-hint"><summary>解析：有效性、单位与空输入</summary><p>NaN 不是有限时间，比较结果也不能表达正常先后关系，必须先拒绝。空数据不豁免公共参数，duration=0 没有合法吞吐分母。统一换单位不改变达标条数，但 goodput 数值除以 1000；例如每秒 2 个请求等于每毫秒 0.002 个请求。这不是性能下降，而是单位改变。</p></details>
+<details class="study-hint"><summary>实现提示：怎样避免三题各写一份不同的验证？</summary><p>先让 Q1 成为单请求真相来源；Q2 和 Q3 在验证外层形状后调用 Q1，而不是重新猜一套公式。验证窗口仍是 Q3 的额外责任。公共 helper 可以使用，但不要改变三个公开函数名、参数或返回字段。</p></details>
+<h2 id="h-6">6. 运行与交付</h2>
+<p>从课程根目录运行；个人主页仓库先进入 <code>_courses/deepinfer</code>：</p>
 <pre><code class="language-bash">python course/tools/grade.py hw06 --question q1 --unlock
 python course/tools/grade.py hw06 --question q2 --hint 1
 python course/tools/grade.py hw06</code></pre>
-<p>在自己的笔记中完成：单请求公式推导；请求平均与间隔平均的反例；单 token 策略；改变观察窗口后 goodput 的变化；为什么 Python 运行秒数不等于模拟器 tick。时间单位始终写在表头。</p>
-<p>本批 HW6 30 分：Q1/Q2/Q3 各 5；公式和单位 6；两个错误口径的反例 6；不用答案口头说明 singleton 和窗口边界 3。测试只占代码部分，不会自动批改书面推导。</p>
+<p>HW6 30 分保持不变：Q1/Q2/Q3 各 5；公式和单位 6；两个错误口径反例 6；不用答案解释单输出与窗口边界 3。交付代码、单请求的区间图、请求均值与间隔均值两种分母、完整 SLO 判定表。测试只覆盖代码，不自动替你完成书面解释。最后说清楚：来自固定 tick 模拟器的延迟只是虚拟时间；运行本脚本用了多少秒，衡量的是 Python 计算开销，不是模型服务的 TTFT。</p>
       </article>
     </div>
 
@@ -66,7 +82,7 @@ python course/tools/grade.py hw06</code></pre>
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="../storage.js?v=548aeeba52ac"></script>
+  <script src="../doc.js?v=5b7937ad5e19"></script>
 </body>
 </html>

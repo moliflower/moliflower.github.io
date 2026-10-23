@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>自学路线：从已学基础走到推理调度 · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css?v=735a586a6ca2">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../../../#/calendar">← 返回周历</a>
+    <span class="doc-category">课程指南</span>
+    <a class="doc-back" href="../../../#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">自学路线</div>
+      <h1>自学路线：从已学基础走到推理调度</h1>
+      <div class="doc-meta">
+        <span>浏览文字约 9 分钟 · 手算与练习请按正文分段完成</span>
+        <span>源文件：<a href="../../LEARNING_PATH.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+
+    </div>
+
+    <div class="doc-layout">
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 14 节</summary>
+        <nav aria-label="本页章节">
+        <a class="toc-level-2" href="#h-1">1. 先找到真正的课程根目录</a><a class="toc-level-2" href="#h-2">2. 整体地图：前一层给后一层什么</a><a class="toc-level-2" href="#h-3">3. 不按日历赶路，按入口检查前进</a><a class="toc-level-3" href="#h-4">入口 A：第一次写函数</a><a class="toc-level-3" href="#h-5">入口 B：会写，但不知道失败在哪里</a><a class="toc-level-3" href="#h-6">入口 C：准备学习 GPU 执行与算子</a><a class="toc-level-3" href="#h-7">入口 D：从算子到 Attention 和 KV</a><a class="toc-level-3" href="#h-8">入口 E：共享资源与调度</a><a class="toc-level-2" href="#h-9">4. 第 5–6 周的逐站路线</a><a class="toc-level-2" href="#h-10">5. 每一小节都做四件事</a><a class="toc-level-2" href="#h-11">6. 出错时怎样缩小问题</a><a class="toc-level-2" href="#h-12">7. 接口标签不等于物理定律</a><a class="toc-level-2" href="#h-13">8. 两个项目阶段如何连接，而不是假装已经连接</a><a class="toc-level-2" href="#h-14">9. 一章学完如何自检</a>
+        </nav>
+      </details>
+      <article class="doc-content">
+        <p>这一版不新增第 7 周及以后内容，而是重整已经发布的起步、预备和第 1–6 周。讲义是主教材，Lab 是实现练习，HW 是推导与迁移，Project 是组合；外部视频和论文是扩展，不是理解正文的必需替代品。</p>
+<p>如果你以前已经做过，不必重置网站进度或重写正确代码。先用每章的新例子检验理解；解释不清的地方再读对应小节。题号、已有接口和评分分母保持兼容。网站勾选记录的是个人进度，不是考试成绩。</p>
+<h2 id="h-1">1. 先找到真正的课程根目录</h2>
+<p>本课每条 <code>python course/...</code> 命令，都从<strong>能够直接看到 course 文件夹的目录</strong>运行。</p>
+<table><thead><tr><th>你拿到的材料</th><th>从哪里开始</th></tr></thead><tbody><tr><td>网站“下载课程代码”得到的 ZIP</td><td>解压后进入同时含 index.html、START_HERE.md、course 的那层</td></tr><tr><td>moliflower.github.io 源码仓库</td><td>从仓库根执行 <code>cd _courses/deepinfer</code>，然后再执行教材命令</td></tr><tr><td>只打开手机网页</td><td>可以读、手算和看图；Python 测试仍需在电脑本地运行</td></tr></tbody></table>
+<p>先运行一条没有待填空内容的命令：</p>
+<pre><code class="language-bash">python course/foundations/demo.py
+python course/tools/grade.py foundations --question q0</code></pre>
+<p>系统只有 python3 时统一替换 python。Windows 可以使用 <code>./course/run.ps1</code> 启动器。课程核心只用 Python 标准库，不要求先装 PyTorch、CUDA 或模型权重。文件找不到时先检查当前目录，不要先安装一堆依赖。</p>
+<h2 id="h-2">2. 整体地图：前一层给后一层什么</h2>
+<figure class="textbook-figure"><a href="../../figures/learning-map.svg" target="_blank" rel="noopener" aria-label="查看大图：学习地图：实线是已发布的先修链，虚线是尚未完成的引擎集成"><img src="../../figures/learning-map.svg" alt="学习地图：实线是已发布的先修链，虚线是尚未完成的引擎集成" loading="lazy"></a><figcaption>学习地图：实线是已发布的先修链，虚线是尚未完成的引擎集成<span class="figure-zoom">小屏可横向滑动图解；点击图解可查看原图</span></figcaption></figure>
+<p>从图上向下看：我们先知道一个位置怎样找到数据，再知道一个算子怎样复用数据，接着知道 attention 为什么要留下 KV，最后才讨论多请求如何分配空间与时间。直接从调度器开始抄代码，会同时遇到索引、所有权、状态机和指标四种问题。</p>
+<h2 id="h-3">3. 不按日历赶路，按入口检查前进</h2>
+<h3 id="h-4">入口 A：第一次写函数</h3>
+<p>从 <a href="foundations.html">Python 起步</a> 开始。先能解释 return 和 print 的区别，再跟踪 if/for，最后用列表和累计状态解决一个小问题。你不需要先懂矩阵、GPU 或大模型。</p>
+<p>入口检查：<code>values=[2,5]</code>，另写一个新列表把每项加一；改变新列表的第一个元素时，原列表应不变。若不能解释为什么，先不要进入 KV cache 的所有权问题。</p>
+<h3 id="h-5">入口 B：会写，但不知道失败在哪里</h3>
+<p>进入 <a href="prep.html">调试预备</a>。按“读失败 → 手算期望 → 缩小输入 → 定位假设 → 修改 → 回归”做，不把碰巧通过一个输入当成修复。预备的矩阵和副本会反复用于后面课程。</p>
+<h3 id="h-6">入口 C：准备学习 GPU 执行与算子</h3>
+<p>读 <a href="lec01.html">L1</a> 和 <a href="lec02.html">L2</a>，做 Lab0。先只用 Python 跟踪编号、地址和尾部 guard；硬件扩展是第二遍选读，不是第一次开始课程的门槛。</p>
+<p>继续 <a href="lec03.html">L3</a> → Lab1，再读 <a href="lec04.html">L4</a> → Project1 的分块阶段。不要跳过“一格输出由哪些乘积累加”而直接背三重 tile 循环。Project1 的学习顺序不是题号顺序，按项目说明先做依赖项。</p>
+<h3 id="h-7">入口 D：从算子到 Attention 和 KV</h3>
+<p><a href="lec05.html">L5</a> → Lab2 的数值部分，再读 <a href="lec06.html">L6</a> → Lab2 代价部分。先会算一个非均匀 attention 输出，再讨论不保存整张中间矩阵的方法。</p>
+<p><a href="lec07.html">L7</a> → Lab3，随后 <a href="lec08.html">L8</a>。推荐在 L7、L8 都完成后统一做 HW1/2；HW2 的 KV 先修在 L7 才齐，HW1 的完整量化先修到 L8 才齐。不因编号是 HW1 就误以为第一讲后必须全部完成。</p>
+<h3 id="h-8">入口 E：共享资源与调度</h3>
+<p>进入第 5–6 周前，先回答：列表副本与别名是什么？非整除长度如何分页？为什么 <code>t//B</code> 不是物理块 ID？失败前修改了状态会有什么后果？这些问题若不稳，回到预备副本、L7 与 Lab3，而不是在一个大模拟器里一起调试。</p>
+<h2 id="h-9">4. 第 5–6 周的逐站路线</h2>
+<table><thead><tr><th>站点</th><th>先读与手算</th><th>再做</th><th>通过这一站的证据</th></tr></thead><tbody><tr><td>1</td><td>L9：逻辑页、物理块与共享所有权</td><td>Lab4 Q1–Q4</td><td>解释一个非连续页表、一条共享生命周期、一条失败不变式</td></tr><tr><td>2</td><td>L10：公共前缀、完整块、逐请求取整</td><td>HW5 Q1–Q3</td><td>手算命中与容量，指出仍有引用的块为何不可淘汰</td></tr><tr><td>3</td><td>Phase1：有限预留容量下的事件</td><td>Project2 Q1/Q2</td><td>同一输入得到逐事件快照，解释严格 FIFO 的队首阻塞</td></tr><tr><td>4</td><td>L11：迭代边界、到达和请求生命周期</td><td>Lab5 Q1</td><td>在图上标记准入、首输出、结束，区分并发数和本轮预算</td></tr><tr><td>5</td><td>L12：拆 prompt、量时间、选统计分母</td><td>Lab5 Q2、HW6 Q1–Q3</td><td>手算预算和 TTFT/TPOT/goodput，不混用秒与 tick</td></tr><tr><td>6</td><td>Phase2：把策略接到执行循环</td><td>project2_scheduler Q1/Q2</td><td>复现小轨迹、换输入、核对 18 组实验并说明模型边界</td></tr></tbody></table>
+<p>每站可以分几次学习；表里的一站不是必须一天完成的任务。建议一次只读到一个可手算的检查点，然后合上答案做题。章节顶部的文字浏览时长不是学会整章的承诺。</p>
+<h2 id="h-10">5. 每一小节都做四件事</h2>
+<ol><li><strong>预测</strong>：先写输入、单位、预期输出，不执行代码。把“不确定”具体写成一条问题。</li><li><strong>追踪</strong>：画一行表：这一步读什么、改什么、哪些量必须不变。图不是装饰，要指着箭头解释发生了什么。</li><li><strong>实现</strong>：只写当前最小步骤，运行对应测试；不要一口气填完整个项目后再找错。</li><li><strong>迁移</strong>：换一个正常输入、一个边界输入、一个会击穿错误想法的反例；能解释才继续。</li></ol>
+<p>例如分页时，不只会回答 length=10、B=4 需要 3 页，还要能回答 length=0、length=12，以及为什么两条 length=1 的独立请求不能合并后只算一页。正常例子教规则，边界和反例检验你有没有理解规则的适用条件。</p>
+<h2 id="h-11">6. 出错时怎样缩小问题</h2>
+<table><thead><tr><th>现象</th><th>先检查什么</th><th>不要先做什么</th></tr></thead><tbody><tr><td>NotImplementedError</td><td>是否仍是题目给出的待实现函数</td><td>不要误认为 Python 没装好</td></tr><tr><td>数值不对</td><td>手算小输入、累计量初值、mask/归一化顺序</td><td>不要通过放宽误差掩盖明显逻辑错误</td></tr><tr><td>只有第二次调用失败</td><td>输入是否被修改、内部状态是否残留、列表是否共享</td><td>不要只对第二次调用特判</td></tr><tr><td>空输入或非法尾部失败</td><td>参数与全输入验证是否早于状态修改</td><td>不要看到预算耗尽就跳过验证</td></tr><tr><td>时间多一轮或少一轮</td><td>首输出来自哪轮、补位在哪个边界</td><td>不要为了匹配一条轨迹随意加减 1</td></tr><tr><td>吞吐量异常漂亮</td><td>分母是否含空闲、是否把模拟 tick 当秒</td><td>不要把模型假设当成设备测量</td></tr></tbody></table>
+<p>优先用 <code>--question q1 --failfast</code>；需要提示时用 <code>--hint 1</code>，再逐层展开。参考答案用于事后对照，不是测试结果本身。先写下自己的理由再看参考，可以避免“看得懂答案”冒充“能独立写出”。</p>
+<h2 id="h-12">7. 接口标签不等于物理定律</h2>
+<p>课程保留已有题目的接口契约，不为了排版统一而破坏你的实现：</p>
+<table><thead><tr><th>容易混淆的约定</th><th>正确读法</th></tr></thead><tbody><tr><td>Lab0/HW1/Project1 的 Roofline 平局标签是 memory；HW2 Q4 是 compute</td><td>物理上两条限制同时达到；字符串只是题目规定的返回值</td></tr><tr><td>HW2 的共享节省与 HW5 的总共享容量</td><td>先明确是否已有一份额外保留的前缀，再数副本，不混用分母</td></tr><tr><td>Lab3 free 与 Lab4 release</td><td>前者单请求拥有全部数据；后者共享块要等最后一个引用释放</td></tr><tr><td>Phase1 的 token 长度与 Phase2 的 prompt/output</td><td>Phase1 预留已知总长度的页数；Phase2 模拟每轮处理，但没有接入页池</td></tr><tr><td>网页“完成”和测试 PASS</td><td>前者是自记进度，后者验证公开行为；两者都不能替代口头解释与迁移</td></tr></tbody></table>
+<h2 id="h-13">8. 两个项目阶段如何连接，而不是假装已经连接</h2>
+<p>Phase1 回答“这个请求现在是否有预留容量”；Phase2 回答“已准入请求这一轮做多少工作”。真正连接时，引擎需要在接受计划前确认新增 KV 所需空间，成功后才能提交状态，失败则要等待、重算或按明确策略抢占；不能先宣布产出 token 再发现空间不足。</p>
+<p>本课当前没有实现这段集成，也没有真实模型执行。读完两阶段后，你应能指出哪些状态分别由请求管理器、页池、调度策略和执行器拥有，而不是把它们揉成一个难以验证的大循环。</p>
+<h2 id="h-14">9. 一章学完如何自检</h2>
+<p>拿一张空纸，完成下面四项：</p>
+<ul><li>不看正文解释本章为什么需要这个机制，举一个旧方法的失败或浪费案例。</li><li>用新的小输入走完整个过程，并给每个数写单位。</li><li>指出实现中的一个关键不变式，给出能破坏它的错误写法及反例。</li><li>区分本章已经验证的行为、教学假设和未来未实现的能力。</li></ul>
+<p>如果只能复述术语，回到手算；能手算但写不出，回到最小实现；能写出但解释不了边界，回到反例。不要把任何一项“不熟”当成不适合学习系统的结论，它只是下一步要练的具体能力。</p>
+<p>所有章节与题目对应见 <a href="textbook.html">教材总索引</a>，评分见 <a href="assessment.html">掌握度与验收</a>。第 7–15 周继续保持未发布状态；这次先把前面的知识真正连起来。</p>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <span class="doc-nav-card disabled"><span>← 上一篇</span><strong>没有了</strong></span><a class="doc-nav-card" href="textbook.html"><span>下一篇 →</span><strong>教材：从第一行 Python 到推理系统</strong></a>
+    </nav>
+  </main>
+
+  <script src="../storage.js?v=548aeeba52ac"></script>
+  <script src="../doc.js?v=5b7937ad5e19"></script>
+</body>
+</html>

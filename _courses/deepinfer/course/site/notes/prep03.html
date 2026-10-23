@@ -9,7 +9,7 @@
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=735a586a6ca2">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -25,7 +25,7 @@
       <div class="eyebrow">预备 3</div>
       <h1>预备 3：让测试帮助你</h1>
       <div class="doc-meta">
-        <span>纯阅读约 4 分钟 · 动手另计</span>
+        <span>浏览文字约 4 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../prep/03-tests.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -33,13 +33,16 @@
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 6 节</summary>
+        <nav aria-label="本页章节">
         <a class="toc-level-2" href="#h-1">1. 一个测试回答三个问题</a><a class="toc-level-2" href="#h-2">2. 浮点数为什么不能总用等号</a><a class="toc-level-2" href="#h-3">3. 修复比较函数，别让它失去检查能力</a><a class="toc-level-2" href="#h-4">4. 独立实现 vector_add</a><a class="toc-level-2" href="#h-5">5. 一次只检查一题</a><a class="toc-level-2" href="#h-6">6. 加一个你自己的测试</a>
-      </aside>
+        </nav>
+      </details>
       <article class="doc-content">
         <blockquote><p><strong>目标</strong>：写出既不误报、也不漏报的检查；独立完成一个小函数。  <br><strong>修改</strong>：<code>prep.py</code> 中的 <code>assert_vector_close</code>、<code>vector_add</code>。  <br><strong>预计投入</strong>：45–75 分钟。</p></blockquote>
 <h2 id="h-1">1. 一个测试回答三个问题</h2>
+<p><strong>本节路线</strong>：第1–3节修复prep q3的比较工具，第4节独立写同题的vector_add，再运行第5–6节测试。先修为预备2的shape、副本与累计值；命令沿用 <a href="prep.html">课程根目录</a>。离开本节要能给测试自己的测试：小误差应接受，明显错误与不同长度必须拒绝。</p>
 <pre><code class="language-python">actual = vector_add([2, -1], [3, 4])
 expected = [5, 3]
 assert actual == expected, f"实际 {actual}，期望 {expected}"</code></pre>
@@ -82,7 +85,7 @@ print((0.1 + 0.2) == 0.3)</code></pre>
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="../storage.js?v=548aeeba52ac"></script>
+  <script src="../doc.js?v=5b7937ad5e19"></script>
 </body>
 </html>

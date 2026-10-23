@@ -5,7 +5,7 @@
 
 ## 1. 确认自己在哪里
 
-用编辑器打开整个 `DeepInfer` 文件夹，再打开终端。终端所在目录应当能看到 `course`。Windows PowerShell 可运行 `Get-Location` 查看当前位置；WSL/Linux 可运行 `pwd`。
+用编辑器打开课程文件夹，再打开终端。终端所在目录应当能直接看到 `course`；离线ZIP解压后进入这一层。若打开的是个人主页源码仓库，先 `cd _courses/deepinfer`。Windows PowerShell可运行 `Get-Location` 和 `Get-ChildItem` 查看当前位置与文件；WSL/Linux可运行 `pwd` 和 `ls`。这是下文“课程根目录”的唯一含义。
 
 检查 Python：
 
@@ -25,7 +25,7 @@ for value in [2, -1, 4]:
     total += value
 ```
 
-在纸上填写每轮结束后的 `total`。随后从仓库根目录运行：
+在纸上填写每轮结束后的 `total`。随后从课程根目录运行：
 
 ```bash
 python course/prep/demo.py
@@ -84,6 +84,8 @@ python course/tools/grade.py prep --question q0
 Q0 只检查已经完成的 demo，应该通过。这里暂时不运行整个预备单元，因为后面的题仍然有意保留错误。
 
 ## 5. 自己解释
+
+这节对应prep q0，只验证现成运行示例；q1的故意错误用于认识反馈，修复安排在下一节。保留一张三轮状态表以及一次能定位到函数的失败消息，作为进入调试的证据。
 
 不看输出，解释输入 `[2, -1, 4]` 的第二轮为什么 `before=2, after=1`。再预测空列表时结果与 trace 是什么。
 

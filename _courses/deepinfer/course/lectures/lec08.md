@@ -1,348 +1,175 @@
-# 第 8 讲：量化（FP8 / FP4）
+# 第 8 讲：量化——从数轴、误差到存储预算
 
-> **课前**：35 分钟  
-> **课后**：作业 1 Q6–Q8 + 算一次 KV 量化收益  
-> **一句话**：低精度能减少存储与搬运，也可能提高硬件算力；是否加速取决于瓶颈、硬件支持和转换成本，scale 粒度则影响误差与元数据开销。
+先修：[L7 KV cache](lec07.md)、绝对值、列表切片、二进制位与整数除法。建议 90–120 分钟，分两次完成“数轴与误差”和“分组与系统代价”。本讲必修使用**对称均匀整数网格**，对应 [HW1 Q6–Q8](../hw/hw01/README.md)；FP8/FP4 编码、硬件 GEMM 为概念拓展，不要求自行实现完整浮点编码器。
 
----
+学习目标：亲手量化一组数；解释最近偶数舍入；证明半格误差界并给出失效反例；比较 outlier 和分组；把 payload、scale 元数据与端到端效果分开。L7、L8 都完成后再统一做 HW1/2，不用提前猜后面还没学的量化题。
 
-## 0. 本讲要解决的问题
+## 1. 为什么减少位宽不是免费压缩
 
-**先修**：二进制位、绝对值、列表切片、整数除法；理解 `round` 的最近偶数舍入。必做先区分 FP 编码与 INT 均匀网格，再完成 HW1 Q6–Q8。FP8 intrinsic 和 GEMM 指令为选读。
+一个 bf16 元素占 2 B，若换成 1 B 编码，数据载荷可减少一半。但有限的编码不能精确保留所有原始实数，必须选择哪些数能表示、其他数映射到哪里，以及怎样恢复近似值。量化同时面对三个问题：存多少、误差多少、执行时是否真的更快。
 
-1. FP32/FP16/BF16/FP8/FP4 的位布局、动态范围、精度各是什么？
-2. 对称量化/非对称量化、per-tensor/per-token/per-group 的公式和误差？
-3. 为什么 outlier 会毁掉 per-tensor？per-group 怎么缓解？
-4. FP8/FP4 GEMM 的 scale 怎么乘？ue8m0 是什么？
-5. KV cache 量化能省多少？精度代价怎么评估？
+低位宽可能降低搬运量，也可能让支持该格式的硬件提高计算能力；若瓶颈不是这些，或者额外转换和 scale 读取抵消收益，就未必加速。先建立可验证的数值模型，再谈性能，不从位宽直接推导速度。
 
----
+## 2. 两种编码必须分开
 
-## 1. 数值格式
+浮点数通过符号、指数、尾数分配数值；规格化非零数可写成 `(-1)^sign * 1.mantissa * 2^(exponent−bias)`。指数影响范围，尾数影响同一量级附近的间距。整数均匀量化则先取一个整数编码 q，再乘统一 scale，网格间距恒定。
 
-### 1.1 浮点数的组成
+| 格式 | 位结构 | 本讲要知道的区别 |
+| :--- | :--- | :--- |
+| FP32 | 1 符号 + 8 指数 + 23 尾数 | 常用高精度计算格式 |
+| FP16 | 1 + 5 + 10 | 范围较窄、同量级有效位较多 |
+| BF16 | 1 + 8 + 7 | 指数范围接近 FP32，尾数更短 |
+| FP8 E4M3 / E5M2 | 1 + 4 + 3 / 1 + 5 + 2 | 两种指数/尾数取舍，特殊值规则不同 |
+| 对称 INT 网格 | 符号整数编码与外部 scale | 等距，不是 FP8 浮点编码 |
 
-规格化的非零二进制浮点数（零、次正规数与特殊值另有编码）：
+FP8 的指数使间距随量级变化，`round(x/scale)` 不是 FP8 cast。FP8 的两种格式与特殊值定义见 [FP8 Formats for Deep Learning](https://arxiv.org/abs/2209.05433)。具体硬件转换还涉及饱和、次正规数和 NaN/Inf，本章不靠整数程序假装实现了这些规则。
 
-```
-value = (-1)^sign * 1.mantissa * 2^(exponent - bias)
-```
+## 3. 在数轴上建立量化流程
 
-- 指数位决定**动态范围**；
-- 尾数位决定**精度**；
-- 符号位 1 bit。
+HW1 约定 bits 为 2–16 的整数且排除 bool，取对称编码范围：
 
-| 格式 | 总位宽 | sign | exponent | mantissa | 动态范围（约） | 精度（约） |
-| :--- | ---: | ---: | ---: | ---: | :--- | :--- |
-| FP32 | 32 | 1 | 8 | 23 | 1e-38 – 3e38 | 1e-7 |
-| FP16 | 16 | 1 | 5 | 10 | 6e-5 – 6e4 | 1e-3 |
-| BF16 | 16 | 1 | 8 | 7 | 1e-38 – 3e38 | 1e-2 |
-| FP8 E4M3（最大值448的变体） | 8 | 1 | 4 | 3 | ~1.56e-2 – 448 | ~0.1 |
-| FP8 E5M2 | 8 | 1 | 5 | 2 | ~6e-5 – 57344 | ~0.25 |
-| FP4 E2M1 | 4 | 1 | 2 | 1 | 1 – 6 | ~0.5 |
-
-> 此表范围下限统一列最小规格化正数；若支持次正规数，还能表示更小的值，例如 E4M3 可到2⁻⁹、E2M1可到0.5。FP8 两种编码及特殊值的区别见 [FP8 Formats for Deep Learning](https://arxiv.org/abs/2209.05433)；HW1 不要求实现这些浮点格式。
-
-### 1.2 为什么 BF16 比 FP16 范围大
-
-BF16 的指数位和 FP32 一样（8 bit），尾数只有 7 bit；FP16 指数 5 bit、尾数 10 bit。  
-所以 BF16 的溢出风险较低，但相同量级附近间距较大。它在许多训练设置中无需 FP16 常用的 loss scaling；不代表任何计算都不会溢出。
-
-### 1.3 MX 格式
-
-MXFP8/MXFP4：
-
-```
-每 32 个元素共享一个 ue8m0 scale
-```
-
-`ue8m0`：8-bit 无符号指数，只有指数位，没有尾数/符号；普通有限编码表示 `2^(e-127)`，保留编码需依格式规范处理。  
-好处：scale 本身很小（1B/32 元素），且乘 scale 可以用位移/指数运算。
-
----
-
-## 2. 量化公式
-
-### 2.1 均匀整数对称量化（INT，供 HW1 实现）
-
-以下 q 是有符号整数编码，使用均匀网格。FP8/FP4 的编码则有指数和尾数，间距随指数改变；本节的 `round(x/scale)` 不能当作 FP8 cast。FP 格式概念与整数练习分别掌握。
-
-```
-qmax = 2^(bits-1) - 1
+```text
+qmax = 2**(bits-1) - 1
+qmin = -qmax
+amax = max(abs(value))
 scale = amax / qmax
-q = clamp(round(x / scale), -qmax, qmax)
-x_hat = q * scale
+quantized = clamp(round(value / scale), qmin, qmax)
+reconstructed = quantized * scale
 ```
 
-- `amax = max(|x|)`；全零组需要单独约定正 scale，例如 HW1 使用1，编码全部为0；
-- `round` 可以是 round-to-nearest-even；
-- 对称量化的零点为 0，适合权重/KV（分布近似对称）。
+这是本作业的对称约定：例如 bits=3 使用 −3 到 3，不使用有符号二进制通常还可表示的 −4。scale 的单位是“原值单位 / 编码格”；value/scale 先把实数换成格数，round 找最近格，再乘 scale 返回原单位。
 
-### 2.2 非对称量化
+空输入或全零输入没有有效 amax，不能让 scale=0。约定 scale=1.0，编码全零或空，仍能精确恢复。clamp 负责不越过允许编码边界；它不能恢复已损失的信息。
 
-```
-scale = (max - min) / (2^bits - 1)
-zero_point = round(-min / scale)
-q = clamp(round(x / scale) + zero_point, 0, 2^bits - 1)
-x_hat = (q - zero_point) * scale
-```
+![均匀整数数轴：scale 决定网格间距，半格位置用最近偶数规则舍入](../figures/unit1-quantization-grid.svg)
 
-适合非对称分布（如 ReLU 后的 activation）。
+读图时区分整数 q 和原值：上面只用 scale=1 便于观察；一般情况下原值间距是 scale。半格恰好与两个网格点等距，必须有确定的平局规则。
 
-上述简式要求 min/max 覆盖零且不同，才能使 zero_point 位于编码区间。一般实现需先令 min=min(0,min(x))、max=max(0,max(x))，并约定常量/全零输入；本课不把这个边界未完善的片段作为 HW1 的必做接口。
+## 4. 手算一：普通数与边界
 
-### 2.3 粒度
+输入 `[-1,0,1]`、bits=3。qmax=3，amax=1，scale=1/3。除以 scale 得 `[-3,0,3]`，都已是整数，所以编码相同；重建再次得到 `[-1,0,1]`，最大绝对误差 0。
 
-| 粒度 | scale 数量 | 优点 | 缺点 |
-| :--- | ---: | :--- | :--- |
-| per-tensor | 1 | 简单 | outlier 毁掉整个 tensor |
-| per-token | B*S | 对 activation 稳 | scale 数量多 |
-| per-channel | C | 对权重稳 | 需要对应布局 |
-| per-group (16/32/128) | N/G | 兼顾精度/开销 | scale 存储/读取开销 |
+这并不表示 3-bit 能精确表示区间内所有数。换成 `[0,0.2,1]`，scale 仍为 1/3：
 
-DeepSeek 的 Q&A：
+| 原值 | 除以 scale | 整数码 | 重建 | 绝对误差 |
+| :--- | :--- | :--- | :--- | :--- |
+| 0 | 0 | 0 | 0 | 0 |
+| 0.2 | 0.6 | 1 | 1/3 | 2/15≈0.133333 |
+| 1 | 3 | 3 | 1 | 0 |
 
-- 主 KV：per-16 e4m3；
-- indexer KV：per-32 ue8m0 MXFP4；
-- MoE 路由专家权重：per-32 ue8m0 MXFP4。
+所以 round-trip 最大误差是 2/15，而不是平均值，也不是相对误差。这个非零案例能抓住“永远返回 0”的假实现，单用精确端点案例抓不到。
 
----
+边界：输入 `[0,0]` 时 scale=1、编码 `[0,0]`、误差 0；输入 `[]` 时编码空、scale=1、误差 0。但是 `bits=True` 或 bits=1 即使配空输入仍须拒绝，不能在验证之前直接返回。
 
-## 3. 量化误差
+### 4.1 最小可运行例子
 
-### 3.1 最大绝对误差
-
-均匀整数网格、round-to-nearest，且 x 位于可表示区间内、没有 clipping 时：
-
-```
-| x - x_hat | <= scale / 2
-```
-
-相对误差：
-
-```
-| x - x_hat | / |x| <= scale / (2|x|)
-```
-
-靠近 0 的元素相对误差大；靠近 amax 的元素相对误差小。
-
-### 3.2 Outlier 的影响
-
-假设一个 tensor 里 99% 的元素在 `[-1,1]`，一个 outlier 是 100：
-
-```
-amax = 100
-scale = 100/127 ≈ 0.787
-1.0 -> q=1 -> x_hat≈0.787，误差 0.213（21%）
-```
-
-per-group 把 outlier 隔离在一个 group 里，其他 group 的 scale 仍然小，误差显著降低。
-
-### 3.3 误差上界（per-group）
-
-对 group `g`：
-
-```
-| x - x_hat | <= amax_g / (2 * qmax)
-```
-
-细分一个原组时，各子组的 amax 不会增大，因此这项最坏误差上界不会增大；单个数值的实际舍入误差不保证单调降低。scale 数量/存储会增加。
-
-### 3.4 量化误差 vs 模型精度
-
-- 权重量化：误差会累积到 logits；
-- KV 量化：影响 attention 的 softmax，长上下文更敏感；
-- activation 量化：受 outlier 影响最大；
-- 需要 end-to-end 评估（PPL、任务指标），不能只看单算子误差。
-
----
-
-## 4. FP8/FP4 GEMM 的 scale
-
-### 4.1 Per-tensor scale
-
-```
-C = (A * sA) @ (B * sB) = (A @ B) * (sA * sB)
-```
-
-所以 GEMM 可以用整数/FP8 输入，最后乘 `sA*sB`。
-
-### 4.2 Per-group scale
-
-对 K 维分组：
-
-```
-A[m, k] = A_q[m, k] * sA[m, k//G]
-B[k, n] = B_q[k, n] * sB[k//G, n]
-C[m, n] = Σ_k A_q * B_q * sA * sB
-```
-
-如果 `sA` 沿 K 变化，不能简单提到 GEMM 外面；需要在累加时按 group 乘 scale，或者用“scale 预乘到 A/B”再 GEMM。
-
-DeepGEMM 的做法：
-
-- 把 scale 转换成特定 layout（如 TMA-aligned col-major）；
-- 在 epilogue 或 mainloop 中按 group 乘；
-- 用 tensor core 的 FP8/FP4 指令；
-- 对 FP4 使用 packed 格式（两个 4-bit 一个 byte）。
-
-### 4.3 累加精度
-
-- FP8/FP4 输入，FP32 累加；
-- 如果累加也用 FP16，误差会很大；
-- 对长 K（如 7168），FP32 累加是必须的。
-
----
-
-## 5. KV Cache 量化
-
-### 5.1 收益
-
-bf16 -> FP8：
-
-```
-数据 payload bytes 减半（scale/对齐另计）
-```
-
-bf16 -> FP4：
-
-```
-KV bytes 减到 1/4（加 scale 开销）
-```
-
-例：`L=32, H_kv=8, D=128, S=4096, B=1`：
-
-- bf16：512 MiB；
-- FP8：256 MiB；
-- FP4：128 MiB（+ scale）。
-
-**含元数据的手算**：MXFP4 的32个数占16B payload，加1B scale，共17B；BF16 同组为64B。压缩比是 `64/17≈3.76`，不是4。若尾组也分配满32个槽或 scale 有对齐，实际比例还会变小。
-
-### 5.2 精度风险
-
-- KV 的 outlier 比权重更难处理；
-- attention 的 softmax 对 K 的误差敏感；
-- 长上下文时，误差会累积；
-- 需要 per-16/per-32 的 scale，甚至混合精度（关键层 bf16）。
-
-### 5.3 评估方法
-
-- 单算子：cosine similarity、max abs error；
-- 端到端：PPL、任务准确率、长上下文 retrieval；
-- 消融：只量化 K、只量化 V、不同 group size。
-
----
-
-## 6. 代码：per-group 量化
-
-下面是可在标准库 Python 运行的**均匀 INT**小例子，说明 group 遍历；并非 FP8 cast。约定有限数值、group_size为正整数、bits为2–8整数；简例只覆盖这些有效输入，完整参数校验与反量化长度检查按 HW1 规格实现。
+这个片段只量化一个已知合法的数，故不是完整作业答案：
 
 ```python
-def quantize_per_group(x, group_size=32, bits=8):
-    qmax = 2 ** (bits - 1) - 1
-    q = []
-    scales = []
-    for g in range(0, len(x), group_size):
-        chunk = x[g:g+group_size]
-        amax = max(abs(v) for v in chunk)
-        scale = amax / qmax if amax else 1.0
-        scales.append(scale)
-        q.extend(max(-qmax, min(qmax, round(v / scale))) for v in chunk)
-    return q, scales
-
-def dequantize_per_group(q, scales, group_size=32):
-    out = []
-    for i, v in enumerate(q):
-        out.append(v * scales[i // group_size])
-    return out
+scale = 1 / 3
+original = 0.2
+code = round(original / scale)
+reconstructed = code * scale
+print(code, reconstructed, abs(original - reconstructed))
 ```
 
-误差：
+预期约为 `1 0.3333333333333333 0.1333333333333333`。改变 original 但保持 scale 不变，观察它怎样被吸向网格点；超过允许范围的情况还要加 clamp，下一节讨论。
 
-```python
-x = [-1.0, 0.0, 1.0, 100.0]
-q, scales = quantize_per_group(x, group_size=2)
-x_hat = dequantize_per_group(q, scales, group_size=2)
-assert len(x) == len(x_hat)
-err = max((abs(a - b) for a, b in zip(x, x_hat)), default=0.0)
-print(q, scales, x_hat, err)
+## 5. 手算二：半格不是“一律四舍五入”
+
+Python `round` 对恰好位于中点的值采用最近偶数：`round(0.5)=0`、`round(1.5)=2`、`round(2.5)=2`；负数同样如此，`round(-1.5)=-2`。依据见 [Python round 文档](https://docs.python.org/3/library/functions.html#round)。这不是总向零，也不是总远离零。
+
+令输入 `[0.5,1.5,2.5,3]`、bits=3。最后的 3 令 amax=3，所以 scale=1；结果：
+
+| 原值 | 两个最近整数 | 选择偶数码 | 重建误差 |
+| :--- | :--- | :--- | :--- |
+| 0.5 | 0、1 | 0 | 0.5 |
+| 1.5 | 1、2 | 2 | 0.5 |
+| 2.5 | 2、3 | 2 | 0.5 |
+| 3 | 精确为 3 | 3 | 0 |
+
+最大误差正好 scale/2。这些输入用二进制可精确表示，适合测试平局；一般十进制小数在二进制浮点中可能略偏中点，不能用手写小数外观断定实际执行必为精确平局。
+
+## 6. 误差界为什么是半格，又什么时候失效
+
+相邻重建值的距离是 scale。任意位于两点之间的 x，选最近一点，最远发生在中点，距离为 scale/2。因此在**均匀网格、最近舍入、x 位于可表示范围、没有 clipping**的条件下：
+
+```text
+abs(x - reconstructed) <= scale / 2
 ```
 
-预测第一组 q=`[-127,0]`、scale=1/127，第二组 q=`[1,127]`、scale=100/127；重建第三个数约0.7874，最大误差约0.2126。改变 group_size 时量化与反量化必须用相同分组。
+相对误差再除以 abs(x)，因此接近零时可能很大；x=0 时相对误差分母为零，需要另定口径，HW1 不计算它。
 
-### FP8 cast 的注意点
+失效反例：固定 scale=1、q 范围 −3 到 3，把 x=10 输入进去。round 得 10，clamp 成 3，重建 3，误差 7，远大于 0.5。这不是推导错了，而是输入超出覆盖范围，clipping 条件被破坏。若对包含 10 的新列表重新计算 amax，scale 会变，必须用新 scale 判断，不能混淆固定 scale 与重新校准。
 
-- E4M3 的 max 是 448；超过要 clamp；
-- 次正规数/NaN/Inf 的编码；
-- `round` 的模式（nearest-even）；
-- scale 的 layout（row-major/col-major/packed）；
-- 使用 `__nv_cvt_float_to_fp8` 时显式选择格式与饱和策略，并对照 [CUDA FP8 转换文档](https://docs.nvidia.com/cuda/cuda-math-api/cuda_math_api/group__CUDA__MATH__FP8__MISC.html) 的最近偶数舍入契约；FP4 对应 [CUDA FP4 转换文档](https://docs.nvidia.com/cuda/cuda-math-api/cuda_math_api/group__CUDA__MATH__FP4__MISC.html)。
+浮点计算自测可加很小容差，但不能把容差放大到掩盖错码。最大误差为 0.49 时满足半格界，并不能单独证明每个 q 正确；要结合确定输出案例验证。
 
----
+## 7. 手算三：outlier 怎样让小数消失
 
-## 7. 仓库对照
+输入 `[0.1,0.2,0.3,100]`，bits=8。qmax=127，per-tensor 的 scale=`100/127≈0.787402`。前三项除以 scale 约为 0.127、0.254、0.381，都舍入为 0；编码 `[0,0,0,127]`，重建 `[0,0,0,100]`，最大绝对误差 0.3。
 
-- `deepinfer/model_executor/layers/tilelang_ops/common.py`：FP4/FP8 常数、`customized_finfo_amax`。
-- `.../tilelang_ops/cuda/quant.py`：`ue8m0_exp_scale`、scale 计算。
-- `.../tilelang_ops/cuda/norm.py`：`do_fp8_cast` 分支，norm + quant 融合。
-- `.../tilelang_ops/cuda/fused_transform.py`：norm + rope + cast + KV store。
-- `doc/inference_deployment_qa.md`：Low-precision computation。
+极端值把网格拉粗，普通小值被压到同一点。这里 amax 并不“算错”，问题是所有数共用一种间距。
 
----
+现在按 G=3 分组：第一组 `[0.1,0.2,0.3]`，第二组只有 `[100]`。第一组 scale=`0.3/127`，编码 `[42,85,127]`，重建约 `[0.0992126,0.2007874,0.3]`；第二组 scale=`100/127`，编码 127，重建 100。总体最大误差约 0.000787402，比 0.3 小得多。
 
-## 8. 练习
+![离群值与分组：全张量 scale 让小值全变零，独立组能让小值使用更细网格](../figures/unit1-quantization-groups.svg)
 
-### 基础
+图中第二组是一个元素的尾组，不填充额外数据。实际系统可能规定固定长度槽位或 scale 对齐，计算存储时须另外计入；不能把 Python 列表长度当硬件分配字节。
 
-**修错题**：所有输入为0时直接写 `scale=amax/qmax`，再执行 `round(x/scale)` 会怎样？将零组编码为零、scale设为1，为什么仍能完全重建？
+### 7.1 分组并不保证最大实际误差每次都下降
 
-<details><summary>核对</summary>
+换成 `[-1,0,1,100]`，G=2：第一组精确重建 −1、0；第二组的 1 仍受 100 影响，变成约 0.787402，误差约 0.212598。全张量时 −1 和 1 都有这个误差，所以分组改善了 −1，却没降低全局最大误差。
 
-scale为0导致除零；约定scale=1后，q仍全0，反量化0×1仍为0。该约定保证实现合法而不改变结果。随后独立测试尾组（长度不是G倍数）、全零组与含outlier组，对齐 HW1 的空输入和长度契约。
+细分组后各组 amax 不增大，因此半格**最坏误差上界**不会增大；但单个数的网格位置改变，实际误差不保证单调降低。再给一个更强反例：`[1,2,3]`、bits=3，全张量 scale=1，三个数全部精确。分成 `[1,2]` 和 `[3]` 后，第一组 scale=2/3，1 除以 scale 恰为 1.5，最近偶数舍入成 2，重建为 4/3，误差反而变成 1/3；组内的半格上界确实从 1/2 降到 1/3，却不能保证实际误差从原来的 0 继续下降。
+
+因此 G=3 的例子能改善并不推出“任何分组都会改善所有指标”。比较时应同时看最大、平均误差和后续任务效果，并计 scale 开销。
+
+## 8. 手算四：把 scale 元数据算回去
+
+假设一种格式每 32 个数共享 1 B scale，每个数是 4-bit payload。32 个编码是 16 B，加 scale 为 17 B；bf16 同组是 64 B，所以压缩比为 `64/17≈3.7647`，不是 4。再有尾组或对齐，比例还可能变化。这个是明确存储假设的例子，不是把 HW1 的 Python 整数对象当作 4-bit 存储。
+
+回到 L7 参数 L=32、Hkv=8、D=128、S=4096、N=1：bf16 载荷 512 MiB；1 B/元素载荷 256 MiB；0.5 B/元素载荷 128 MiB。后两者都只是 payload，scale、打包、对齐必须另列。不要把“载荷减半”写成“总显存减半”：模型权重和 workspace 可能完全没变。
+
+## 9. 拓展：scale 为什么有时不能提出矩阵乘
+
+若 sA、sB 都是标量，数学上 `(Aq*sA)@(Bq*sB)=(Aq@Bq)*(sA*sB)`。如果沿归约维度 K 每组有不同 scale，求和项的系数不同，就不能统一挪到最后。
+
+最小反例：两项原始乘积都是 1，第一项 scale 乘积为 1，第二项为 10，正确加权结果是 `1*1+1*10=11`。先把裸乘积相加得到 2，最后只乘第一组 scale 会得 2，乘第二组会得 20，两者都错。需要逐组缩放再合并，或使用支持相应布局的 kernel。
+
+真实 FP8/FP4 的表示、scale 格式、累加精度与硬件指令必须共同核对。更高精度累加通常有助于控制累加误差，但本课不能仅凭输入位宽声称某个长 K 必须使用某种唯一实现。CUDA 的转换细节可查 [FP8 转换文档](https://docs.nvidia.com/cuda/cuda-math-api/cuda_math_api/group__CUDA__MATH__FP8__MISC.html) 与 [FP4 转换文档](https://docs.nvidia.com/cuda/cuda-math-api/cuda_math_api/group__CUDA__MATH__FP4__MISC.html)。
+
+## 10. 从量化误差到模型效果的距离
+
+权重、激活、K、V 的误差会通过不同计算路径影响输出。局部最大误差小，不保证 logits、任务准确率或长上下文检索不变；局部误差较大，也不能直接换算任务分数下降多少。最小可信评估应保持同一数据、模型和推理设置，先查数值误差，再比较端到端指标。
+
+可以设计只量化 K、只量化 V、改变 group size 的对照，但需要真实模型执行才有端到端结论。本课标准库作业只验证编码、重建、误差计算和容量模型，不能发布“已证明真实 FP8 精度无损”的结论。
+
+## 11. 常见错误、自测与出口
+
+| 现象 | 先检查 |
+| :--- | :--- |
+| 全零输入除零 | 是否约定 scale=1 |
+| 半格输出与测试不符 | 是否写成一律向上而非 ties-to-even |
+| 最大误差看起来过小 | 是否误用了平均值或漏算某个元素 |
+| 改 G 后重建错位 | 量化和重建是否用同一组边界 |
+| 报告压缩比总是整数倍 | 是否漏算 scale、尾组与固定内存 |
+
+自测：① bits=3 的 `[0,0.2,1]` 最大误差为何非零？② scale=1 时 −0.5、−1.5、−2.5 分别舍入到哪里？③ 固定 scale=1、码范围 −3 到 3，输入 10，为何不满足半格界？④ 分组后某些元素更准，为何最大误差可能不变？
+
+<details>
+<summary>核对数值和适用条件</summary>
+
+① 0.2 映射到 1/3，误差 2/15。② 依次 0、−2、−2，平局选偶数。③ clipping 导致重建 3、误差 7，破坏不截断条件。④ 例如 `[-1,0,1,100]` 按两元素分组，−1 恢复精确，但 1 仍与 100 同组，仍决定全局最大误差。
 
 </details>
 
-1. 对 `x=[-1,0,1]`，8-bit 对称量化，求 scale、q、dequant、误差。
-2. 对 `x=[-1,0,1,100]`，per-tensor vs per-group（G=2）的误差各是多少？
-3. 计算 bf16/FP8/FP4 的 KV bytes（给定 L/H/D/S/B）。
-4. 解释 ue8m0 的表示范围；为什么它适合做 block scale？
+迁移自测：32 个 4-bit 数加 1 B scale 的总量是多少？如果一个模型量化后 payload 降一半，但权重与 workspace 保持不变，总内存是否也降一半？为什么 INT 网格测试通过不代表 FP8 cast 正确？
 
-### 进阶
+<details>
+<summary>迁移解析</summary>
 
-5. 实现 per-tensor/per-token/per-group 量化，测随机正态和长尾分布的误差。
-6. 实现 FP8 E4M3 的 cast（可以先用 Python 模拟），和 PyTorch 的 FP8 对比。
-7. 在 GEMM 中加 per-tensor scale，验证 `(A*sA)@(B*sB)` 和 `(A@B)*sA*sB` 在浮点容差内相等；sA/sB 是标量，不能写成矩阵乘 `A@sA`。
-8. 用 `ncu` 看 FP8 GEMM 的 tensor core 利用率和带宽，和 BF16 对比。
+总量 17 B；总内存还包含不变项，所以通常不是减半。整数网格没有实现浮点指数、尾数、特殊值和饱和编码，验证的是另一个明确定义的数值模型。
 
-### 挑战
+</details>
 
-9. 实现 per-group FP8 GEMM 的 scale 乘法，比较“预乘 scale”和“epilogue 乘”的误差/性能。
-10. 模拟 KV 量化：只量化 K/V，测 attention 输出误差和 PPL 变化。
-
----
-
-## 9. 面试追问
-
-1. FP8 E4M3 和 E5M2 有什么区别？分别适合什么？
-2. 为什么 per-tensor 对 outlier 敏感？per-group 怎么缓解？
-3. 对称量化的最大绝对误差是多少？相对误差呢？
-4. FP8/FP4 GEMM 的 scale 怎么乘？为什么不能简单提到 GEMM 外面？
-5. KV cache 量化能省多少？精度风险在哪？
-6. 如果量化后 PPL 变差，你会先查什么？
-
----
-
-## 10. 参考文献
-
-- NVIDIA, *FP8 Formats for Deep Learning*；Hopper/Blackwell 文档。
-- DeepSeek-V3：FP8 训练/推理。
-- Micikevicius et al., *FP8 Formats for Deep Learning*。
-- DeepInfer Q&A：Low-precision computation。
-
----
-
-## 11. 下一步
-
-- 完成 [作业 1](../hw/hw01/README.md) 的 Q6–Q8；
-- 读 [项目 1](../projects/project1/README.md) 的 roofline 部分；
-- 进入 Unit 2：PagedAttention、continuous batching、sampling。
+完成后做 [HW1](../hw/hw01/README.md) 的 Q6–Q8 与量化书面题，并和 Q3/Q9 的预算计算连接；再做 [HW2](../hw/hw02/README.md) 的流量、分页与共享分析。你应该能从空白纸推导一个案例、指出错误实现会在哪里失效，而不只是复述“低精度更省”。

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="826" viewBox="0 0 600 826" role="img" aria-labelledby="title desc">
+  <title id="title">前缀命中与共享容量的两个计算</title>
+  <desc id="desc">公共前缀长度五、块大小四时只命中四个 token。三个请求长度五八九共享四 token 前缀时，总槽位从二十八减少到二十。每条私有尾部仍独立向上取整。</desc>
+  <rect width="600" height="826" rx="20" fill="#f4f8fc"/>
+  <g font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" fill="#17324d" font-size="22">
+    <text x="30" y="44" font-size="26" font-weight="700">内容向下对齐，空间向上取整</text>
+    <rect x="30" y="70" width="540" height="239" rx="12" fill="#fff" stroke="#759ac0"/>
+    <text x="50" y="108" font-weight="700">① 命中：B = 4，首次不同即停止</text>
+    <text x="50" y="150">缓存   [1 2 3 4]   [5 6 7]</text>
+    <text x="50" y="191">查询   [1 2 3 4]   [5 9]</text>
+    <rect x="50" y="217" width="500" height="66" rx="8" fill="#e1f3ec"/>
+    <text x="68" y="245">公共前缀 5 → 完整块 1 → 命中 4</text>
+    <text x="68" y="272" font-size="20">第五个相同 token 不构成新完整块。</text>
+    <rect x="30" y="335" width="540" height="335" rx="12" fill="#fff" stroke="#759ac0"/>
+    <text x="50" y="373" font-weight="700">② 容量：长度 [5, 8, 9]，P = 4</text>
+    <text x="50" y="414">不共享：8 + 8 + 12 = 28 槽</text>
+    <rect x="50" y="438" width="500" height="50" rx="8" fill="#d5e7ff"/>
+    <text x="70" y="470">唯一公共前缀：4 槽</text>
+    <text x="50" y="524">A 私有 1 token → 4 槽</text>
+    <text x="50" y="566">B 私有 4 token → 4 槽</text>
+    <text x="50" y="608">C 私有 5 token → 8 槽</text>
+    <text x="50" y="650" font-weight="700">共享后：4 + 4 + 4 + 8 = 20 槽</text>
+    <rect x="30" y="696" width="540" height="103" rx="12" fill="#fff2db"/>
+    <text x="50" y="733">少两份前缀：2 × 4 = 8 槽。</text>
+    <text x="50" y="769">尾部浪费仍是 3 + 0 + 3 = 6 槽。</text>
+  </g>
+</svg>

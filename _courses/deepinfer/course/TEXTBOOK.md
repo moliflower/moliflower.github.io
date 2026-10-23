@@ -1,6 +1,8 @@
-# 教材：从零基础到可验证的推理算子
+# 教材：从第一行 Python 到可解释的推理系统
 
-这份索引把课程正文、练习与验收串在一起。正文就在仓库内，可以离线读；外部课程、论文和博客用于完成本章之后的扩展。遇到陌生概念，先回到表格中的先修，避免在多个链接之间来回跳。
+这是已经发布的起步、预备和第 1–6 周的总索引。本次重整以前的章节，不新增后续周次：从问题动机到图解、推导、手算、最小实现，再到渐进练习和自测。先打开 [自学路线与诊断入口](LEARNING_PATH.md)，确认从哪里开始、命令在哪个目录运行、卡住时回看哪一章。
+
+正文与图解都包含在离线包内。外部课程、论文和视频用于核查与扩展，不要求先刷完才能读懂正文。章节里的折叠解析请在预测之后展开；看懂解析不自动意味着能独立做题。
 
 本课程借鉴 [CS61A Lab1](https://cs61a.org/fa26/labs/lab01/) 的预测与编程练习、[HW1](https://cs61a.org/fa26/hw/hw01/) 的函数规格、[Hog](https://cs61a.org/fa26/projects/hog/) 的分阶段项目，以及 [Composing Programs](https://composingprograms.com/3ed/designing-functions/) 的函数设计方法。题目和 Infra 路线为本地课程设计，未获得 Berkeley 认证；“对齐”指可检查的教学设计，不表示已达到一门成熟大学课程的完整性。
 
@@ -13,6 +15,8 @@
 
 ## 2. 每一章学完要留下什么
 
+按“先修 → 正文 → 对应练习 → 出口证据”阅读，不按作业编号猜测先后。尤其 HW1 的全部先修到 L8 才齐，HW2 到 L7 才齐；推荐完成 L7、L8 后统一做两份作业。Project1 的分块实现按项目给出的依赖顺序推进。每个主题可以用多次学习完成。
+
 | 章节 | 必要先修 | 核心练习 | 离开本章的证据 |
 | :--- | :--- | :--- | :--- |
 | [Python 起步 0–3](foundations/README.md) | 整数四则运算 | foundations Q0–Q4 | 追踪变量；独立写列表循环；解释边界 |
@@ -22,9 +26,9 @@
 | [L3 数值算子](lectures/lec03.md) | 一维循环、平方、平均值 | Lab1 | 极端 logits 下 softmax 稳定；解释 eps |
 | [L4 矩阵乘与 tiling](lectures/lec04.md) | prep 矩阵乘、Lab0 单位 | Project1 Phase2（先完成 Phase1） | 手算一个非整除 tile，核对访问计数 |
 | [L5 Attention](lectures/lec05.md) | L3、矩阵乘与转置 | Lab2 Q1–Q6 | 手算一个输出行，说明 mask 和归一化 |
-| [L6 Attention 的流量](lectures/lec06.md) | L5、L4 成本模型 | Lab2 Q7–Q8；HW2 在 L7 后 | 分清数学有效工作、实现 FLOPs、容量和流量 |
-| [L7 KV cache](lectures/lec07.md) | 列表副本、整数分组、L5 | Lab3；HW2 | append/get/free 不破坏所有权，解释尾页 |
-| [L8 量化](lectures/lec08.md) | L3、误差与字节单位 | HW1；Quiz2 | 解释 scale、舍入误差与元数据成本 |
+| [L6 Attention 的流量](lectures/lec06.md) | L5、L4 成本模型 | Lab2 Q7–Q8；完整 HW 后置 | 分清数学有效工作、实现 FLOPs、容量和流量 |
+| [L7 KV cache](lectures/lec07.md) | 列表副本、整数分组、L5 | Lab3；为 HW2 补齐 KV 先修 | append/get/free 不破坏所有权，解释尾页 |
+| [L8 量化](lectures/lec08.md) | L3、误差与字节单位 | 统一做 HW1/2；Quiz2 | 解释 scale、舍入误差与元数据成本 |
 | [Kernel Zoo](projects/project1/README.md) | Lab0/1、L4 | Q1–Q9、实验与报告 | 正确性、流量计数、可复现实验、局限性 |
 | [L9 共享块池](lectures/lec09.md) | L7、Lab3、HW2 | Lab4 | 失败无部分修改、引用数与所有者一致 |
 | [L10 前缀缓存](lectures/lec10.md) | L9、Lab4 | HW5 | 区分公共前缀、完整块命中、共享容量与淘汰 |
@@ -33,7 +37,7 @@
 | [L12 Chunked prefill](lectures/lec12.md) | L11 | Lab5 Q2、HW6 | 首 token、请求等权 TPOT、SLO 与统计窗口 |
 | [Mini Engine Phase2](projects/project2_scheduler/README.md) | Lab5、HW6 | Q1/Q2、18 组实验与报告 | 精确时间轨迹、独立快照、模型局限 |
 
-“会讲一个结论”还不够。每章至少写一个正常输入、一个边界输入，并说明测试期望从哪里来。可复用 [作业记录模板](WORKSHEET.md)。
+“会讲一个结论”还不够。每章至少留下一个正常输入、一个边界输入和一个反例，并说明测试期望从哪里来。先用最小例子检查机制，再运行公开测试，最后在不知道答案的新输入上复查。可复用 [作业记录模板](WORKSHEET.md)。
 
 ## 3. 读公式前先认清量
 
@@ -49,6 +53,11 @@
 | 误差容限 | 允许实际结果偏离期望的范围 | 先检查 shape、长度与有限性，再比较误差 |
 | Roofline | 给定流量和峰值模型的性能上界/时间下界 | Python wall time 不能直接当 GPU kernel 时延 |
 | checkpoint | 某阶段可检查的产物 | 打开过页面或勾选完成，不等于代码已验收 |
+| logical / physical | 逻辑位置属于请求序列；物理位置属于存储池 | 逻辑页号需要查页表，不能直接当物理 ID |
+| ownership / reference | 所有者仍需使用一份数据；引用数记录共享生命周期 | 引用归零表示可回收，不表示旧内容已清空 |
+| prefill / decode | 处理 prompt / 首输出后继续自回归生成 | 最后一个 prefill chunk 就可产生第一个输出 |
+| TTFT / TPOT | 到首输出的时间 / 首输出之后的平均间隔 | 单输出 TPOT 无定义；tick 不自动等于毫秒 |
+| goodput | 明确窗口内满足约定 SLO 的请求数/时间 | 不是所有 token 的吞吐量，窗口和达标口径必须写清 |
 
 ## 4. 从课程作品走向 28 届 Infra 准备
 

@@ -4,6 +4,8 @@
   const themeButton = document.getElementById("doc-theme");
   const done = document.getElementById("doc-done");
   const hint = document.getElementById("doc-done-hint");
+  const contents = document.getElementById("doc-toc");
+  if (contents && window.matchMedia("(max-width: 900px)").matches) contents.open = false;
   function sync() {
     const theme = storage.theme();
     document.documentElement.setAttribute("data-theme", theme);

@@ -9,7 +9,7 @@
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=735a586a6ca2">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -25,7 +25,7 @@
       <div class="eyebrow">项目报告</div>
       <h1>Project1 报告模板</h1>
       <div class="doc-meta">
-        <span>纯阅读约 4 分钟 · 动手另计</span>
+        <span>浏览文字约 4 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../projects/project1/report_template.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -33,16 +33,18 @@
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 6 节</summary>
+        <nav aria-label="本页章节">
         <a class="toc-level-2" href="#h-1">1. 问题、环境与复现方式</a><a class="toc-level-2" href="#h-2">2. 正确性与复用</a><a class="toc-level-2" href="#h-3">3. 请求量推导</a><a class="toc-level-2" href="#h-4">4. 实验与 Roofline</a><a class="toc-level-2" href="#h-5">5. Debugging notebook 与 Checkoff</a><a class="toc-level-2" href="#h-6">6. 自评与可选 GPU 结果</a>
-      </aside>
+        </nav>
+      </details>
       <article class="doc-content">
         <blockquote><p>复制为 <code>report.md</code> 后填写。保留失败或反常结果；不要把参考解的实验当作自己的实现。</p></blockquote>
 <h2 id="h-1">1. 问题、环境与复现方式</h2>
-<ul><li>我想验证的问题 / 可被否证的预测：</li><li>使用的实现（自己的 / 参考对照）、Git commit 或 CSV 中 source_sha256：</li><li>Python、操作系统、CPU（计时来自此环境）：</li><li>完整命令、seed、warmups、repeats、原始 CSV 路径：</li><li>计时区间包括什么、排除什么；当时电源/后台负载情况：</li><li>Roofline 对象（默认虚构加速器 / 真实 GPU）：</li><li>模型带宽（GB/s）、峰值（TFLOP/s）、dtype、SIMT/Tensor Core、稠密/稀疏：</li><li>规格来源链接和查询日期（使用虚构参数时注明无需查规格）：</li></ul>
+<ul><li>我想验证的问题 / 可被否证的预测：</li><li>使用的实现（自己的 / 参考对照）、Git commit 或 CSV 中 source_sha256：</li><li>Python、操作系统、CPU（计时来自此环境）：</li><li>完整命令、seed、warmups、repeats、原始 CSV 路径：</li><li>命令的当前目录（课程根目录，能看到course；源码仓库的_courses/deepinfer）：</li><li>计时区间包括什么、排除什么；当时电源/后台负载情况：</li><li>Roofline 对象（默认虚构加速器 / 真实 GPU）：</li><li>模型带宽（GB/s）、峰值（TFLOP/s）、dtype、SIMT/Tensor Core、稠密/稀疏：</li><li>规格来源链接和查询日期（使用虚构参数时注明无需查规格）：</li></ul>
 <h2 id="h-2">2. 正确性与复用</h2>
-<ul><li>复用的本人 Lab 函数、为本项目做的修改：</li><li>完整测试命令与结果；浮点比较的容差和理由：</li><li>Q2 长度 5 的每轮结果；一个浮点加法改变顺序的反例：</li><li>Q9 一个矩形例子中的局部 accumulator 在每轮 k0 后是什么：</li><li>为什么输入不会被修改、输出行不会共享：</li></ul>
+<ul><li>复用的本人 Lab 函数、为本项目做的修改：</li><li>完整测试命令与结果；浮点比较的容差和理由：</li><li>Q2 长度 5 的每轮结果；一个浮点加法改变顺序的反例：</li><li>Q9 一个矩形例子中的局部 accumulator 在每轮 k0 后是什么：</li><li>该例每轮实际搬了哪些A/B值、何时写回C；与L4逐块图的对应关系：</li><li>为什么输入不会被修改、输出行不会共享：</li></ul>
 <h2 id="h-3">3. 请求量推导</h2>
 <p>说明 naive 与 tiled 的读/写次数，推导 ceil 的来源，再手算一个尾块案例。区分请求字节、最小存储容量、真实设备流量。</p>
 <table><thead><tr><th>n</th><th>tile</th><th>naive bytes</th><th>tiled bytes</th><th>ratio</th><th>计数器是否符合（只跑小 n）</th></tr></thead><tbody><tr><td>3</td><td>2</td><td></td><td></td><td></td><td></td></tr><tr><td>3</td><td>16</td><td></td><td></td><td></td><td></td></tr><tr><td>17</td><td>8</td><td></td><td></td><td></td><td></td></tr></tbody></table>
@@ -56,6 +58,7 @@
 <ul><li>哪条数据支持最初预测？哪条不支持？</li><li>请求量减少与 Python 时间的关系是什么？有哪些混杂因素？</li><li>为什么 Python 时间和虚构加速器下界不能相除得出 GPU 效率？</li><li>这一模型未包含哪些硬件因素？下一步用什么实验区分解释？</li></ul>
 <h2 id="h-5">5. Debugging notebook 与 Checkoff</h2>
 <p>最小失败输入 → 期望值 → 实际值/异常 → 根因 → 修复 → 回归命令。</p>
+<p>至少记录一个能区分下列问题的证据：尾块越界、accumulator过早清零、绕过Memory读数据、过多写回。不要只填“测试全通过”；写出哪个中间状态让你确认原因。</p>
 <p>逐条回答 README 的 5 个 checkoff 问题，每条至少引用一个自己的例子或实验数据。没有真实 GPU 数据时写清楚还需要测什么。</p>
 <h2 id="h-6">6. 自评与可选 GPU 结果</h2>
 <p>按 README 内部 100 分 rubric 自评，逐项指向证据。没有完成的部分留空并写清原因。</p>
@@ -68,7 +71,7 @@
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="../storage.js?v=548aeeba52ac"></script>
+  <script src="../doc.js?v=5b7937ad5e19"></script>
 </body>
 </html>

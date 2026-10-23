@@ -9,7 +9,7 @@
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=735a586a6ca2">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -25,7 +25,7 @@
       <div class="eyebrow">预备单元</div>
       <h1>预备单元：把看得懂变成能定位错误</h1>
       <div class="doc-meta">
-        <span>纯阅读约 4 分钟 · 动手另计</span>
+        <span>浏览文字约 4 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../prep/README.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -33,10 +33,12 @@
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 6 节</summary>
+        <nav aria-label="本页章节">
         <a class="toc-level-2" href="#h-1">1. 本单元的产物</a><a class="toc-level-2" href="#h-2">2. 按顺序学习</a><a class="toc-level-2" href="#h-3">3. 卡住时怎样得到帮助</a><a class="toc-level-2" href="#h-4">4. 记录一次修复</a><a class="toc-level-2" href="#h-5">5. 出口检查</a><a class="toc-level-2" href="#h-6">6. C++ 在哪里开始？</a>
-      </aside>
+        </nav>
+      </details>
       <article class="doc-content">
         <blockquote><p><strong>适合你</strong>：能写简单 Python 函数，遇到错误不容易排查；C++ 基础少。  <br><strong>需要</strong>：Python 3.10+；不需要 C++、CUDA、GPU 或第三方包。  <br><strong>节奏</strong>：四次短练习，可分几天完成；不计入正式 15 周。</p></blockquote>
 <p>如果还没有写过 Python，先完成 <a href="foundations.html">Python 起步</a> 的四节课和 Q0–Q4。能解释 <code>return</code>、<code>if</code>、<code>for</code>，并独立构造新列表后再进入这里；本单元开始练调试，不再把这些语法当成新概念。</p>
@@ -45,7 +47,7 @@
 <p>完成后，你应能说清楚一次调试的五件事：输入、期望、实际、最小复现、修复依据。不会要求你记住 traceback 的每一行。</p>
 <h2 id="h-2">2. 按顺序学习</h2>
 <table><thead><tr><th>课</th><th>先学什么</th><th>动手任务</th><th>检查命令的题号</th></tr></thead><tbody><tr><td><a href="prep00.html">预备 0：运行和报错</a></td><td>路径、运行文件、追踪变量</td><td>运行已经完成的示例</td><td>q0</td></tr><tr><td><a href="prep01.html">预备 1：定位逻辑错误</a></td><td>最小复现、循环不变式</td><td>修复最大值函数</td><td>q1</td></tr><tr><td><a href="prep02.html">预备 2：列表和矩阵</a></td><td>副本、二维索引、累计值</td><td>修复复制与矩阵乘法</td><td>q2</td></tr><tr><td><a href="prep03.html">预备 3：让测试帮助你</a></td><td>断言、误差、边界、自测</td><td>修复比较函数，独立写向量加法</td><td>q3</td></tr></tbody></table>
-<p>所有下面这样的命令都在 <strong>DeepInfer 仓库根目录</strong>运行，即能看到 <code>course</code> 文件夹的位置。若你的环境只提供 <code>python3</code>，将命令中的 <code>python</code> 替换为 <code>python3</code>。</p>
+<p>所有下面这样的命令都在<strong>课程根目录</strong>运行，即能直接看到 <code>course</code> 文件夹的位置。离线ZIP解压后进入这一层；若从个人主页源码仓库开始，先 <code>cd _courses/deepinfer</code>。不要已经进入 <code>course</code> 后又输入以 <code>course/</code> 开头的路径。若环境只提供 <code>python3</code>，将命令中的 <code>python</code> 替换为 <code>python3</code>；Windows启动器也可用 <code>.\course\run.ps1 prep --question q0</code>。</p>
 <pre><code class="language-bash">python course/prep/demo.py
 python course/tools/grade.py prep --question q0</code></pre>
 <p>第一条最后显示 <code>result = 5</code>；第二条显示 <code>PASS</code>。先获得一个确定能运行的起点，再处理故意留下的错误。</p>
@@ -64,6 +66,7 @@ python course/tools/grade.py prep --question q1 --hint 3</code></pre>
 我定位到的原因：
 修复后新增的测试：</code></pre>
 <h2 id="h-5">5. 出口检查</h2>
+<p>四节阅读分别只对应q0、q1、q2、q3；q2包含复制矩阵与矩阵乘法两项，q3包含比较函数与独立向量加法两项。先修复当前小题再整份运行，避免把其他故意保留的错误误认成一次修复引起的回归。</p>
 <pre><code class="language-bash">python course/tools/grade.py prep</code></pre>
 <ul><li>能修好全负数的最大值，而不是给某个测试特判。</li><li>能解释复制矩阵时为什么要复制每一行。</li><li>能手算矩阵的一格，并在代码中找到对应的累计过程。</li><li>能让测试既接受微小浮点误差，也拒绝明显错误。</li></ul>
 <p>有一项讲不清，就回看对应一课，状态记为“需要复习”，已完成的部分仍然有效。准备好后，进入 <a href="lec01.html">第 1 讲</a>，再做 <a href="lab00.html">Lab0</a>。</p>
@@ -77,7 +80,7 @@ python course/tools/grade.py prep --question q1 --hint 3</code></pre>
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="../storage.js?v=548aeeba52ac"></script>
+  <script src="../doc.js?v=5b7937ad5e19"></script>
 </body>
 </html>

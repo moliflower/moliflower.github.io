@@ -9,7 +9,7 @@
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=735a586a6ca2">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -25,7 +25,7 @@
       <div class="eyebrow">HW2 报告</div>
       <h1>HW2 推导与证据模板</h1>
       <div class="doc-meta">
-        <span>纯阅读约 1 分钟 · 动手另计</span>
+        <span>浏览文字约 2 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../hw/hw02/REPORT_TEMPLATE.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -33,12 +33,14 @@
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 4 节</summary>
+        <nav aria-label="本页章节">
         <a class="toc-level-2" href="#h-1">W1：从 IO 账本到 bound</a><a class="toc-level-2" href="#h-2">W2 + Q11：逐请求分配</a><a class="toc-level-2" href="#h-3">W3：共享的基线与 copy-on-write</a><a class="toc-level-2" href="#h-4">调试记录与 checkoff</a>
-      </aside>
+        </nav>
+      </details>
       <article class="doc-content">
-        <p>复制本模板填写。每个数值带单位，区分有效内容、分配容量、请求流量。</p>
+        <p>完成 L7/L8、Lab3 与 HW1 后复制本模板填写。每个数值带单位，区分有效内容、分配容量、请求流量。所有命令从包含 <code>course/</code> 的课程根目录 <code>deepinfer/</code> 执行；填写真实结果，不预设通过。</p>
 <p>姓名/日期： 本次独立尝试时长： 使用过的提示题号、级别或参考材料：</p>
 <h2 id="h-1">W1：从 IO 账本到 bound</h2>
 <p>画出 Q/K/V/S/P/O 的阶段箭头，并在每条箭头上标注读或写：</p>
@@ -46,6 +48,7 @@
 <table><thead><tr><th>s</th><th>full FLOPs</th><th>三阶段流量</th><th>读一次下界流量</th><th>两种 AI</th><th>两种 bound</th></tr></thead><tbody><tr><td>128</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>4096</td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table>
 <p>Q tile=64 时 K/V 被重新读取几次？对应请求流量：</p>
 <p>模型没有包含的设备行为：</p>
+<p>AI 恰好等于拐点时，本题返回 compute，而 HW1 同时相等返回 memory；解释为何这是标签约定而非物理冲突：</p>
 <h2 id="h-2">W2 + Q11：逐请求分配</h2>
 <table><thead><tr><th>请求长度</th><th>页数</th><th>slot 数</th><th>waste</th><th>KV 分配字节</th></tr></thead><tbody><tr><td>1</td><td></td><td></td><td></td><td></td></tr><tr><td>16</td><td></td><td></td><td></td><td></td></tr><tr><td>17</td><td></td><td></td><td></td><td></td></tr><tr><td>合计</td><td></td><td></td><td></td><td></td></tr></tbody></table>
 <p>先把长度相加再分页会得到什么？为什么错误：</p>
@@ -54,7 +57,8 @@
 <h2 id="h-3">W3：共享的基线与 copy-on-write</h2>
 <p>现存副本数、新消费者数、前缀有效长度、完整页长度：</p>
 <p>共享前后分别有多少份完整页？节省多少 slot 与字节：</p>
-<p>画出两个请求共享尾页、其中一个 append 前后的块表；标记哪些页保留、哪些复制：</p>
+<p>对照第 5 周 HW5 的“n 条请求内部共享 1 份”，指出与本题“已有 1 份、n 个新消费者”何处不同：</p>
+<p>纸上选做：画出两个请求共享尾页、其中一个 append 前后的块表，标记哪些保留、哪些复制。此图是隔离写入的设计，不代表 Lab3 已实现有限共享池或写时复制：</p>
 <h2 id="h-4">调试记录与 checkoff</h2>
 <table><thead><tr><th>题号/输入</th><th>原先预测</th><th>实际结果/异常</th><th>根因</th><th>修复后的检查</th></tr></thead><tbody><tr><td></td><td></td><td></td><td></td><td></td></tr></tbody></table>
 <p>最终测试命令及通过数：</p>
@@ -68,7 +72,7 @@
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="../storage.js?v=548aeeba52ac"></script>
+  <script src="../doc.js?v=5b7937ad5e19"></script>
 </body>
 </html>

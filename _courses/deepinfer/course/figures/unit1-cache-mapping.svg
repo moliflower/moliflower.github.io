@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="680" viewBox="0 0 600 680" role="img" aria-labelledby="title desc">
+  <title id="title">分页映射与输入输出副本</title>
+  <desc id="desc">页大小二，页表七二，token 三经逻辑页一与偏移一定位到物理页二偏移一。append 需要保存输入副本，get 需要返回逐行副本，防止调用者修改缓存。</desc>
+  <rect width="600" height="680" rx="20" fill="#f4f8fc"/>
+  <g font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="22" fill="#17324d">
+    <text x="30" y="44" font-size="26" font-weight="700">顺序由逻辑决定，位置由页表决定</text>
+    <rect x="30" y="70" width="540" height="184" rx="12" fill="#fff" stroke="#759ac0"/>
+    <text x="50" y="108" font-weight="700">页大小 2；table = [7, 2]</text>
+    <text x="50" y="150">逻辑 token 0、1 → 物理页 7</text>
+    <text x="50" y="192">逻辑 token 2、3 → 物理页 2</text>
+    <text x="50" y="234">token 3 → (table[1], 1) = (2, 1)</text>
+    <rect x="30" y="280" width="540" height="156" rx="12" fill="#e1f3ec" stroke="#5a9c85"/>
+    <text x="50" y="318" font-weight="700">写入方向：append 保存副本</text>
+    <text x="50" y="360">调用者输入 [1, 2] → 缓存 [1.0, 2.0]</text>
+    <text x="50" y="402">调用者把输入改成 99，缓存应不变。</text>
+    <rect x="30" y="462" width="540" height="183" rx="12" fill="#e2edf8" stroke="#759ac0"/>
+    <text x="50" y="500" font-weight="700">读取方向：get 返回逐行副本</text>
+    <text x="50" y="542">缓存内层行 → 新的返回内层行</text>
+    <text x="50" y="584">仅复制最外层列表还不够。</text>
+    <text x="50" y="621">修改返回值后，再读应仍是原数据。</text>
+  </g>
+</svg>

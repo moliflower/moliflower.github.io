@@ -12,9 +12,13 @@ Edit Markdown, Python assignments, and the course site's HTML/CSS/JS directly un
 python _courses/build_deepinfer.py
 node _courses/tests/test_site.cjs _courses/deepinfer/course/site
 node _courses/tests/test_storage.cjs _courses/deepinfer/course/site
-python _courses/deepinfer/course/tools/grade.py --solution
+node _courses/tests/test_doc_reader.cjs
+python -B _courses/deepinfer/course/tools/grade.py --solution
+python -B -m unittest discover -s _courses/tests -p 'test_*.py'
 ```
 
 The builder regenerates lecture HTML and the runnable ZIP; deployment also runs it automatically. Never add personal reports, QA attempts, credentials, or working files to the public `deepinfer/` directory. The ZIP includes public reference solutions; student progress remains browser-local. Upstream CUDA implementation links stay pinned to the original DeepInfer repository and are separate from this course's source.
+
+The illustrated textbook covers the published Weeks 1–6 only. Edit diagrams as local SVG sources in `deepinfer/course/figures/`, with a `viewBox`, accessible title/description, and no scripts or external resources. Standalone Markdown images become captioned, zoomable figures in the reader; on narrow screens diagrams scroll inside their own frame rather than shrinking labels into illegibility. Reader styles and scripts receive content-hash URLs, while existing assignment IDs and progress keys remain unchanged. New numerical examples should have regression checks under `_courses/tests/`, outside the learner assignment tree.
 
 Commit the refreshed course files on `main` to use the existing GitHub Actions deployment. Do not edit `gh-pages` directly: the next site build replaces it.

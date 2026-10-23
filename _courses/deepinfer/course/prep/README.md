@@ -21,7 +21,7 @@
 | [预备 2：列表和矩阵](02-matrix.md) | 副本、二维索引、累计值 | 修复复制与矩阵乘法 | q2 |
 | [预备 3：让测试帮助你](03-tests.md) | 断言、误差、边界、自测 | 修复比较函数，独立写向量加法 | q3 |
 
-所有下面这样的命令都在 **DeepInfer 仓库根目录**运行，即能看到 `course` 文件夹的位置。若你的环境只提供 `python3`，将命令中的 `python` 替换为 `python3`。
+所有下面这样的命令都在**课程根目录**运行，即能直接看到 `course` 文件夹的位置。离线ZIP解压后进入这一层；若从个人主页源码仓库开始，先 `cd _courses/deepinfer`。不要已经进入 `course` 后又输入以 `course/` 开头的路径。若环境只提供 `python3`，将命令中的 `python` 替换为 `python3`；Windows启动器也可用 `.\course\run.ps1 prep --question q0`。
 
 ```bash
 python course/prep/demo.py
@@ -56,6 +56,8 @@ python course/tools/grade.py prep --question q1 --hint 3
 ```
 
 ## 5. 出口检查
+
+四节阅读分别只对应q0、q1、q2、q3；q2包含复制矩阵与矩阵乘法两项，q3包含比较函数与独立向量加法两项。先修复当前小题再整份运行，避免把其他故意保留的错误误认成一次修复引起的回归。
 
 ```bash
 python course/tools/grade.py prep

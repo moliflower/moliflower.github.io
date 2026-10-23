@@ -9,7 +9,7 @@
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=735a586a6ca2">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -25,7 +25,7 @@
       <div class="eyebrow">讲义 12</div>
       <h1>第 12 讲：Chunked prefill 与延迟指标</h1>
       <div class="doc-meta">
-        <span>纯阅读约 6 分钟 · 动手另计</span>
+        <span>浏览文字约 14 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../lectures/lec12.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -33,44 +33,76 @@
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
-        <a class="toc-level-2" href="#h-1">1. 为什么把 prompt 拆成几轮</a><a class="toc-level-2" href="#h-2">2. 三个数一起取最小值</a><a class="toc-level-2" href="#h-3">3. 指标先定义事件，再写公式</a><a class="toc-level-2" href="#h-4">4. 吞吐量不等于达标吞吐</a><a class="toc-level-2" href="#h-5">5. 小 chunk 一定更好吗</a><a class="toc-level-2" href="#h-6">6. 实验前的预测</a>
-      </aside>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 10 节</summary>
+        <nav aria-label="本页章节">
+        <a class="toc-level-2" href="#h-1">1. 长 prompt 为什么不能只用“一个请求”衡量</a><a class="toc-level-2" href="#h-2">2. 把“剩余预算”变成可检查的不变式</a><a class="toc-level-2" href="#h-3">3. 案例一：从一张计划推到完整结束</a><a class="toc-level-2" href="#h-4">4. 案例二：小 chunk 为什么可能更晚得到首 token</a><a class="toc-level-2" href="#h-5">5. 先画事件，再推导 TTFT、ITL、TPOT 和 E2E</a><a class="toc-level-3" href="#h-6">案例三：同一个“3”，可能来自错误公式</a><a class="toc-level-2" href="#h-7">6. 案例四：为什么“平均 TPOT”有两种答案</a><a class="toc-level-2" href="#h-8">7. 案例五：吞吐高，不代表请求都达标</a><a class="toc-level-2" href="#h-9">8. 从约束推出一个看似奇怪、其实必然的结果</a><a class="toc-level-2" href="#h-10">9. 分级自测与下一步</a>
+        </nav>
+      </details>
       <article class="doc-content">
-        <p>先修：<a href="lec11.html">L11</a>。约 60 分钟；配套 <a href="lab05.html">Lab5 Q2</a>、<a href="hw06.html">HW6</a>、<a href="project2-scheduler.html">Project2 Phase2</a>。</p>
-<h2 id="h-1">1. 为什么把 prompt 拆成几轮</h2>
-<p>Prefill 可以一次处理多个 prompt 位置；普通 decode 每条序列每轮处理一个新位置。长 prompt 若一次占用很大的执行批次，可能延后正在流式生成的请求。Chunked prefill 把剩余 prompt 分成多次处理，使 prefill 工作能与 decode 在调度边界交错。</p>
-<p><a href="https://docs.vllm.ai/en/stable/configuration/optimization/#chunked-prefill">vLLM 官方优化文档</a> 描述了 decode 优先、剩余 token 预算用于 prefill 的策略，以及预算对 TTFT/ITL 的影响（核对：2026-10-24）。这是理解系统的入口，不代表所有版本、所有模型都使用完全相同的实现。本课额外设定“每请求每轮最多一个 chunk”的教学规则，不把它冒充 vLLM 的配置项或源码复刻。</p>
-<h2 id="h-2">2. 三个数一起取最小值</h2>
-<p>先给每条入选 decode 请求分配 1 个 token，得到剩余预算 R。然后按活动顺序处理每条 prefill 请求：</p>
-<pre><code class="language-text">本次分配 = min(剩余 prompt token, chunk_size, R)
-R = R - 本次分配</code></pre>
-<p>每条请求本轮最多被选一次。即使仍有预算，也不回头给同一请求第二个 chunk。chunk_size 是上限，不是必须补齐的长度；不能凭空生成 padding 工作，也不能因为不足一个整块就拒绝执行尾部。</p>
-<p>例如活动队列 <code>[(A,5,3),(B,0,2),(C,2,1)]</code>，预算 4，chunk_size=2：</p>
-<table><thead><tr><th>顺序</th><th>动作</th><th>消耗</th><th>剩余预算</th></tr></thead><tbody><tr><td>1</td><td>B decode</td><td>1</td><td>3</td></tr><tr><td>2</td><td>A prefill</td><td>2</td><td>1</td></tr><tr><td>3</td><td>C prefill</td><td>1</td><td>0</td></tr></tbody></table>
-<p>C 仍有 1 个 prompt token 未处理，不能产生首 token。A 的剩余 prompt 是 3。B 的剩余输出数减一。本例没有任何请求完成 prefill 后又在同轮 decode。</p>
-<h2 id="h-3">3. 指标先定义事件，再写公式</h2>
-<p>设 arrival 是到达时刻，输出 token 时间依次为 t1 ... tn。时间必须来自同一时钟、使用同一单位。</p>
+        <p>先修：<a href="lec11.html">L11</a>。建议分两次学习，每次 60–80 分钟。配套 <a href="lab05.html">Lab5 Q2</a>、<a href="hw06.html">HW6</a>、<a href="project2-scheduler.html">Project2 Phase2</a>。目标不是记住 TTFT 的缩写，而是能从原始事件推导指标、找出错误统计口径，并解释一个调度参数为何改变结果。</p>
+<h2 id="h-1">1. 长 prompt 为什么不能只用“一个请求”衡量</h2>
+<p>一个请求可能只输入 8 个 token，另一个可能输入 8000 个。它们都占一个并发位置，但 prefill 工作量明显不同。如果每轮只限制“请求个数”，就无法描述本轮究竟处理了多少 prompt。反过来，仅限制 token 总量，也不能保证请求状态占用的 KV 内存够用。L11 的三类约束必须继续分开。</p>
+<p>Chunked prefill 的做法是把尚未处理的 prompt 分成多轮执行。不是把用户 prompt 截短，也不是每段各生成一个答案，而是保留前一段上下文状态，接着处理下一段；<strong>只有整个 prompt 完成时才产生首输出</strong>。本周模拟器只用剩余计数表示这件事，并不真的保存 KV 或调用注意力。</p>
+<p><a href="https://docs.vllm.ai/en/stable/configuration/optimization/#chunked-prefill">vLLM 官方优化文档</a>描述了 decode 优先、剩余 token 预算用于 prefill 的调度方式，并讨论预算对 TTFT 与 ITL 的影响（核对于 2026-10-24）。我们用它理解问题，不把自己的 toy 参数叫作真实引擎参数：本课额外规定每个请求每轮最多一个 chunk，且所有轮固定为 1 tick。真实系统的启用条件、实现细节和性能需要按版本核实。</p>
+<h2 id="h-2">2. 把“剩余预算”变成可检查的不变式</h2>
+<p>设本轮预算 B，已选择的 decode 请求有 D 条。普通 decode 每条处理一个新位置，所以先扣除 D，得到 R=B−D。随后按活动顺序逐条访问还在 prefill 的请求。对其中一条，设剩余 prompt 为 P，单请求 chunk 上限为 K：</p>
+<pre><code class="language-text">本次 count = min(P, K, R)
+分配后 R = R - count
+始终满足：已分配总数 + R = B，且 R &gt;= 0</code></pre>
+<p>为什么同时取三个最小值？只看 P 会突破整轮预算；只看 K 会处理并不存在的尾部 token；只看 R 则会让单条请求越过 chunk 上限。<code>count=0</code> 时不添加动作。分配完这条就往下走，不回头给它第二个 chunk。因此剩余预算不必总为 0，预算是上限而非工作量目标。</p>
+<figure class="textbook-figure"><a href="../../figures/week06-budget.svg" target="_blank" rel="noopener" aria-label="查看大图：预算4先给B一次decode，再给A两token和C一token的逐步分配图"><img src="../../figures/week06-budget.svg" alt="预算4先给B一次decode，再给A两token和C一token的逐步分配图" loading="lazy"></a><figcaption>预算4先给B一次decode，再给A两token和C一token的逐步分配图<span class="figure-zoom">小屏可横向滑动图解；点击图解可查看原图</span></figcaption></figure>
+<p>读图时先遮住最下面的计划，自己在每一步写出 R。图里的 1、2、1 是<strong>本轮输入 token 数</strong>，不是三条请求的剩余输出长度，也不是 KV 块数。最后检查所有 count 相加是否不超过 4。</p>
+<h2 id="h-3">3. 案例一：从一张计划推到完整结束</h2>
+<p>现在已经有三个活动请求，轮开始状态为 <code>A:(5,3), B:(0,2), C:(2,1)</code>；预算 4、chunk 2。B 先前已经得到首 token，这里只观察它后面还需生成的两个输出，不能拿这一段记录直接算 B 的完整 TTFT。</p>
+<table><thead><tr><th>区间</th><th>计划（按执行顺序）</th><th>轮末 active</th><th>本轮输出</th><th>未用预算</th></tr></thead><tbody><tr><td>0→1</td><td>B D1，A P2，C P1</td><td>A:(3,3)，B:(0,1)，C:(1,1)</td><td>B</td><td>0</td></tr><tr><td>1→2</td><td>B D1，A P2，C P1</td><td>A:(1,3)</td><td>B,C</td><td>0</td></tr><tr><td>2→3</td><td>A P1</td><td>A:(0,2)</td><td>A</td><td>3</td></tr><tr><td>3→4</td><td>A D1</td><td>A:(0,1)</td><td>A</td><td>3</td></tr><tr><td>4→5</td><td>A D1</td><td>空</td><td>A</td><td>3</td></tr></tbody></table>
+<p>第一轮并不是给 A 完整 2、给 C 完整 2：B 已经占 1，只剩 3，所以 C 只能处理 1。第二轮 C 刚完成 prefill，产出唯一输出后结束。第三轮 A 的最后 1 个 prompt token 产生首输出，而不是第六个“prompt 输出”。这段观察内产生的时间为 A=<code>[3,4,5]</code>、B=<code>[1,2]</code>、C=<code>[2]</code>；B 的两次输出并不包含首 token。</p>
+<p>手写一个只处理一条 prefill 的小函数，再扩展到多条，是比一口气写整个调度器更可靠的路径：</p>
+<pre><code class="language-python">def allocate_chunk(prefill_remaining, chunk_size, remaining_budget):
+    return min(prefill_remaining, chunk_size, remaining_budget)
+
+assert allocate_chunk(5, 2, 3) == 2
+assert allocate_chunk(2, 2, 1) == 1
+assert allocate_chunk(1, 2, 8) == 1</code></pre>
+<p>这个 toy 片段假定输入合法，不是评分接口。下一步增加一个 <code>remaining_budget</code> 变量和列表循环，每加入计划就扣减 count；再把 decode 遍历放在前面；最后补全部输入验证。每完成一步都保留一组能手算的断言，而不是等整题写完才运行测试。</p>
+<h2 id="h-4">4. 案例二：小 chunk 为什么可能更晚得到首 token</h2>
+<p>固定两个请求 <code>long=(0,5,2)</code>、<code>short=(1,1,1)</code>，<code>max_active=2, token_budget=3</code>，只改变 chunk=1 或 3。两者都逐轮补位，不能把这个实验误写成固定批次与连续批次的比较。</p>
+<table><thead><tr><th>区间</th><th>chunk=1 的计划</th><th>chunk=3 的计划</th></tr></thead><tbody><tr><td>0→1</td><td>long P1</td><td>long P3</td></tr><tr><td>1→2</td><td>long P1，short P1</td><td>long P2，short P1</td></tr><tr><td>2→3</td><td>long P1</td><td>long D1</td></tr><tr><td>3→4</td><td>long P1</td><td>全部完成</td></tr><tr><td>4→5</td><td>long P1</td><td>全部完成</td></tr><tr><td>5→6</td><td>long D1</td><td>全部完成</td></tr></tbody></table>
+<p>chunk=1 时 long 输出 <code>[5,6]</code>，short 输出 <code>[2]</code>；chunk=3 时 long 输出 <code>[2,3]</code>，short 仍是 <code>[2]</code>。平均 TTFT 分别为 <code>(5+1)/2=3</code> 与 <code>(2+1)/2=1.5</code> tick；完成时间为 6 与 3。相同的 3 个输出，对应输出吞吐 3/6 与 3/3 token/tick。两个配置里 long 的 TPOT 都为 1。</p>
+<p>结论应写成“在这个固定 tick 模型、此输入及预算下，增大 chunk 减少 long 的 prefill 轮数，short 未受影响”。不能写“小 chunk 没用”或“真实机器增大 chunk 一定加速两倍”。若 short 的 prompt 变长，剩余预算可能不够；若单轮物理耗时依批次变化，short 的用户等待也会变。准确解释要同时说出改变了什么、固定了什么、没有模拟什么。</p>
+<h2 id="h-5">5. 先画事件，再推导 TTFT、ITL、TPOT 和 E2E</h2>
+<p>到达时刻记为 arrival，输出完成时刻依次为 t1、t2、…、tn。所有时间必须来自同一时钟、同一单位，且严格递增。先把用户经历分成“等第一字”和“已有第一字后继续等”两段，而不是先猜一个除法。</p>
 <pre><code class="language-text">TTFT = t1 - arrival
+ITL 列表 = [t2-t1, t3-t2, ..., tn-t(n-1)]
 E2E = tn - arrival
-TPOT = (tn - t1) / (n - 1)       n &gt; 1</code></pre>
-<ul><li>TTFT 包含排队和 prefill，不只是 prefill kernel 的执行时间。</li><li>TPOT 是该请求在首 token 之后的平均输出间隔。n=1 没有间隔，本课记 None，而非 0。</li><li>ITL 是逐个 token 间隔，例如 <code>[2,4]</code>；TPOT 是它们的均值 3。均值不能代替尾延迟。</li><li>E2E/n 混入了等待和首 token 时间，不是这里定义的 TPOT。</li></ul>
-<p>手算：arrival=2，输出时间 <code>[5,7,11]</code>，TTFT=3，TPOT=3，E2E=9。若单位是秒，就全部是秒；若来自本课模拟器，就全部是 tick，不能改名为毫秒。</p>
-<p>多请求汇总也要交代分母。请求 A 的 TPOT 为 4，B 为 1，平均请求 TPOT=(4+1)/2=2.5。若 A 只有一个间隔、B 有三个间隔，合并所有间隔后的平均值则是 7/4。两个统计量都可以有用，但不能混称同一个平均值。</p>
-<h2 id="h-4">4. 吞吐量不等于达标吞吐</h2>
-<p>定义观察窗口 <code>[0,T]</code>，只输入在此窗口内已经完成的请求，且明确排除未完成请求带来的统计偏差：</p>
+TPOT = sum(ITL) / (n-1) = (tn-t1) / (n-1)，n &gt; 1</code></pre>
+<p>TPOT 中间的求和会抵消所有中间时间戳，只剩末时刻减首时刻，因此可以用端点快速计算。分母是 n−1，因为三个输出只有两个相邻间隔。由同样的拆分还能得到一致性检查：<code>E2E = TTFT + (n-1) * TPOT</code>，仅对 n&gt;1 使用。首输出之前的排队和 prefill 全包含在 TTFT 中，不应再额外加一遍。</p>
+<figure class="textbook-figure"><a href="../../figures/week06-metrics.svg" target="_blank" rel="noopener" aria-label="查看大图：到达2，输出5、7、11时刻的延迟拆分与公式图"><img src="../../figures/week06-metrics.svg" alt="到达2，输出5、7、11时刻的延迟拆分与公式图" loading="lazy"></a><figcaption>到达2，输出5、7、11时刻的延迟拆分与公式图<span class="figure-zoom">小屏可横向滑动图解；点击图解可查看原图</span></figcaption></figure>
+<p>读图时先看上方原始事件：2 到 5 是首输出等待，5 到 7 与 7 到 11 是两个不同的输出间隔。它们平均为 3，却不代表两个间隔都等于 3。最后用下方等式检查总等待是否还原成 9。</p>
+<h3 id="h-6">案例三：同一个“3”，可能来自错误公式</h3>
+<p>arrival=2，输出 <code>[5,7,11]</code>：TTFT=5−2=3，ITL=<code>[2,4]</code>，TPOT=(2+4)/2=3，E2E=11−2=9。这里错误公式 <code>E2E/n=9/3</code> 也碰巧得到 3，所以一个测试通过不能证明公式正确。</p>
+<p>只把 arrival 改为 0，输出时间不变：TTFT 变为 5，E2E 变为 11，TPOT 仍是 3；错误公式却得到 11/3。首 token 前的等待不应该改变首 token 后的平均间隔，这就是能击穿错误实现的最小改动。</p>
+<p>只有一个输出时，没有任何 ITL，TPOT 无定义，本课返回 <code>None</code>；不是 0，也不是 TTFT。空输出列表则不满足“完成请求”契约，应报错，不可当成单输出。HW6 允许首输出与 arrival 相同以支持通用时间数据，但本模拟器最少要执行一轮，因此它自己的 TTFT 至少是 1 tick。计算器的允许范围可以比某一种数据源更宽。</p>
+<h2 id="h-7">6. 案例四：为什么“平均 TPOT”有两种答案</h2>
+<p>三个完成请求为 A=<code>(0,[1,5])</code>、B=<code>(0,[2,3,4,5])</code>、C=<code>(1,[2])</code>。逐个算完后再汇总：</p>
+<table><thead><tr><th>请求</th><th>TTFT</th><th>ITL</th><th>TPOT</th><th>是否进入平均 TPOT</th></tr></thead><tbody><tr><td>A</td><td>1</td><td>[4]</td><td>4</td><td>是</td></tr><tr><td>B</td><td>2</td><td>[1,1,1]</td><td>1</td><td>是</td></tr><tr><td>C</td><td>1</td><td>空</td><td>None</td><td>否</td></tr></tbody></table>
+<p>请求等权 mean_ttft=(1+2+1)/3=4/3；请求等权 mean_tpot=(4+1)/2=2.5。若把所有间隔合在一起，则得到 <code>(4+1+1+1)/4=1.75</code>，B 因输出更长被赋予更高权重。这两个统计量回答不同问题，不能把它们混用。把 C 的 None 擅自转成 0 会进一步得到错误的 5/3。</p>
+<p>本课 HW6 选择请求等权口径，是为了每条完成请求权重相同，并非宣称它适用于所有业务。平均值还会掩盖个别很慢的请求；真实报告需要说明分布、分位数、未完成请求和失败情况，不能只报一个漂亮平均数。</p>
+<h2 id="h-8">7. 案例五：吞吐高，不代表请求都达标</h2>
+<p>把观察窗口明确规定为 <code>[0,T]</code>。本课只接收在此窗口内已完成且时间合法的请求，T 必须为正。SLO 是服务目标：TTFT 不超过给定上限，并且有定义的 TPOT 也不超过上限；等于上限算通过，单输出只检查 TTFT。</p>
 <pre><code class="language-text">输出吞吐 = 完成请求的输出 token 总数 / T
-请求 goodput = 同时满足 TTFT 与 TPOT 限制的请求数 / T</code></pre>
-<p>HW6 采用包含等号的 SLO：TTFT &lt;= limit、TPOT &lt;= limit；单 token 请求只检查 TTFT。本课 goodput 单位是请求/单位时间，不是 token/秒。窗口中的空闲时间也算 T，不能为了让数字好看偷偷剔除。真实在线基准还要报告未完成/失败请求、负载和窗口边界处理方法。</p>
-<p>例如窗口 6 秒，三个请求 <code>(arrival,token_times)</code> 为 <code>(0,[2,4])</code>、<code>(0,[2,6])</code>、<code>(1,[2])</code>。限制 TTFT&lt;=2、TPOT&lt;=2：第一、三条达标，goodput=2/6 请求/秒。总输出吞吐则是 5/6 token/秒，二者不是同一种量。</p>
-<h2 id="h-5">5. 小 chunk 一定更好吗</h2>
-<p>不一定。较小 chunk 给其他请求留下机会，但长 prompt 要更多轮才能到首 token，也可能增加运行时开销。更大的 token 批次可能改变一次迭代的实际时长，进而改变流式输出间隔。应在相同到达负载、模型、设备与统计口径下比较，不能只凭一个参数推导实际性能。</p>
-<p>本周模拟器刻意将每轮固定为 1 tick，并要求 token_budget &gt;= max_active。于是活动的 decode 每轮都能执行，所有多 token 请求的 TPOT 都是 1 tick；实验能展示首 token 排队变化，却<strong>不能重现 GPU 上大 prefill 拖慢 decode 的物理时延</strong>。这是模型的边界，不是“chunk size 不影响真实 TPOT”的证据。以后加入有测量依据的批次成本或真实设备执行，才能讨论物理时间。</p>
-<h2 id="h-6">6. 实验前的预测</h2>
-<p>用 Phase2 的 long_then_short 负载，固定预算 4，比较 max_active=1/2、chunk=1/2/4：</p>
-<ol><li>哪些配置让短请求不必等待长请求整个结束？</li><li>为什么 chunk=1 可能留有空预算，反而需要更多轮？</li><li>改成所有请求同时到达，结论是否仍成立？</li><li>报告中哪些数字来自测量，哪些来自教学假设？</li></ol>
-<p>先写预测，再运行实验。一个解释清楚的不理想结果，比一句没有条件的“优化加速了”更有价值。</p>
+请求 goodput = 同时达到适用 SLO 的请求数 / T</code></pre>
+<p>窗口 T=6，限制 TTFT≤2、TPOT≤2；三个请求为 A=<code>(0,[2,4])</code>、B=<code>(0,[2,6])</code>、C=<code>(1,[2])</code>。A 得到 (2,2)，通过；B 得到 (2,4)，未通过；C 得到 (1,None)，通过。因此 goodput=2/6 请求/时间单位；输出吞吐=(2+2+1)/6=5/6 token/时间单位。若时间单位来自实验，必须写 tick，不能标成秒。</p>
+<p>把窗口改成 5 不是“删掉超时的 B 再算”：B 的最后输出在 6，数据不符合窗口契约，HW6 必须报错。把窗口扩大为 8，输入记录不变，则 goodput=2/8、输出吞吐=5/8；多观察的空闲时间也在分母内。真实在线压测还需统计未完成、取消与失败请求；本作业的“完成请求列表”没有这些信息，不能冒充全量在线服务结论。</p>
+<h2 id="h-9">8. 从约束推出一个看似奇怪、其实必然的结果</h2>
+<p>Project2 要求 <code>token_budget &gt;= max_active</code>，活动 decode 数又不会超过 max_active。因此每轮的所有活动 decode 都能拿到一个 token 份额；本阶段也没有抢占或取消，轮长恒为 1。某请求得到首输出后，在后续每一轮都会继续输出，直到结束，所以所有 n&gt;1 请求的 ITL 都是 1，TPOT 也必为 1 tick。</p>
+<p>这是推导，不是实验偶然。实验里你可以比较排队、首输出时间、补位和完成窗口，却不能用“TPOT 都是 1”证明 chunk size 对真实 GPU 没影响。真实大 prefill 可能改变单轮物理时间；目前成本模型把这种变化刻意删掉了。等将来接入经过测量校准的迭代成本或真实设备，才有条件讨论真实 TTFT/TPOT 权衡。</p>
+<h2 id="h-10">9. 分级自测与下一步</h2>
+<p>基础：<code>min(7,3,2)</code> 为什么是 2？arrival=1，输出 <code>[4]</code> 的 TTFT、TPOT、E2E 是什么？</p>
+<p>应用：用案例二的输入，把 chunk 改为 2，逐轮填写计划、long 的剩余 prompt、输出列表，然后再算平均 TTFT。不要先看参考结果。</p>
+<p>解释：为什么“平均 TPOT=1”不代表全部请求从到达到结束只用了 1 tick？为什么输出吞吐的分子不能改成 <code>prompt+output−1</code>？</p>
+<details class="study-hint"><summary>展开自测解析</summary><p>基础：整轮只剩 2 预算，即使请求和 chunk 都更大也不能超用。单输出的三个指标是 3、None、3。应用：chunk=2 时各轮计划为 long P2；long P2 与 short P1；long P1；long D1。long 输出 <code>[3,4]</code>，short <code>[2]</code>，平均 TTFT=(3+1)/2=2。解释：TPOT 不含首次排队和 prefill；输出吞吐只数实际交给用户的输出，<code>prompt+output−1</code> 计的是输入工作量，是另一个指标。</p></details>
+<p>完成 <a href="lab05.html">Lab5</a> 时，把预算不变式写在纸上；完成 <a href="hw06.html">HW6</a> 时，先画时间线再写公式；完成 <a href="project2-scheduler.html">Project2 Phase2</a> 时，先过单请求，再过同到达和补位，最后跑实验。三项练习分别训练策略、测量与状态机，不要用某一项的通过替代另两项。</p>
       </article>
     </div>
 
@@ -79,7 +111,7 @@ TPOT = (tn - t1) / (n - 1)       n &gt; 1</code></pre>
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="../storage.js?v=548aeeba52ac"></script>
+  <script src="../doc.js?v=5b7937ad5e19"></script>
 </body>
 </html>

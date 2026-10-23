@@ -2,6 +2,7 @@
 
 > 每周 12–15 小时。**Lecture 在前，Lab 在中，Homework/Project 在后。**  
 > 标注“待发布”的材料尚无完整代码与验收，不承诺按日期自动补充。已发布材料按先修推进，日历日期仅为示例。
+> **当前重整范围**：起步、预备、第 1–6 周。先按 [自学路线](LEARNING_PATH.md) 选择入口，保留原题号与评分；第 7–15 周本次不增加内容。
 
 ---
 
@@ -11,7 +12,7 @@
 
 **入门前置**：[预备 0–3](prep/README.md)，练运行、调试、矩阵与测试，不要求 C++。正式第 1 周以第一讲核心和 Lab0 为主。CUDA/occupancy/profiling 等为选读，后续材料继续审校。
 
-**目标**：建立 GPU 心智模型，能写 memory-bound kernel，能算 roofline，能解释 attention/KV 的代价。
+**目标**：建立 GPU 执行与访存心智模型，用纯 Python 实现算子并检查数值，在给定代价假设下分析 roofline 和 attention/KV；实际设备优化留作扩展。
 
 | Week | Lecture | Lab | Homework | Project | 本周产出 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -43,13 +44,13 @@
 - **Lecture 5**：attention 的数学、Q/K/V、multi-head、causal mask。
 - **Lecture 6**：FlashAttention 的 online softmax、tiling、IO complexity；decode attention 为什么 memory-bound。
 - **Lab 2**：实现 matmul/transpose/softmax/causal mask/attention/multi-head，算 FLOPs 和 bytes。
-- **代价练习**：先做 Lab2 Q7/Q8；完整 HW2 在 KV 讲完后做。
+- **代价练习**：先做 Lab2 Q7/Q8；完整 HW1/2 留到 L7、L8 都完成后统一做。
 - **Project 1**：Phase 2 完成，开始写 report 的 roofline 表。
 - **Checkoff**：prefill 和 decode 的 attention 分别是什么 bound？为什么？
 
 ### Week 4 详细
 
-- **Lecture 7**：KV cache 基础：为什么 decode 需要 cache、K/V 布局、容量计算；PagedAttention 留到 Week 5。
+- **Lecture 7**：KV cache 基础：为什么 decode 需要 cache、K/V 布局、容量计算、单请求分页容器；全局有限共享块池与 PagedAttention 的系统背景在 Week5。
 - **Lecture 8**：FP8/FP4、per-tensor/per-token/per-group、scale 布局、误差。
 - **Lab 3**：实现连续布局 + paged 布局的 KV cache（append/get/free），算 page waste。
 - **HW1/2**：先修齐备后做 Roofline、KV、量化与 attention 代价，可把本阶段拆成多周。
@@ -73,9 +74,9 @@
 
 - KV cache 的 allocate/free/evict；
 - continuous batching vs static batching；
-- chunked prefill 的 chunk size 和 TTFT/TPOT trade-off；
+- chunked prefill 的预算分配、TTFT/TPOT 统计口径与真实权衡的模型限制；
 - prefix cache 的命中率和 eviction；
-- 用离散事件模拟器测 throughput/latency。
+- 用固定 tick 轨迹计算模型吞吐和延迟，不把它们报告为 GPU 实测秒数。
 
 ### Week 7–8 重点
 

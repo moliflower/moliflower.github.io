@@ -9,7 +9,7 @@
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=735a586a6ca2">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -25,7 +25,7 @@
       <div class="eyebrow">起步 2</div>
       <h1>起步 2：遍历列表，构造自己的输出</h1>
       <div class="doc-meta">
-        <span>纯阅读约 3 分钟 · 动手另计</span>
+        <span>浏览文字约 3 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../foundations/02-sequences.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -33,13 +33,16 @@
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 5 节</summary>
+        <nav aria-label="本页章节">
         <a class="toc-level-2" href="#h-1">1. 一组有顺序的数据</a><a class="toc-level-2" href="#h-2">2. for 每次取出一个元素</a><a class="toc-level-2" href="#h-3">3. 两个名字可以指向同一个列表</a><a class="toc-level-2" href="#h-4">4. Q3：把上限规则放进循环</a><a class="toc-level-2" href="#h-5">5. 解释与调试</a>
-      </aside>
+        </nav>
+      </details>
       <article class="doc-content">
         <p><strong>先修：</strong>函数与条件。<strong>目标：</strong>追踪一次循环，理解输入与输出的关系，通过 Q3。</p>
 <h2 id="h-1">1. 一组有顺序的数据</h2>
+<p><strong>本节路线</strong>：读第1–3节追踪列表和别名，再做第4节的foundations Q3；先修为起步1的条件选择。命令目录见 <a href="foundations.html">起步入口</a>。出口证据不是“出现一个列表”，而是输出满足上限、顺序不变、输入保持原值，并能解释为什么要新建结果容器。</p>
 <p><code>lengths = [2, 8, 0]</code> 创建一个有三项的列表。<code>len(lengths)</code> 是 3。索引从 0 开始，所以 <code>lengths[0]</code> 是 2，<code>lengths[2]</code> 是 0；<code>lengths[3]</code> 超出范围，会产生 <code>IndexError</code>。</p>
 <p>空列表 <code>[]</code> 的长度为 0，没有第 0 项。不要因为某次输入非空，就假设所有输入都有第 0 项。</p>
 <h2 id="h-2">2. for 每次取出一个元素</h2>
@@ -73,7 +76,7 @@ print(original)</code></pre>
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="../storage.js?v=548aeeba52ac"></script>
+  <script src="../doc.js?v=5b7937ad5e19"></script>
 </body>
 </html>

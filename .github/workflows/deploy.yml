@@ -105,8 +105,9 @@ jobs:
           python _courses/build_deepinfer.py
           node _courses/tests/test_site.cjs _courses/deepinfer/course/site
           node _courses/tests/test_storage.cjs _courses/deepinfer/course/site
+          node _courses/tests/test_doc_reader.cjs
           python -B _courses/deepinfer/course/tools/grade.py --solution
-          python -B _courses/tests/test_week06.py
+          python -B -m unittest discover -s _courses/tests -p 'test_*.py'
           mkdir -p _site/deepinfer
           cp -a _courses/deepinfer/. _site/deepinfer/
           test -s _site/deepinfer/index.html

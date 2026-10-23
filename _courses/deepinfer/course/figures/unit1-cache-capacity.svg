@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="690" viewBox="0 0 600 690" role="img" aria-labelledby="title desc">
+  <title id="title">从每 token 到整个批次的 KV 容量</title>
+  <desc id="desc">两份 K V 乘八个头、一百二十八维、两字节，得到每层每 token 四 KiB；乘三十二层得到一百二十八 KiB；乘二千零四十八 token 得二百五十六 MiB。分页槽位还须独立向上取整。</desc>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#41647f"/></marker></defs>
+  <rect width="600" height="690" rx="20" fill="#f4f8fc"/>
+  <g font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="22" fill="#17324d">
+    <text x="30" y="44" font-size="26" font-weight="700">先数元素，再乘字节</text>
+    <rect x="30" y="70" width="540" height="118" rx="12" fill="#fff" stroke="#759ac0"/>
+    <text x="50" y="108" font-weight="700">① 一个 token、一层</text>
+    <text x="50" y="147">K / V × KV heads × D × dtype</text>
+    <text x="50" y="177">2 × 8 × 128 × 2 = 4096 B</text>
+    <path d="M300 195 V227" stroke="#41647f" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="30" y="242" width="540" height="105" rx="12" fill="#e2edf8" stroke="#759ac0"/>
+    <text x="50" y="280" font-weight="700">② 乘层数：一个 token、全部层</text>
+    <text x="50" y="322">4096 × 32 = 131072 B = 128 KiB</text>
+    <path d="M300 354 V386" stroke="#41647f" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="30" y="401" width="540" height="105" rx="12" fill="#e1f3ec" stroke="#5a9c85"/>
+    <text x="50" y="439" font-weight="700">③ 乘长度与并发数</text>
+    <text x="50" y="481">128 KiB × 2048 × 1 = 256 MiB</text>
+    <rect x="30" y="536" width="540" height="125" rx="12" fill="#fff2db"/>
+    <text x="50" y="574" font-weight="700">有效载荷 ≠ 已分配空间</text>
+    <text x="50" y="611">5 token、每页 4 槽 → 分配 8 槽。</text>
+    <text x="50" y="645">还未计页表、scale、对齐和权重。</text>
+  </g>
+</svg>

@@ -13,7 +13,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parent / "deepinfer"
 DIRECTORIES = {"course", "doc", "notes"}
 FILES = {"LICENSE", "START_HERE.md"}
-EXTENSIONS = {".html", ".css", ".js", ".md", ".py", ".ps1", ".bat"}
+EXTENSIONS = {".html", ".css", ".js", ".md", ".py", ".ps1", ".bat", ".svg"}
 
 
 def build_homepage():

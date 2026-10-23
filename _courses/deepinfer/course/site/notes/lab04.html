@@ -9,7 +9,7 @@
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=735a586a6ca2">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -25,7 +25,7 @@
       <div class="eyebrow">实验 4</div>
       <h1>Lab4：有限块池与共享所有权</h1>
       <div class="doc-meta">
-        <span>纯阅读约 4 分钟 · 动手另计</span>
+        <span>浏览文字约 7 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../labs/lab04/README.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -33,36 +33,47 @@
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
-        <a class="toc-level-2" href="#h-1">1. 先跑一条可解释的失败</a><a class="toc-level-2" href="#h-2">2. API 与契约</a><a class="toc-level-2" href="#h-3">3. 先手算，再实现</a><a class="toc-level-2" href="#h-4">4. 调试任务与验收</a>
-      </aside>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 7 节</summary>
+        <nav aria-label="本页章节">
+        <a class="toc-level-2" href="#h-1">1. 开始前：定位目录、预测失败</a><a class="toc-level-2" href="#h-2">2. 先画状态，而不是先写循环</a><a class="toc-level-2" href="#h-3">3. Q1：先证明放得下，再分配</a><a class="toc-level-2" href="#h-4">4. Q2：共享增加所有权，不增加内容副本</a><a class="toc-level-2" href="#h-5">5. Q3：release 是减一，不是清零</a><a class="toc-level-2" href="#h-6">6. Q4：位置分解后再查表</a><a class="toc-level-2" href="#h-7">7. 整体验证、解释与交付</a>
+        </nav>
+      </details>
       <article class="doc-content">
-        <p>先修：Lab3 → <a href="lec09.html">第 9 讲</a>。约 2–3 小时，可分两次完成。只用 Python 标准库，修改 <code>course/labs/lab04/lab04.py</code>。这是块生命周期模型，没有 KV 数值、并发或 GPU。</p>
-<h2 id="h-1">1. 先跑一条可解释的失败</h2>
-<p>从仓库根目录执行：</p>
+        <p>这份实验把 <a href="lec09.html">第 9 讲</a> 的四条手算轨迹变成代码。先修 Lab3、L9；预计 2–3 小时，可按两次 60–90 分钟拆开。只用标准 Python，编辑 <code>course/labs/lab04/lab04.py</code>，不要编辑参考答案或测试。模型只管理块 ID 和引用数，没有 KV 数值、并发或 GPU。</p>
+<h2 id="h-1">1. 开始前：定位目录、预测失败</h2>
+<p>以下命令从<strong>课程根目录 <code>deepinfer/</code></strong> 执行，也就是能看到 <code>course/</code> 的目录；离线 ZIP 解压后也用这个位置。在个人主页源码仓库中，先进入 <code>_courses/deepinfer/</code>。Windows 可把 <code>python course/tools/grade.py</code> 替换为 <code>./course/run.ps1</code>。</p>
 <pre><code class="language-bash">python course/tools/grade.py lab04 --question q1 --unlock
 python course/tools/grade.py lab04 --question q1 --failfast
 python course/tools/grade.py lab04 --question q1 --hint 1</code></pre>
-<p>初始 NotImplementedError 表示题目尚未实现。Windows 可把 <code>python course/tools/grade.py</code> 替换成 <code>.\course\run.ps1</code>。</p>
-<h2 id="h-2">2. API 与契约</h2>
-<p>构造器已提供：<code>BlockPool(capacity)</code> 创建 refs 列表，长度为非负整数 capacity。<code>available()</code> 返回 refs=0 的数量。所有整数都排除 bool。</p>
-<table><thead><tr><th>题号</th><th>接口</th><th>必须满足的行为</th></tr></thead><tbody><tr><td>Q1</td><td><code>allocate(count)</code></td><td>非负整数；按最小 ID 取空闲块，将引用数设为 1，返回新的 ID 列表；0 返回 []；不足抛 MemoryError；非法 count 抛 ValueError</td></tr><tr><td>Q2</td><td><code>retain(block_ids)</code></td><td>输入为不重复整数 ID 的列表，每块必须在范围内且 refs&gt;0；整批验证后每块 +1，返回 None</td></tr><tr><td>Q3</td><td><code>release(block_ids)</code></td><td>与 Q2 同样验证；每块 -1；归零即可再分配，返回 None</td></tr><tr><td>Q4</td><td><code>locate(table,t,B)</code></td><td>table 是非负整数 ID 列表，B 为正整数，t 为整数；要求 0≤t&lt;len(table)*B；返回 <code>(table[t//B],t%B)</code></td></tr></tbody></table>
-<p>Q2/Q3 空列表有效。重复、空闲、负数、越界、bool ID 均抛 ValueError。<strong>任何失败都不能部分改变 refs</strong>。不能修改输入列表；返回的 ID 列表不得与内部状态共享。调用者不直接修改 refs；它公开只是为了手算与观察。</p>
-<p>Q4 不要求 table 的 ID 连续或唯一；它不掌握池容量与真实序列长度，也不验证页中是否已经写入 token。空表没有可访问位置。</p>
-<h2 id="h-3">3. 先手算，再实现</h2>
-<pre><code class="language-text">pool = BlockPool(3)
-A = pool.allocate(2)      -&gt; [0,1], refs=[1,1,0]
-pool.retain([0])          -&gt; refs=[2,1,0]
-B_tail = pool.allocate(1) -&gt; [2], refs=[2,1,1]
-pool.release(A)           -&gt; refs=[1,0,1]
-pool.allocate(1)          -&gt; [1], refs=[1,1,1]</code></pre>
-<p>最后一步复用的是物理块 1，而不是增长出新的块 3。写代码时把验证和变更分开；Q2/Q3 可以共享一个验证函数。</p>
-<h2 id="h-4">4. 调试任务与验收</h2>
-<p>构造 refs=<code>[1,0]</code>，尝试 release <code>[0,1]</code>。如果失败后得到 <code>[0,0]</code>，记录：期望、实际、哪一次写操作发生得太早，以及如何回归验证。</p>
+<p>初始 <code>NotImplementedError</code> 是起点，不是环境损坏。先写下预期输出，再实现一个函数，最后只跑这一题。不要在首个错误出现时直接打开整份 solution。</p>
+<h2 id="h-2">2. 先画状态，而不是先写循环</h2>
+<p>构造器已提供：<code>BlockPool(capacity)</code> 创建长度为 capacity 的 refs 列表。capacity 是非负整数且排除 bool。<code>available()</code> 统计 refs=0 的块数。公开 refs 是为了观察，不意味着调用者应该直接改它。</p>
+<table><thead><tr><th>时刻</th><th>操作</th><th>返回值</th><th>refs</th></tr></thead><tbody><tr><td>0</td><td>建立容量 3 的池</td><td>新池</td><td><code>[0,0,0]</code></td></tr><tr><td>1</td><td>allocate(2)</td><td><code>[0,1]</code></td><td><code>[1,1,0]</code></td></tr><tr><td>2</td><td>retain([0])</td><td>None</td><td><code>[2,1,0]</code></td></tr><tr><td>3</td><td>allocate(1)</td><td><code>[2]</code></td><td><code>[2,1,1]</code></td></tr><tr><td>4</td><td>release([0,1])</td><td>None</td><td><code>[1,0,1]</code></td></tr><tr><td>5</td><td>allocate(1)</td><td><code>[1]</code></td><td><code>[1,1,1]</code></td></tr></tbody></table>
+<p>最后复用块 1，而不是新增不存在的块 3。把这张表抄到自己的笔记，每完成一题就执行当前已经支持的前几行。</p>
+<h2 id="h-3">3. Q1：先证明放得下，再分配</h2>
+<p><code>allocate(count)</code>：count 必须是非负整数，bool 不合法。按最小 ID 选择空闲块，把它们的 refs 设为 1，返回新的 ID 列表。申请 0 返回 <code>[]</code>。数量不足抛 <code>MemoryError</code>；非法数量抛 <code>ValueError</code>。<strong>失败不能部分修改 refs。</strong></p>
+<p>建议按三步完成：</p>
+<ol><li>先只验证 count，确认 -1、1.5、True 都被拒绝。</li><li>只读地列出空闲候选，手算 refs=<code>[1,0,1,0]</code> 时应为 <code>[1,3]</code>。</li><li>比较候选数量与 count，成功后才统一修改所选位置。</li></ol>
+<p>检查点：容量 3，先申请 2 再申请 2，第二次必须失败且保留 <code>[1,1,0]</code>；随后申请 1 仍能拿到 <code>[2]</code>。如果第二次失败后第三次也失败，通常是在容量判断之前写入了状态。容量 0、申请 0 也必须成功。</p>
+<pre><code class="language-bash">python course/tools/grade.py lab04 --question q1 --failfast</code></pre>
+<h2 id="h-4">4. Q2：共享增加所有权，不增加内容副本</h2>
+<p><code>retain(block_ids)</code> 返回 None。输入必须是不重复整数 ID 的列表；每个 ID 在池范围内，且 refs&gt;0。负数、越界、bool、浮点数、重复 ID、空闲 ID 或非列表都抛 <code>ValueError</code>。空列表有效，输入列表不改变。</p>
+<p>第一步，把验证工作写成只读检查：类型、范围、占用、重复。第二步，确认整批都合法后，每个 refs 加一。Q3 可以复用同一验证逻辑，但不要为了复用而提前改变状态。</p>
+<p>检查点：<code>[1,1,0]</code> 上 retain <code>[0]</code> 得 <code>[2,1,0]</code>；retain <code>[0,2]</code> 必须失败且仍是 <code>[2,1,0]</code>。如果变成 <code>[3,1,0]</code>，说明前一个合法元素已被过早更新。</p>
+<details class="study-hint"><summary>为什么 retain 一个空闲块是错误，而不是方便的分配？</summary><p>retain 表示“新增一个已有块的所有者”，不能证明空闲块的内容有效，也没有完成 allocate 的资源选择。把两种操作混在一起会破坏接口契约。缓存层若要重新保护一个无人引用但内容仍有效的块，需要专门的集成协议；Lab4 不实现这个协议。</p></details>
+<h2 id="h-5">5. Q3：release 是减一，不是清零</h2>
+<p><code>release(block_ids)</code> 使用与 Q2 相同的整批验证。合法后每个 refs 减一；归零就允许重新分配，返回 None。不能产生负引用数。任何失败都不改变 refs，也不改输入。</p>
+<p>先只实现“单块有两个所有者”的情景：2→1，此时不可分配；再实现 1→0，此时可分配；最后加入多块批次。<code>release([0,0])</code> 必须拒绝，不能把一个所有者的重复 ID 当成两次释放。</p>
+<p>调试必做：从 refs=<code>[1,0]</code> 调用 <code>release([0,1])</code>。记录调用前状态、期望异常、调用后状态。期望是 <code>ValueError</code> 和 <code>[1,0]</code>，不是 <code>[0,0]</code>。如果错，找到第一条过早执行的写操作，再回归同一输入。</p>
+<h2 id="h-6">6. Q4：位置分解后再查表</h2>
+<p><code>locate(block_table, token_index, block_size)</code> 返回 <code>(物理ID, 块内偏移)</code>。table 必须是非负整数 ID 列表，允许 ID 不连续或重复；B 为正整数；t 为整数；整数均排除 bool。要求 <code>0 &lt;= t &lt; len(table)*B</code>，其余非法输入抛 <code>ValueError</code>。不修改块表。</p>
+<p>先在纸上算商与余数，再查表：table=<code>[9,2,7]</code>，B=4，t=4 应为 <code>(2,0)</code>，t=11 为 <code>(7,3)</code>；t=12 越界。空表没有有效位置。该函数不知道物理池容量和真实序列长度，不要擅自增加“物理 ID 必须小于表长”或“最后一块全都已写入”的假设。</p>
+<details class="study-hint"><summary>分层检查：为何 table=[9]、t=0、B=4 是合法映射？</summary><p>表长为 1 表示这条请求有一个逻辑块，不表示物理池只有一块。物理 ID 9 可以来自更大的池。locate 只做映射；池范围由资源管理层负责，真实序列长度由请求层负责。</p></details>
+<h2 id="h-7">7. 整体验证、解释与交付</h2>
 <pre><code class="language-bash">python course/tools/grade.py lab04</code></pre>
-<p>测试包含 150 步固定种子所有权轨迹，并核对每一块的引用数。通过以后仍需写出：共享块为何不会在第一个请求结束时释放；MemoryError 如何与 ValueError 区分；locate 为何不能取代序列长度检查。</p>
-<p>自评四题各 5 分：测试 3 分、手算/解释 2 分，共 20 分，属于 Unit2 试运行验收，不并入 Unit1。下一步：<a href="lec10.html">第 10 讲</a> 与 <a href="hw05.html">HW5</a>。</p>
+<p>现有测试还包含 150 步固定种子所有权轨迹，逐块核对引用数。随机轨迹有助于发现组合错误，但不能替代你解释前面的最小反例。</p>
+<p>每题自评 5 分：测试 3 分、手算和解释 2 分，四题共 20 分，保持 Unit2 试运行口径，不并入 Unit1。交付实现、上表实际轨迹、一个失败修复记录，并回答：为什么共享块不能在首个请求结束时清零？为什么 refs 总和不是占用块数？为什么 locate 不能证明 token 已经写入？然后进入 <a href="lec10.html">第 10 讲</a> 与 <a href="hw05.html">HW5</a>。</p>
       </article>
     </div>
 
@@ -71,7 +82,7 @@ pool.allocate(1)          -&gt; [1], refs=[1,1,1]</code></pre>
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="../storage.js?v=548aeeba52ac"></script>
+  <script src="../doc.js?v=5b7937ad5e19"></script>
 </body>
 </html>

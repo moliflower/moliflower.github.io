@@ -1,10 +1,10 @@
 # Lab4：有限块池与共享所有权
 
-先修：Lab3 → [第 9 讲](../../lectures/lec09.md)。约 2–3 小时，可分两次完成。只用 Python 标准库，修改 `course/labs/lab04/lab04.py`。这是块生命周期模型，没有 KV 数值、并发或 GPU。
+这份实验把 [第 9 讲](../../lectures/lec09.md) 的四条手算轨迹变成代码。先修 Lab3、L9；预计 2–3 小时，可按两次 60–90 分钟拆开。只用标准 Python，编辑 `course/labs/lab04/lab04.py`，不要编辑参考答案或测试。模型只管理块 ID 和引用数，没有 KV 数值、并发或 GPU。
 
-## 1. 先跑一条可解释的失败
+## 1. 开始前：定位目录、预测失败
 
-从仓库根目录执行：
+以下命令从**课程根目录 `deepinfer/`** 执行，也就是能看到 `course/` 的目录；离线 ZIP 解压后也用这个位置。在个人主页源码仓库中，先进入 `_courses/deepinfer/`。Windows 可把 `python course/tools/grade.py` 替换为 `./course/run.ps1`。
 
 ```bash
 python course/tools/grade.py lab04 --question q1 --unlock
@@ -12,44 +12,81 @@ python course/tools/grade.py lab04 --question q1 --failfast
 python course/tools/grade.py lab04 --question q1 --hint 1
 ```
 
-初始 NotImplementedError 表示题目尚未实现。Windows 可把 `python course/tools/grade.py` 替换成 `.\course\run.ps1`。
+初始 `NotImplementedError` 是起点，不是环境损坏。先写下预期输出，再实现一个函数，最后只跑这一题。不要在首个错误出现时直接打开整份 solution。
 
-## 2. API 与契约
+## 2. 先画状态，而不是先写循环
 
-构造器已提供：`BlockPool(capacity)` 创建 refs 列表，长度为非负整数 capacity。`available()` 返回 refs=0 的数量。所有整数都排除 bool。
+构造器已提供：`BlockPool(capacity)` 创建长度为 capacity 的 refs 列表。capacity 是非负整数且排除 bool。`available()` 统计 refs=0 的块数。公开 refs 是为了观察，不意味着调用者应该直接改它。
 
-| 题号 | 接口 | 必须满足的行为 |
-| :--- | :--- | :--- |
-| Q1 | `allocate(count)` | 非负整数；按最小 ID 取空闲块，将引用数设为 1，返回新的 ID 列表；0 返回 []；不足抛 MemoryError；非法 count 抛 ValueError |
-| Q2 | `retain(block_ids)` | 输入为不重复整数 ID 的列表，每块必须在范围内且 refs>0；整批验证后每块 +1，返回 None |
-| Q3 | `release(block_ids)` | 与 Q2 同样验证；每块 -1；归零即可再分配，返回 None |
-| Q4 | `locate(table,t,B)` | table 是非负整数 ID 列表，B 为正整数，t 为整数；要求 0≤t<len(table)*B；返回 `(table[t//B],t%B)` |
+| 时刻 | 操作 | 返回值 | refs |
+| :--- | :--- | :--- | :--- |
+| 0 | 建立容量 3 的池 | 新池 | `[0,0,0]` |
+| 1 | allocate(2) | `[0,1]` | `[1,1,0]` |
+| 2 | retain([0]) | None | `[2,1,0]` |
+| 3 | allocate(1) | `[2]` | `[2,1,1]` |
+| 4 | release([0,1]) | None | `[1,0,1]` |
+| 5 | allocate(1) | `[1]` | `[1,1,1]` |
 
-Q2/Q3 空列表有效。重复、空闲、负数、越界、bool ID 均抛 ValueError。**任何失败都不能部分改变 refs**。不能修改输入列表；返回的 ID 列表不得与内部状态共享。调用者不直接修改 refs；它公开只是为了手算与观察。
+最后复用块 1，而不是新增不存在的块 3。把这张表抄到自己的笔记，每完成一题就执行当前已经支持的前几行。
 
-Q4 不要求 table 的 ID 连续或唯一；它不掌握池容量与真实序列长度，也不验证页中是否已经写入 token。空表没有可访问位置。
+## 3. Q1：先证明放得下，再分配
 
-## 3. 先手算，再实现
+`allocate(count)`：count 必须是非负整数，bool 不合法。按最小 ID 选择空闲块，把它们的 refs 设为 1，返回新的 ID 列表。申请 0 返回 `[]`。数量不足抛 `MemoryError`；非法数量抛 `ValueError`。**失败不能部分修改 refs。**
 
-```text
-pool = BlockPool(3)
-A = pool.allocate(2)      -> [0,1], refs=[1,1,0]
-pool.retain([0])          -> refs=[2,1,0]
-B_tail = pool.allocate(1) -> [2], refs=[2,1,1]
-pool.release(A)           -> refs=[1,0,1]
-pool.allocate(1)          -> [1], refs=[1,1,1]
+建议按三步完成：
+
+1. 先只验证 count，确认 -1、1.5、True 都被拒绝。
+2. 只读地列出空闲候选，手算 refs=`[1,0,1,0]` 时应为 `[1,3]`。
+3. 比较候选数量与 count，成功后才统一修改所选位置。
+
+检查点：容量 3，先申请 2 再申请 2，第二次必须失败且保留 `[1,1,0]`；随后申请 1 仍能拿到 `[2]`。如果第二次失败后第三次也失败，通常是在容量判断之前写入了状态。容量 0、申请 0 也必须成功。
+
+```bash
+python course/tools/grade.py lab04 --question q1 --failfast
 ```
 
-最后一步复用的是物理块 1，而不是增长出新的块 3。写代码时把验证和变更分开；Q2/Q3 可以共享一个验证函数。
+## 4. Q2：共享增加所有权，不增加内容副本
 
-## 4. 调试任务与验收
+`retain(block_ids)` 返回 None。输入必须是不重复整数 ID 的列表；每个 ID 在池范围内，且 refs>0。负数、越界、bool、浮点数、重复 ID、空闲 ID 或非列表都抛 `ValueError`。空列表有效，输入列表不改变。
 
-构造 refs=`[1,0]`，尝试 release `[0,1]`。如果失败后得到 `[0,0]`，记录：期望、实际、哪一次写操作发生得太早，以及如何回归验证。
+第一步，把验证工作写成只读检查：类型、范围、占用、重复。第二步，确认整批都合法后，每个 refs 加一。Q3 可以复用同一验证逻辑，但不要为了复用而提前改变状态。
+
+检查点：`[1,1,0]` 上 retain `[0]` 得 `[2,1,0]`；retain `[0,2]` 必须失败且仍是 `[2,1,0]`。如果变成 `[3,1,0]`，说明前一个合法元素已被过早更新。
+
+<details>
+<summary>为什么 retain 一个空闲块是错误，而不是方便的分配？</summary>
+
+retain 表示“新增一个已有块的所有者”，不能证明空闲块的内容有效，也没有完成 allocate 的资源选择。把两种操作混在一起会破坏接口契约。缓存层若要重新保护一个无人引用但内容仍有效的块，需要专门的集成协议；Lab4 不实现这个协议。
+
+</details>
+
+## 5. Q3：release 是减一，不是清零
+
+`release(block_ids)` 使用与 Q2 相同的整批验证。合法后每个 refs 减一；归零就允许重新分配，返回 None。不能产生负引用数。任何失败都不改变 refs，也不改输入。
+
+先只实现“单块有两个所有者”的情景：2→1，此时不可分配；再实现 1→0，此时可分配；最后加入多块批次。`release([0,0])` 必须拒绝，不能把一个所有者的重复 ID 当成两次释放。
+
+调试必做：从 refs=`[1,0]` 调用 `release([0,1])`。记录调用前状态、期望异常、调用后状态。期望是 `ValueError` 和 `[1,0]`，不是 `[0,0]`。如果错，找到第一条过早执行的写操作，再回归同一输入。
+
+## 6. Q4：位置分解后再查表
+
+`locate(block_table, token_index, block_size)` 返回 `(物理ID, 块内偏移)`。table 必须是非负整数 ID 列表，允许 ID 不连续或重复；B 为正整数；t 为整数；整数均排除 bool。要求 `0 <= t < len(table)*B`，其余非法输入抛 `ValueError`。不修改块表。
+
+先在纸上算商与余数，再查表：table=`[9,2,7]`，B=4，t=4 应为 `(2,0)`，t=11 为 `(7,3)`；t=12 越界。空表没有有效位置。该函数不知道物理池容量和真实序列长度，不要擅自增加“物理 ID 必须小于表长”或“最后一块全都已写入”的假设。
+
+<details>
+<summary>分层检查：为何 table=[9]、t=0、B=4 是合法映射？</summary>
+
+表长为 1 表示这条请求有一个逻辑块，不表示物理池只有一块。物理 ID 9 可以来自更大的池。locate 只做映射；池范围由资源管理层负责，真实序列长度由请求层负责。
+
+</details>
+
+## 7. 整体验证、解释与交付
 
 ```bash
 python course/tools/grade.py lab04
 ```
 
-测试包含 150 步固定种子所有权轨迹，并核对每一块的引用数。通过以后仍需写出：共享块为何不会在第一个请求结束时释放；MemoryError 如何与 ValueError 区分；locate 为何不能取代序列长度检查。
+现有测试还包含 150 步固定种子所有权轨迹，逐块核对引用数。随机轨迹有助于发现组合错误，但不能替代你解释前面的最小反例。
 
-自评四题各 5 分：测试 3 分、手算/解释 2 分，共 20 分，属于 Unit2 试运行验收，不并入 Unit1。下一步：[第 10 讲](../../lectures/lec10.md) 与 [HW5](../../hw/hw05/README.md)。
+每题自评 5 分：测试 3 分、手算和解释 2 分，四题共 20 分，保持 Unit2 试运行口径，不并入 Unit1。交付实现、上表实际轨迹、一个失败修复记录，并回答：为什么共享块不能在首个请求结束时清零？为什么 refs 总和不是占用块数？为什么 locate 不能证明 token 已经写入？然后进入 [第 10 讲](../../lectures/lec10.md) 与 [HW5](../../hw/hw05/README.md)。

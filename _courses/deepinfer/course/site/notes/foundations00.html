@@ -9,7 +9,7 @@
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=735a586a6ca2">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -25,7 +25,7 @@
       <div class="eyebrow">起步 0</div>
       <h1>起步 0：让一个函数把结果交回来</h1>
       <div class="doc-meta">
-        <span>纯阅读约 3 分钟 · 动手另计</span>
+        <span>浏览文字约 4 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../foundations/00-expressions.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -33,13 +33,16 @@
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 4 节</summary>
+        <nav aria-label="本页章节">
         <a class="toc-level-2" href="#h-1">1. 值、表达式、名字</a><a class="toc-level-2" href="#h-2">2. 函数是可复用的计算步骤</a><a class="toc-level-2" href="#h-3">3. 从例子迁移到 Q1</a><a class="toc-level-2" href="#h-4">4. 理解检查</a>
-      </aside>
+        </nav>
+      </details>
       <article class="doc-content">
         <p><strong>目标：</strong>能追踪赋值，调用一个函数，并通过 Q1。先会整数加法和乘法即可。</p>
 <h2 id="h-1">1. 值、表达式、名字</h2>
+<p><strong>本节路线</strong>：第1–2节先追踪现成示例，第3节再做foundations Q1；不要先读Q2的条件分支。命令从含 <code>course</code> 的课程根目录运行，目录准备见 <a href="foundations.html">起步入口</a>。离开本节要能交出一次函数调用的“参数→局部值→返回值”，而不只是终端截图。</p>
 <p><code>3</code> 是一个整数值。<code>3 * 2</code> 是表达式，Python 求值得到 <code>6</code>。<code>count = 3</code> 把名字 <code>count</code> 绑定到值 <code>3</code>。随后写 <code>count * 2</code>，Python 先查到 <code>count</code> 的值，再做乘法。</p>
 <pre><code class="language-python">count = 3
 other = count
@@ -63,7 +66,9 @@ print(answer)</code></pre>
 <pre><code class="language-bash">python course/tools/grade.py foundations --question q1 --failfast</code></pre>
 <p>动手前先写三个期望：<code>(5, 2)</code>、<code>(0, 4)</code>、<code>(3, 8)</code>。解释最后结果的单位为什么是字节。再运行测试；测试的是返回值，终端看见 <code>10</code> 并不等于函数返回了 <code>10</code>。</p>
 <h2 id="h-4">4. 理解检查</h2>
-<p>有人写了 <code>return count + element_bytes</code>，输入 <code>(2, 2)</code> 恰好通过。给一个能区分加法和乘法的输入，并写出两种结果。然后进入 <a href="foundations01.html">起步 1</a>。</p>
+<p>有人写了 <code>return count + element_bytes</code>，输入 <code>(2, 2)</code> 恰好通过。给一个能区分加法和乘法的输入，并写出两种结果。再把示例中的return换成print，在纸上预测调用者收到什么；不必修改学生文件中的正确部分。</p>
+<details class="study-hint"><summary>独立尝试后的核对</summary><p>例如 <code>(3,8)</code>：乘法24，加法11。只打印结果却没有return，调用者得到None。一个返回值正确、一个把数字显示出来，是不同的行为；测试检查前者。</p></details>
+<p>完成Q1单题测试并能解释这个反例后，进入 <a href="foundations01.html">起步1</a>。</p>
       </article>
     </div>
 
@@ -72,7 +77,7 @@ print(answer)</code></pre>
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="../storage.js?v=548aeeba52ac"></script>
+  <script src="../doc.js?v=5b7937ad5e19"></script>
 </body>
 </html>

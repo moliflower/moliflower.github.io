@@ -9,7 +9,7 @@
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=735a586a6ca2">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -25,7 +25,7 @@
       <div class="eyebrow">起步 1</div>
       <h1>起步 1：让边界条件决定分支</h1>
       <div class="doc-meta">
-        <span>纯阅读约 3 分钟 · 动手另计</span>
+        <span>浏览文字约 3 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../foundations/01-control.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -33,13 +33,16 @@
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 4 节</summary>
+        <nav aria-label="本页章节">
         <a class="toc-level-2" href="#h-1">1. 条件产生 True 或 False</a><a class="toc-level-2" href="#h-2">2. 商与余数必须一起看</a><a class="toc-level-2" href="#h-3">3. 先填表，再做 Q2</a><a class="toc-level-2" href="#h-4">4. 怎么证明没有少分或多分？</a>
-      </aside>
+        </nav>
+      </details>
       <article class="doc-content">
         <p><strong>先修：</strong>起步 0 的赋值、函数和返回值。<strong>目标：</strong>用条件和整数运算求最少分组数，通过 Q2。</p>
 <h2 id="h-1">1. 条件产生 True 或 False</h2>
+<p><strong>本节路线</strong>：先用表格比较，再学商和余数，最后实现foundations Q2。先修是起步0的参数与返回值；命令目录沿用 <a href="foundations.html">起步入口</a>。学完留下三类输入的证据：0个、恰好整组、刚超出整组，解释哪一种需要补一组。</p>
 <p><code>7 &gt; 3</code> 得到 <code>True</code>，<code>7 == 3</code> 得到 <code>False</code>。<code>=</code> 赋值，<code>==</code> 比较，不能互换。下面是一个完整示例：</p>
 <pre><code class="language-python">def shipping_fee(items):
     if items == 0:
@@ -70,7 +73,7 @@ python course/tools/grade.py foundations --question q2 --failfast</code></pre>
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="../storage.js?v=548aeeba52ac"></script>
+  <script src="../doc.js?v=5b7937ad5e19"></script>
 </body>
 </html>

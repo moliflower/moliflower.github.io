@@ -1206,6 +1206,10 @@ p { margin: 0 0 1em; }
   margin-bottom: 8px;
 }
 
+.doc-toc > summary { cursor: pointer; color: var(--text); font-size: 13px; font-weight: 700; }
+.doc-toc[open] > summary { margin-bottom: 10px; }
+.doc-toc > nav { padding-top: 2px; }
+
 .doc-toc a {
   display: block;
   color: var(--muted);
@@ -1289,6 +1293,12 @@ p { margin: 0 0 1em; }
 #storage-status { padding: 0 24px; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .doc-content img { max-width: 100%; border-radius: 10px; }
+.textbook-figure { margin: 24px 0; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel-2); }
+.textbook-figure > a { display: block; text-align: center; overflow-x: auto; }
+.textbook-figure img { display: block; width: 100%; min-width: 520px; max-width: 640px; height: auto; margin: 0 auto; background: #f8fafc; }
+.textbook-figure figcaption { margin-top: 12px; font-size: 13px; line-height: 1.7; color: var(--muted); }
+.figure-zoom { display: block; font-size: 12px; color: var(--accent); margin-top: 4px; }
+.doc-content h2, .doc-content h3 { scroll-margin-top: 84px; }
 
 .doc-content .study-hint {
   border: 1px solid var(--border);
@@ -1339,10 +1349,12 @@ p { margin: 0 0 1em; }
   .doc-topbar, .doc-toc, .doc-actions, .doc-nav { display: none !important; }
   .doc-main { width: 100%; padding: 0; }
   .doc-content, .doc-hero { border: 0; box-shadow: none; }
+  .textbook-figure img { min-width: 0; }
 }
 
 @media (max-width: 520px) {
   .doc-topbar { flex-wrap: wrap; gap: 10px; }
   .doc-brand { display: none; }
   .doc-topbar .theme-btn { margin-left: auto; }
+  .textbook-figure::before { content: "↔ 左右滑动查看完整图解"; display: block; margin-bottom: 10px; color: var(--accent); font-size: 12px; }
 }

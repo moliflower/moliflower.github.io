@@ -9,7 +9,7 @@
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=735a586a6ca2">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -25,7 +25,7 @@
       <div class="eyebrow">项目 1</div>
       <h1>项目 1：Kernel Zoo</h1>
       <div class="doc-meta">
-        <span>纯阅读约 22 分钟 · 动手另计</span>
+        <span>浏览文字约 24 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../projects/project1/README.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -33,17 +33,22 @@
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
-        <a class="toc-level-2" href="#h-1">1. 先认识文件，再写代码</a><a class="toc-level-2" href="#h-2">2. 路线与共同契约</a><a class="toc-level-2" href="#h-3">3. Phase 1：正确的 reference kernels（约 4–5 小时）</a><a class="toc-level-2" href="#h-4">4. Phase 2：先推导，再让访问次数可观察（约 5–6 小时）</a><a class="toc-level-3" href="#h-5">Q7：请求量模型 <code>matmul_traffic</code></a><a class="toc-level-3" href="#h-6">Q9：显式 tile 引擎 <code>matmul_tiled_profile</code></a><a class="toc-level-3" href="#h-7">Q6：面向调用者的接口 <code>matmul_tiled</code></a><a class="toc-level-2" href="#h-8">5. Phase 3：实验、Roofline 与解释（约 3–5 小时）</a><a class="toc-level-3" href="#h-9">Q8：<code>estimate_time</code> 返回理论时间下界</a><a class="toc-level-3" href="#h-10">固定协议，生成可复核 CSV</a><a class="toc-level-2" href="#h-11">6. 报告与评分</a><a class="toc-level-2" href="#h-12">7. 可选 GPU 延伸与项目保存</a>
-      </aside>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 13 节</summary>
+        <nav aria-label="本页章节">
+        <a class="toc-level-2" href="#h-1">1. 先认识文件，再写代码</a><a class="toc-level-3" href="#h-2">先修到checkpoint的路线</a><a class="toc-level-2" href="#h-3">2. 路线与共同契约</a><a class="toc-level-2" href="#h-4">3. Phase 1：正确的 reference kernels（约 4–5 小时）</a><a class="toc-level-2" href="#h-5">4. Phase 2：先推导，再让访问次数可观察（约 5–6 小时）</a><a class="toc-level-3" href="#h-6">Q7：请求量模型 <code>matmul_traffic</code></a><a class="toc-level-3" href="#h-7">Q9：显式 tile 引擎 <code>matmul_tiled_profile</code></a><a class="toc-level-3" href="#h-8">Q6：面向调用者的接口 <code>matmul_tiled</code></a><a class="toc-level-2" href="#h-9">5. Phase 3：实验、Roofline 与解释（约 3–5 小时）</a><a class="toc-level-3" href="#h-10">Q8：<code>estimate_time</code> 返回理论时间下界</a><a class="toc-level-3" href="#h-11">固定协议，生成可复核 CSV</a><a class="toc-level-2" href="#h-12">6. 报告与评分</a><a class="toc-level-2" href="#h-13">7. 可选 GPU 延伸与项目保存</a>
+        </nav>
+      </details>
       <article class="doc-content">
         <blockquote><p><strong>建议时间</strong>：12–16 小时，按三个 checkpoint 分配，不要求连续完成。  <br><strong>先修</strong>：<a href="prep.html">Python 预备课</a>、<a href="lab00.html">Lab0</a>、<a href="lab01.html">Lab1</a>、<a href="lec04.html">第四讲</a>的矩阵乘法与 tiling。  <br><strong>交付</strong>：9 个函数、实验 CSV、<code>report.md</code>、调试记录和 5 分钟讲解。全部必做部分只用 Python 标准库，无需 GPU。</p></blockquote>
 <p>你已经在 Lab 中练过逐元素计算、归约、softmax 和 RMSNorm。现在把自己的实现组合成一个小型算子库，再回答一个需要证据的问题：<strong>分块怎样减少从“全局内存”读取标量的次数？这种减少能支持什么性能结论？</strong></p>
 <p>本项目借鉴 CS61A Hog 的文件导览、分阶段依赖、公开测试和实验报告组织方式。课程内容为原创，不代表 UC Berkeley 的官方课程或质量认证。关键的新增任务是显式搬运和复用 tile；把 Lab 的代码重新抄一遍并不是项目的全部。</p>
 <h2 id="h-1">1. 先认识文件，再写代码</h2>
 <table><thead><tr><th>文件</th><th>你的职责</th></tr></thead><tbody><tr><td><code>project1.py</code></td><td>唯一需要补实现的代码；保留函数名和参数，可以新增私有辅助函数</td></tr><tr><td><code>memory.py</code></td><td>已提供的标量请求计数器；阅读，不修改</td></tr><tr><td><code>experiment.py</code></td><td>已提供的实验驱动；阅读，不修改</td></tr><tr><td><code>test_project1.py</code></td><td>公开的算法、输入契约和计数器使用测试；不修改</td></tr><tr><td><code>test_project_tools.py</code></td><td>已提供工具的回归测试；不修改</td></tr><tr><td><code>report_template.md</code></td><td>复制为自己的 <code>report.md</code>，填入证据和解释</td></tr><tr><td><code>project1_solution.py</code></td><td>完成尝试后对照；不要导入或复制成学生文件</td></tr></tbody></table>
-<p>所有命令从仓库根目录运行。下文用 <code>python</code>；WSL 中可替换为 <code>python3</code>，Windows 可使用已安装解释器或 <code>py -3</code>。</p>
+<p>所有命令从<strong>课程根目录</strong>运行，即直接包含 <code>course</code> 的位置；离线ZIP解压后进入这一层，个人主页源仓库先 <code>cd _courses/deepinfer</code>。下文用 <code>python</code>；WSL中可替换为 <code>python3</code>，Windows可使用已安装解释器、<code>py -3</code>或 <code>.\course\run.ps1 project1 --question q1</code>。</p>
+<h3 id="h-2">先修到checkpoint的路线</h3>
+<table><thead><tr><th>先完成的阅读/练习</th><th>本项目实现顺序</th><th>本次新增能力</th></tr></thead><tbody><tr><td>Lab0与L3、Lab1</td><td>Q1–Q4</td><td>迁移本人算子，统一输入契约</td></tr><tr><td>预备2、L4第1–2节</td><td>Q5</td><td>矩形点积与逐格累计</td></tr><tr><td>L4第3–6节、两个K块的图</td><td>Q7</td><td>用尾块手算推导请求模型</td></tr><tr><td>L4第7节、下面的内存API</td><td>Q9 → Q6</td><td>显式搬运、真实复用、共用引擎</td></tr><tr><td>L4第8–9节</td><td>Q8 → 实验 → 报告</td><td>分开数值、请求、Python时间与模型</td></tr></tbody></table>
+<p>题号不重新编号。尤其Q6依赖Q9，先做Q7/Q9再回Q6是有意的路线，不代表学生漏做。每到一个checkpoint先看本阶段证据，后续未实现函数失败不会抹掉前一阶段已完成的工作。</p>
 <p><strong>Problem 0：工具检查（不计分）</strong></p>
 <pre><code class="language-bash">python -m unittest discover -s course/projects/project1 -p test_project_tools.py -v
 python course/tools/grade.py project1 --list
@@ -52,7 +57,7 @@ python course/tools/grade.py project1 --question q1 --unlock</code></pre>
 <p>先检查一次初始状态：</p>
 <pre><code class="language-bash">python course/tools/grade.py project1 --question q1 --failfast</code></pre>
 <p>此时看到 <code>NotImplementedError</code> 是正常的：工具能运行，学生函数还没写。不要为了让它变绿而改测试。</p>
-<h2 id="h-2">2. 路线与共同契约</h2>
+<h2 id="h-3">2. 路线与共同契约</h2>
 <p>按下面的顺序做，<strong>题号用于固定评分接口，不是实现顺序</strong>：</p>
 <pre><code class="language-text">Q1 → Q2 → Q3、Q4 → Q5
                      ↓
@@ -67,14 +72,14 @@ python course/tools/grade.py project1 --question q1 --unlock</code></pre>
 python course/tools/grade.py project1 --question q1 --failfast
 python course/tools/grade.py project1 --question q1 --hint 1</code></pre>
 <p>提示分 1/2/3 级。只有卡住时再逐级打开；完整测试通过以后还要完成 checkpoint 的解释。</p>
-<h2 id="h-3">3. Phase 1：正确的 reference kernels（约 4–5 小时）</h2>
+<h2 id="h-4">3. Phase 1：正确的 reference kernels（约 4–5 小时）</h2>
 <table><thead><tr><th>题号 / 修改函数</th><th>输入与输出</th><th>错误输入、限制与手算例子</th></tr></thead><tbody><tr><td>Q1 <code>vector_add(a,b)</code></td><td>等长向量 → 对应元素相加的新向量；空 → <code>[]</code></td><td>长度不同抛错。<code>[1,-2]+[3,5] → [4,3]</code></td></tr><tr><td>Q2 <code>sum_reduce(x)</code></td><td>相邻两项相加、奇数尾项保留，每轮减半 → 一个 float；空 → <code>0.0</code></td><td>不用 <code>sum</code>、<code>math.fsum</code> 或线性累加替代树。<code>[1,2,3,4,5] → [3,7,5] → [10,5] → [15]</code></td></tr><tr><td>Q3 <code>softmax(x)</code></td><td>减最大值后取指数、归一化；空 → <code>[]</code></td><td>可复用 Q2。<code>[1000,1000] → [0.5,0.5]</code>；输出长度不变</td></tr><tr><td>Q4 <code>rmsnorm(x,weight,eps)</code></td><td><code>x[i]*weight[i]/sqrt(mean(x²)+eps)</code>；两空向量 → <code>[]</code></td><td>长度不同或 eps 非有限/≤0 抛错，空输入也先检查 eps。<code>x=[3,4]</code> 的均方为 12.5</td></tr><tr><td>Q5 <code>matmul_naive(a,b)</code></td><td>A(m,k) @ B(k,n) → C(m,n)，每格一个点积</td><td>按共同矩阵契约；<code>[[1,2,3]] @ [[4],[5],[6]] → [[32]]</code></td></tr></tbody></table>
 <p><strong>为什么测试树形顺序？</strong> 浮点加法不能随意换括号。例如 <code>[1e16,1,-1e16,1]</code>，相邻成对归约得到 0，普通从左到右累加得到 1，精确实数和为 2。树形归约适合并行，不意味着所有输入下更精确。请自己推演每轮，再运行 Q2。</p>
 <p><strong>Checkpoint 1</strong></p>
 <pre><code class="language-bash">python -m unittest discover -s course/projects/project1 -p test_project1.py -k TestPhase1 -v</code></pre>
 <p>验收需要三项证据：Q1–Q5 测试通过；手算一条长度为 5 的归约和一个 (2,3)@(3,2)；解释为什么 <code>[[0]*n]*m</code> 会造成共享行。此阶段不要求后续题目通过。</p>
-<h2 id="h-4">4. Phase 2：先推导，再让访问次数可观察（约 5–6 小时）</h2>
-<h3 id="h-5">Q7：请求量模型 <code>matmul_traffic</code></h3>
+<h2 id="h-5">4. Phase 2：先推导，再让访问次数可观察（约 5–6 小时）</h2>
+<h3 id="h-6">Q7：请求量模型 <code>matmul_traffic</code></h3>
 <p>输入：<code>n&gt;=0</code>、<code>tile&gt;0</code>、<code>dtype_bytes&gt;0</code>，满足整数规则。输出：两个整数 <code>(naive_bytes,tiled_bytes)</code>；<code>n=0</code> 返回 <code>(0,0)</code>。非法参数抛错。</p>
 <p>我们只统计 A/B 的标量读取和 C 的最终写回，不统计局部 tile 访问、不读旧 C。假设没有跨输出 tile 的缓存复用；尾块只搬有效元素：</p>
 <pre><code class="language-text">q = ceil(n / tile) = (n + tile - 1) // tile
@@ -83,7 +88,7 @@ tiled_elements = 2*n²*q + n²
 bytes = elements * dtype_bytes</code></pre>
 <p>推导：朴素方法有 n² 个输出，每格读 2n 个标量、写 1 个。分块后，每个 A 元素会被每个输出列块使用一次，共 q 次；B 元素会被每个输出行块使用一次，也是 q 次。C 仍只写一次。当 n 能被 tile 整除时，读量才简化为 <code>2*n³/tile</code>。</p>
 <p><strong>手算核对</strong>：n=3、tile=2，q=2，A/B 各读 18 次，C 写 9 次，共 45 次，float32 请求量 180 bytes；naive 为 252 bytes。tile=16 时只需一个输出块，最少 108 bytes，而不是把 n³/16 直接代入。</p>
-<h3 id="h-6">Q9：显式 tile 引擎 <code>matmul_tiled_profile</code></h3>
+<h3 id="h-7">Q9：显式 tile 引擎 <code>matmul_tiled_profile</code></h3>
 <p>输入与 Q5 相同，另有正整数 tile。输出 <code>(C,stats)</code>，其中 stats 严格包含：</p>
 <pre><code class="language-python">{"a_reads": ..., "b_reads": ..., "c_writes": ..., "requested_bytes": ...}</code></pre>
 <p>构造一个 <code>memory = MatrixMemory(a,b)</code> 后，数值读取只能通过 <code>load_a(i,p)</code>、<code>load_b(p,j)</code>；结果写回只能通过 <code>store_c(i,j,value)</code>。最后返回 <code>memory.output</code> 和 <code>memory.stats()</code>。输入矩阵可以在构造前用于验证 shape，之后不要直接读取其元素。</p>
@@ -102,27 +107,29 @@ bytes = elements * dtype_bytes</code></pre>
 返回矩阵和统计</code></pre>
 <p><strong>循环不变式</strong>：进入下一轮 k0 前，accumulator 已经包含所有更早归约块对当前 C tile 的贡献。把 accumulator 放到 k0 循环里初始化，会丢失前面块；每轮 k0 都写回则违反一次最终写回的计数契约。</p>
 <p><strong>完整的小例子</strong>：A=<code>[[1,2,3],[4,5,6]]</code>，B=<code>[[7,8],[9,10],[11,12]]</code>，tile=2。只有一个输出 tile，但有两个归约 tile。第一轮产生 <code>[[25,28],[73,82]]</code>，第二轮增加 <code>[[33,36],[66,72]]</code>，最终 C=<code>[[58,64],[139,154]]</code>。A/B 各搬 6 个标量，C 写 4 个，总请求量 <code>(6+6+4)*4=64</code> bytes。</p>
+<figure class="textbook-figure"><a href="../../figures/unit1-tiling-accumulator.svg" target="_blank" rel="noopener" aria-label="查看大图：一个输出tile跨两个K块累计，最后才写回"><img src="../../figures/unit1-tiling-accumulator.svg" alt="一个输出tile跨两个K块累计，最后才写回" loading="lazy"></a><figcaption>一个输出tile跨两个K块累计，最后才写回<span class="figure-zoom">小屏可横向滑动图解；点击图解可查看原图</span></figcaption></figure>
+<p>动手顺序建议：先只实现这组固定shape的手算过程，在自己的草稿中观察每轮accumulator；接着加入输出行/列块；最后加入三个方向各自的尾块。正式Q9仍须通过Memory读取和写回，不能把讲义中的固定列表演示原样当答案。若数字正确但计数错，先数load/store发生在哪一层循环，而不是给stats字典填公式。</p>
 <p>矩形矩阵可用于自查，m/k/n 都不能偷换成同一个 n：</p>
 <pre><code class="language-text">A_reads = m*k*ceil(n/tile)
 B_reads = k*n*ceil(m/tile)
 C_writes = m*n</code></pre>
 <p>Q9 的测试会替换 memory 的读取行为，检查搬入的数是否真的用于乘法；只调用计数器、实际仍直接读 a/b 的实现不符合抽象约定。它也会用独立的 <code>math.fsum</code> oracle 检查有符号小数和三个维度都有尾块的情况。</p>
-<h3 id="h-7">Q6：面向调用者的接口 <code>matmul_tiled</code></h3>
+<h3 id="h-8">Q6：面向调用者的接口 <code>matmul_tiled</code></h3>
 <p>Q9 完成以后，让 Q6 调用 Q9 并只返回矩阵。Q6 和 Q9 共享同一套合法输入、错误行为与计算引擎，不要再写另一份循环。这样实验和用户调用检验的是同一份算法。</p>
 <p><strong>Checkpoint 2</strong></p>
 <pre><code class="language-bash">python course/tools/grade.py project1 --question q7
 python course/tools/grade.py project1 --question q9
 python course/tools/grade.py project1 --question q6</code></pre>
 <p>交付 n=3/tile=2 的计数推导、上面矩形例子的手算和测试结果。再只计算模型表的 n=1024/4096/8192、tile=16/32/64；<strong>不要用 Python 真跑这些立方规模的矩阵乘法</strong>。单位选择十进制 MB=<code>1e6 bytes</code>，在表头写清楚。</p>
-<h2 id="h-8">5. Phase 3：实验、Roofline 与解释（约 3–5 小时）</h2>
-<h3 id="h-9">Q8：<code>estimate_time</code> 返回理论时间下界</h3>
+<h2 id="h-9">5. Phase 3：实验、Roofline 与解释（约 3–5 小时）</h2>
+<h3 id="h-10">Q8：<code>estimate_time</code> 返回理论时间下界</h3>
 <p>输入 bytes_moved/flops 必须有限且非负；bandwidth_gbps/peak_tflops 必须有限且正，否则抛错。输出 <code>(seconds,bound)</code>：</p>
 <pre><code class="language-text">memory_seconds  = bytes_moved / (bandwidth_gbps * 1e9)
 compute_seconds = flops       / (peak_tflops * 1e12)
 lower_bound     = max(memory_seconds, compute_seconds)</code></pre>
 <p>bound 为较慢资源的 <code>"memory"</code> 或 <code>"compute"</code>；相等时返回 <code>"memory"</code>，包括零工作量返回 <code>(0.0,"memory")</code>。例如 1e9 bytes、1e12 FLOPs、100 GB/s、10 TFLOP/s 得 0.1 秒和 <code>"compute"</code>。</p>
 <p>默认的 1000 GB/s 和 100 TFLOP/s 是<strong>虚构加速器</strong>。你可以用它完成必做部分，但必须标注假设。使用真实 GPU 时，算力必须匹配数据类型、SIMT/Tensor Core、稠密/稀疏口径；规格链接和查询日期写进报告。模型没有启动开销、占用率和流水线细节，不能把下界写成预计真实耗时。</p>
-<h3 id="h-10">固定协议，生成可复核 CSV</h3>
+<h3 id="h-11">固定协议，生成可复核 CSV</h3>
 <p>Q6–Q9 完成后：</p>
 <pre><code class="language-bash">python course/projects/project1/experiment.py --sizes 3 8 17 --tiles 1 2 8 16 --seed 61 --warmups 2 --repeats 7 --output course/projects/project1/experiment.csv</code></pre>
 <p>同一个 n/seed 在不同 tile 下使用相同输入。驱动用独立 oracle 校验<strong>每一次</strong>调用，校验在计时外；校验数值、输入未被修改、每种请求的计数和模型是否一致。默认相对容差 1e-9、绝对容差 1e-10。所有 case 通过后才写 CSV。重跑命令会覆盖同名结果，要比较版本时换一个输出名。</p>
@@ -132,18 +139,19 @@ lower_bound     = max(memory_seconds, compute_seconds)</code></pre>
 <p><strong>Final checkpoint</strong></p>
 <pre><code class="language-bash">python course/tools/grade.py project1</code></pre>
 <p>测试通过 + CSV 可复现 + 报告有证据 + 完成 checkoff。参考解可由 <code>--solution</code> 在临时目录测试；它验证课程材料，不代表你的实现完成。实验驱动也提供 <code>--solution</code>，用于遇到工具问题时对照，CSV 会标明实现来源。</p>
-<h2 id="h-11">6. 报告与评分</h2>
+<h2 id="h-12">6. 报告与评分</h2>
 <p>复制 <a href="project1-report.html">report_template.md</a> 为 <code>report.md</code>。正文建议 2–3 页，原始 CSV 和调试记录作为附录；不用预填“tiling 一定加速”这样的结论。</p>
 <table><thead><tr><th>项目</th><th>分数</th><th>可观察的验收证据</th></tr></thead><tbody><tr><td>Phase 1 正确性</td><td>25</td><td>Q1–Q5 契约与公开测试；各题 5 分</td></tr><tr><td>Phase 2 抽象与正确性</td><td>30</td><td>Q7 尾块模型 10；Q9 数值/真实搬运/一次写回 15；Q6 复用接口 5</td></tr><tr><td>Phase 3 模型</td><td>10</td><td>Q8 单位、异常输入、边界/同值规则</td></tr><tr><td>实验与报告</td><td>25</td><td>可复现命令与原始结果 5；推导/手算 5；口径与假设 5；用数据支撑结论并解释反例 5；局限与下一步实验 5</td></tr><tr><td>口头或文字 checkoff</td><td>10</td><td>以下 5 题，每题 2 分：准确解释 1 分，举自己结果中的证据 1 分</td></tr></tbody></table>
 <p>本表是项目内部 100 分自评，折算为 Unit 1 总评的 30%。测试通过是必要证据，不自动代表实验/报告得分；没有 GPU 不扣分。可选 GPU 部分不作为必做项的加分捷径。</p>
 <p>Checkoff（可录 5 分钟视频或写逐题回答）：</p>
 <ol><li>指出自己 Q9 中 accumulator 的生命周期，并用两个 k tile 的例子说明为什么不会丢失贡献。</li><li>n=3 时 tile 从 2 改成 16，为什么请求量有下界，不会持续按 1/tile 下降？</li><li>你的计数器字节、Python 时间和模型下界分别属于什么实验对象？哪两个数不能直接相除声称“GPU 加速”？</li><li>如果 softmax 的长度从 4096 到 128K，哪些计算/访存/启动因素变了？哪些结论需要真实硬件数据才知道？</li><li>你会优先优化端到端推理中的哪个算子？列出需要先测量的占比、瓶颈和 Amdahl 上界，不用猜一个通用答案。</li></ol>
-<h2 id="h-12">7. 可选 GPU 延伸与项目保存</h2>
+<h2 id="h-13">7. 可选 GPU 延伸与项目保存</h2>
 <p>先做一次限定范围的源码阅读，每个位置只回答一个问题，不要求读懂整个引擎：</p>
 <table><thead><tr><th>学过的抽象</th><th>仓库文件与定位符号</th><th>阅读问题</th></tr></thead><tbody><tr><td>Q2/Q4 归约与 RMSNorm</td><td><code>deepinfer/model_executor/layers/tilelang_ops/cuda/norm.py</code> 中 <code>norm_tl</code>、<code>T.reduce_sum</code>、<code>T.rsqrt</code></td><td>找到平方和、除以 d、加 eps、倒数平方根，标出与自己公式对应的位置</td></tr><tr><td>Q3 稳定归一化</td><td><code>deepinfer/model_executor/layers/tilelang_ops/cuda/fused_sample.py</code> 中 <code>fused_sample_tl</code>、<code>new_max</code>、<code>sum_v</code></td><td>为什么分块后改变最大值时，要修正旧的指数和？先描述问题，在线算法在后续单元学习</td></tr><tr><td>Q5/Q9 矩阵乘接口</td><td><code>deepinfer/model_executor/layers/linear.py</code> 中 <code>bf16_gemm_nt</code>、<code>apply_weight_bf16</code></td><td>调用传入了哪些张量？权重存储 shape 为什么需要关注转置？区分调用封装和真正 GEMM 实现</td></tr></tbody></table>
 <p>完成核心后选 vector_add 和 softmax/rmsnorm 中一个移植到 TileLang。对照 Python reference；根据 dtype 说明绝对/相对容差，先检查误差再报告时间。同 shape、dtype、设备、预热策略与计时边界比较；CUDA 计时需要事件或正确同步，不能用未同步的主机时间。记录编译时间是否排除、warmup 10 次、正式 100 次及中位数/p90。CPU→GPU 传输如有测量，单列出来。</p>
 <p>这部分是后续 GPU 单元的桥梁。Python 的列表 tile 表达复用思想，但没有模拟 shared memory 容量、bank conflict、线程调度或 Tensor Core 布局；不要把相同循环顺序当成已经完成 GPU 实现。</p>
 <p>保存 <code>project1.py</code>、<code>report.md</code>、实验结果和 <code>notes/project1.md</code>。调试记录至少一条：最小失败输入 → 期望/实际 → 原因 → 修复 → 回归命令。仓库当前忽略 <code>*.csv</code>；如果用 Git 保存实验，需显式 <code>git add -f course/projects/project1/experiment.csv</code>，或者把 CSV 作为报告附件单独保留。</p>
+<p>这里“保存”指自己的学习副本或报告附件，不要求将个人作业上传到公共课程仓库。使用Git时先确认仓库根目录；个人主页源码仓库中的路径是 <code>_courses/deepinfer/course/...</code>，上述短路径是相对于课程根目录的路径。公共发布包不会收集个人report或实验CSV。</p>
 <p>若实验很慢，先缩小 n 和 repeats；若 tile 越大 Python 时间反而更长，保留结果并解释计数器/解释器/分配成本，不要删除不符合预期的数据。后续阅读从 <a href="lec04.html">第四讲</a>和 <a href="https://cs61a.org/fa26/projects/hog/">CS61A Hog</a>的项目组织方式开始。</p>
       </article>
     </div>
@@ -153,7 +161,7 @@ lower_bound     = max(memory_seconds, compute_seconds)</code></pre>
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="../storage.js?v=548aeeba52ac"></script>
+  <script src="../doc.js?v=5b7937ad5e19"></script>
 </body>
 </html>

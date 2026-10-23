@@ -4,6 +4,8 @@
 
 ## 1. 值、表达式、名字
 
+**本节路线**：第1–2节先追踪现成示例，第3节再做foundations Q1；不要先读Q2的条件分支。命令从含 `course` 的课程根目录运行，目录准备见 [起步入口](README.md)。离开本节要能交出一次函数调用的“参数→局部值→返回值”，而不只是终端截图。
+
 `3` 是一个整数值。`3 * 2` 是表达式，Python 求值得到 `6`。`count = 3` 把名字 `count` 绑定到值 `3`。随后写 `count * 2`，Python 先查到 `count` 的值，再做乘法。
 
 ```python
@@ -57,4 +59,12 @@ python course/tools/grade.py foundations --question q1 --failfast
 
 ## 4. 理解检查
 
-有人写了 `return count + element_bytes`，输入 `(2, 2)` 恰好通过。给一个能区分加法和乘法的输入，并写出两种结果。然后进入 [起步 1](01-control.md)。
+有人写了 `return count + element_bytes`，输入 `(2, 2)` 恰好通过。给一个能区分加法和乘法的输入，并写出两种结果。再把示例中的return换成print，在纸上预测调用者收到什么；不必修改学生文件中的正确部分。
+
+<details><summary>独立尝试后的核对</summary>
+
+例如 `(3,8)`：乘法24，加法11。只打印结果却没有return，调用者得到None。一个返回值正确、一个把数字显示出来，是不同的行为；测试检查前者。
+
+</details>
+
+完成Q1单题测试并能解释这个反例后，进入 [起步1](01-control.md)。
