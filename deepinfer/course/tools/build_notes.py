@@ -12,6 +12,7 @@ Usage:
 from __future__ import annotations
 
 import html
+import hashlib
 import posixpath
 import re
 from collections import defaultdict
@@ -22,7 +23,8 @@ SITE = ROOT / "course" / "site"
 OUT = SITE / "notes"
 
 DOCS = [
-    dict(src="course/TEXTBOOK.md", out="textbook.html", category="课程指南", label="教材导航", key=None, title_zh="教材：从零基础到可验证的推理算子"),
+    dict(src="course/LEARNING_PATH.md", out="learning-path.html", category="课程指南", label="自学路线", key=None, title_zh="自学路线：从已学基础走到推理调度"),
+    dict(src="course/TEXTBOOK.md", out="textbook.html", category="课程指南", label="教材导航", key=None, title_zh="教材：从第一行 Python 到推理系统"),
     dict(src="course/ASSESSMENT.md", out="assessment.html", category="课程指南", label="掌握度验收", key=None, title_zh="掌握度与已发布单元评分"),
     dict(src="course/foundations/README.md", out="foundations.html", category="Python 起步", label="起步指南", key="foundations-guide", title_zh="Python 起步：从第一行代码到可测试的函数"),
     dict(src="course/foundations/00-expressions.md", out="foundations00.html", category="Python 起步", label="起步 0", key="foundations-q1", title_zh="起步 0：让一个函数把结果交回来"),
@@ -43,7 +45,7 @@ DOCS = [
     dict(src="course/lectures/lec05.md", out="lec05.html", category="讲义", label="讲义 5", key="w3-l5", title_zh="第 5 讲：从零实现 Attention"),
     dict(src="course/lectures/lec06.md", out="lec06.html", category="讲义", label="讲义 6", key="w3-l6", title_zh="第 6 讲：FlashAttention 与 Decode Attention"),
     dict(src="course/lectures/lec07.md", out="lec07.html", category="讲义", label="讲义 7", key="w4-l7", title_zh="第 7 讲：KV Cache 基础"),
-    dict(src="course/lectures/lec08.md", out="lec08.html", category="讲义", label="讲义 8", key="w4-l8", title_zh="第 8 讲：量化（FP8 / FP4）"),
+    dict(src="course/lectures/lec08.md", out="lec08.html", category="讲义", label="讲义 8", key="w4-l8", title_zh="第 8 讲：量化——数轴、误差与存储预算"),
     # labs
     dict(src="course/labs/lab00/README.md", out="lab00.html", category="实验", label="实验 0", key="w1-lab0", title_zh="实验 0：GPU 心智模型"),
     dict(src="course/labs/lab01/README.md", out="lab01.html", category="实验", label="实验 1", key="w2-lab1", title_zh="实验 1：Reduction、Softmax 与 RMSNorm"),
@@ -197,7 +199,9 @@ def is_block_start(lines: list[str], i: int) -> bool:
     stripped = line.strip()
     if not stripped:
         return True
-    if stripped == "<details>":
+    if re.fullmatch(r"<details>(?:\s*<summary>.*?</summary>)?", stripped):
+        return True
+    if re.fullmatch(r"!\[[^\]]*\]\([^)\s]+\)", stripped):
         return True
     if stripped.startswith(("```", ">")):
         return True
@@ -225,16 +229,34 @@ def convert_blocks(lines: list[str], headings=None) -> tuple[str, list[tuple[int
             i += 1
             continue
 
+        figure = re.fullmatch(r"!\[([^\]]*)\]\(([^)\s]+)\)", line.strip())
+        if figure:
+            description, source = figure.groups()
+            url = html.escape(rewrite_url(source), quote=True)
+            caption = html.escape(description)
+            body.append(
+                f'<figure class="textbook-figure"><a href="{url}" target="_blank" rel="noopener" '
+                f'aria-label="查看大图：{html.escape(description, quote=True)}">'
+                f'<img src="{url}" alt="{html.escape(description, quote=True)}" loading="lazy"></a>'
+                f'<figcaption>{caption}<span class="figure-zoom">小屏可横向滑动图解；点击图解可查看原图</span></figcaption></figure>'
+            )
+            i += 1
+            continue
+
         # Only allow these two structural tags, never arbitrary raw HTML.
         # Contents still pass through the escaping Markdown renderer.
-        if line.strip() == "<details>":
+        disclosure = re.fullmatch(r"<details>(?:\s*<summary>(.*?)</summary>)?", line.strip())
+        if disclosure:
             i += 1
-            while i < len(lines) and not lines[i].strip():
+            summary_text = disclosure.group(1)
+            if summary_text is None:
+                while i < len(lines) and not lines[i].strip():
+                    i += 1
+                summary = re.fullmatch(r"<summary>(.*?)</summary>", lines[i].strip()) if i < len(lines) else None
+                if not summary:
+                    raise ValueError("<details> 后需要 <summary>标题</summary>，可同行或另起一行")
+                summary_text = summary.group(1)
                 i += 1
-            summary = re.fullmatch(r"<summary>(.*?)</summary>", lines[i].strip()) if i < len(lines) else None
-            if not summary:
-                raise ValueError("<details> 后需要独立一行的 <summary>标题</summary>")
-            i += 1
             buf = []
             depth, fenced = 1, False
             while i < len(lines):
@@ -242,7 +264,7 @@ def convert_blocks(lines: list[str], headings=None) -> tuple[str, list[tuple[int
                 if stripped.startswith("```"):
                     fenced = not fenced
                 if not fenced:
-                    if stripped == "<details>":
+                    if re.fullmatch(r"<details>(?:\s*<summary>.*?</summary>)?", stripped):
                         depth += 1
                     elif stripped == "</details>":
                         depth -= 1
@@ -253,7 +275,7 @@ def convert_blocks(lines: list[str], headings=None) -> tuple[str, list[tuple[int
             if depth:
                 raise ValueError("<details> 缺少 </details>")
             inner, _ = convert_blocks(buf, headings)
-            body.append(f'<details class="study-hint"><summary>{inline(summary.group(1))}</summary>{inner}</details>')
+            body.append(f'<details class="study-hint"><summary>{inline(summary_text)}</summary>{inner}</details>')
             i += 1
             continue
 
@@ -361,6 +383,10 @@ def build_page(doc: dict, body: str, headings: list[tuple[int, str, str]]) -> st
     title = doc["title_zh"] or doc["parsed_title"]
     # src is relative to the repo root; from site/notes/ it is ../../<src>
     source_rel = "../../" + doc["src"].removeprefix("course/")
+    assets = {
+        name: f"../{name}?v={hashlib.sha256((SITE / name).read_bytes()).hexdigest()[:12]}"
+        for name in ("styles.css", "storage.js", "doc.js")
+    }
 
     toc_items = [
         (level, text, hid)
@@ -414,7 +440,7 @@ def build_page(doc: dict, body: str, headings: list[tuple[int, str, str]]) -> st
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     }} catch (_) {{}}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="{assets['styles.css']}">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -430,7 +456,7 @@ def build_page(doc: dict, body: str, headings: list[tuple[int, str, str]]) -> st
       <div class="eyebrow">{html.escape(doc["label"])}</div>
       <h1>{html.escape(title)}</h1>
       <div class="doc-meta">
-        <span>纯阅读约 {minutes} 分钟 · 动手另计</span>
+        <span>浏览文字约 {minutes} 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="{html.escape(source_rel)}">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -438,10 +464,12 @@ def build_page(doc: dict, body: str, headings: list[tuple[int, str, str]]) -> st
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · {len(toc_items)} 节</summary>
+        <nav aria-label="本页章节">
         {toc}
-      </aside>
+        </nav>
+      </details>
       <article class="doc-content">
         {body}
       </article>
@@ -452,8 +480,8 @@ def build_page(doc: dict, body: str, headings: list[tuple[int, str, str]]) -> st
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="{assets['storage.js']}"></script>
+  <script src="{assets['doc.js']}"></script>
 </body>
 </html>
 """

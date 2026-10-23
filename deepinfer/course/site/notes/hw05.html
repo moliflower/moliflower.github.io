@@ -9,7 +9,7 @@
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=fe4449dc2f59">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -25,7 +25,7 @@
       <div class="eyebrow">作业 5</div>
       <h1>HW5：前缀命中与容量推导</h1>
       <div class="doc-meta">
-        <span>纯阅读约 3 分钟 · 动手另计</span>
+        <span>浏览文字约 6 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../hw/hw05/README.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -33,29 +33,42 @@
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
-        <a class="toc-level-2" href="#h-1">Q1：完整前缀匹配</a><a class="toc-level-2" href="#h-2">Q2：只保留一份共享前缀</a><a class="toc-level-2" href="#h-3">Q3：可回收块的顺序</a><a class="toc-level-2" href="#h-4">运行与交付</a>
-      </aside>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 5 节</summary>
+        <nav aria-label="本页章节">
+        <a class="toc-level-2" href="#h-1">1. 公共契约：验证不因空输入而消失</a><a class="toc-level-2" href="#h-2">2. Q1：最长公共前缀，不是相同子串</a><a class="toc-level-2" href="#h-3">3. Q2：先画每条私有尾部，再求和</a><a class="toc-level-2" href="#h-4">4. Q3：先决定资格，再决定顺序</a><a class="toc-level-2" href="#h-5">5. 从通过测试到解释结论</a>
+        </nav>
+      </details>
       <article class="doc-content">
-        <p>先修：<a href="lec10.html">第 10 讲</a>、Lab4、HW2。保留原 15 周蓝图中的 HW5 编号，HW3/4 没有被隐含发布。预计 2–3 小时。</p>
-<p>修改 <code>course/hw/hw05/hw05.py</code>，只用标准库。所有数量、token ID 和时间戳都是非负整数且排除 bool；块大小必须为正整数。输入不变；返回新列表；规定的非法输入统一抛 ValueError。</p>
-<h2 id="h-1">Q1：完整前缀匹配</h2>
-<p><code>prefix_hit_tokens(cached, query, block_size)</code>：cached/query 为 token ID 列表。比较从位置 0 起的最长公共前缀，只返回其中完整块的 token 数。空列表合法。即使另一边为空，也必须验证全部 token 和 block_size。</p>
-<p>预测：<code>[1,2,3,4,5]</code> 对 <code>[1,2,3,9]</code>，B=2，返回 2。为什么不是 3，也不是 4？给一个“后面相同但前面不同”的反例。</p>
-<h2 id="h-2">Q2：只保留一份共享前缀</h2>
-<p><code>shared_prefix_slots(lengths,prefix_tokens,block_size)</code>：lengths 为每条请求长度列表，prefix_tokens 必须是块大小的倍数，并且不超过任一长度。前缀只存一次，每条私有后缀独立取整。没有请求时返回 0，但仍验证公共参数。</p>
-<p>手算 <code>[5,8,9]</code>、P=4、B=4：不共享 28 槽，共享 20 槽。交付一张每条请求的尾部长度、页数、浪费槽位表。再写出一条全部长度等于 P 的例子和一条 P=0 的例子。</p>
-<p>这里不计额外的常驻前缀副本，也不把长度总和一次性取整。用整数运算，测试会包含超过 float 精确整数范围的长度。</p>
-<h2 id="h-3">Q3：可回收块的顺序</h2>
-<p><code>eviction_order(refcounts,last_used)</code>：两个等长列表，位置就是物理 ID。返回 refs=0 的 ID，按 <code>(last_used[ID], ID)</code> 升序排列。空列表返回 []。不修改任何引用数；真正回收由调用者完成。</p>
-<p>手算 <code>[1,0,0,0]</code> / <code>[0,9,3,3]</code> 应返回 <code>[2,3,1]</code>。说明为什么块 0 不能排在第一位。</p>
-<h2 id="h-4">运行与交付</h2>
+        <p>先修：<a href="lec10.html">第 10 讲</a>、Lab4、HW2。沿用原 15 周蓝图中的 HW5 编号，不代表 HW3/4 已发布。预计 2–3 小时。编辑 <code>course/hw/hw05/hw05.py</code>，只用标准库，不修改测试与 reference。</p>
+<p>以下命令从<strong>课程根目录 <code>deepinfer/</code></strong> 执行；该目录包含 <code>course/</code>。个人主页源码仓库中的对应目录是 <code>_courses/deepinfer/</code>。每题先提交纸笔预测，再实现、运行、解释差异。</p>
+<h2 id="h-1">1. 公共契约：验证不因空输入而消失</h2>
+<p>所有数量、token ID、时间戳是非负整数且排除 bool；B 必须为正整数。列表内容必须完整验证。所有函数保留输入，要求返回列表时返回新列表；规定的非法输入抛 <code>ValueError</code>。不要因为另一边为空或当前没有候选，就忽略非法输入。</p>
+<h2 id="h-2">2. Q1：最长公共前缀，不是相同子串</h2>
+<p><code>prefix_hit_tokens(cached, query, block_size)</code>：两个输入为 token ID 列表，空列表合法。返回从位置 0 起的公共前缀中<strong>完整块</strong>的 token 数。</p>
+<p>按三个台阶思考：</p>
+<ol><li>暂不考虑块，逐对比较，遇到首个差异就停，得到 common。</li><li>将 common 向下对齐到 B 的倍数，而不是向上取整。</li><li>把完整输入验证放在可能提前返回之前，包括短序列无法配对的尾部。</li></ol>
+<p>手算 cached=<code>[1,2,3,4,5]</code>、query=<code>[1,2,3,9]</code>、B=2：前三个位置相同，common=3；一个完整块，结果 2，不是 3 或 4。自造反例应体现“首位不同、后面相同”，而不只是两个完全不同的列表。</p>
+<p>检查点：相同列表 <code>[1,2,3]</code> 在 B=2 下只能命中 2；<code>[True]</code> 对 <code>[]</code> 必须报错。如果最后一例返回 0，重点检查是不是只验证了 <code>zip</code> 遍历到的位置。</p>
 <pre><code class="language-bash">python course/tools/grade.py hw05 --question q1 --unlock
 python course/tools/grade.py hw05 --question q1 --failfast
-python course/tools/grade.py hw05 --question q1 --hint 1
-python course/tools/grade.py hw05</code></pre>
-<p>将实现、三个手算、一个失败后修复的记录保存为自己的作业。每题 10 分：代码 5、推导 3、反例 2，共 30 分，只用于本次 Unit2 批次验收。出口问题：相同的请求命中率为什么可能有不同的 token 命中率？为什么节省槽位不能直接称为推理加速？</p>
+python course/tools/grade.py hw05 --question q1 --hint 1</code></pre>
+<h2 id="h-3">3. Q2：先画每条私有尾部，再求和</h2>
+<p><code>shared_prefix_slots(lengths, prefix_tokens, block_size)</code>：lengths 是请求长度列表；P 是 B 的倍数，且不超过任一长度。公共前缀只存一份，每条私有后缀分别向上取整。没有请求返回 0，但仍验证公共参数。</p>
+<p>推导步骤：先算每条 <code>length−P</code>，再算每条私有页数，再乘 B 转槽位，最后加一份 P。不要把所有尾长先相加。这里没有额外常驻前缀副本，与 HW2 某个缓存开销情景口径不同。</p>
+<table><thead><tr><th>请求长度</th><th>P</th><th>私有长度</th><th>私有页数（B=4）</th><th>私有槽位</th><th>浪费</th></tr></thead><tbody><tr><td>5</td><td>4</td><td>1</td><td>1</td><td>4</td><td>3</td></tr><tr><td>8</td><td>4</td><td>4</td><td>1</td><td>4</td><td>0</td></tr><tr><td>9</td><td>4</td><td>5</td><td>2</td><td>8</td><td>3</td></tr></tbody></table>
+<p>手算总量为 <code>4+4+4+8=20</code>，不共享为 <code>8+8+12=28</code>。请再独立写两张小表：全部长度等于 P；P=0。它们应该分别退化为一份前缀和普通逐请求分页。</p>
+<p>最小反例：<code>[1,1]</code>、P=0、B=4 需要 8 槽，不是 4。边界检查：<code>[]</code>、P=4、B=4 返回 0；P=1 则非法；<code>[3]</code>、P=4 也非法。只用整数运算，<code>[2**60+1]</code>、P=0、B=16 应为 <code>2**60+16</code>。</p>
+<p>调试时输出三列中间量：私有长度、私有页数、私有槽位。若少了一整页，先查取整；若多了 P，先查是否数了额外前缀副本；若非法空输入没有报错，查早返回的位置。</p>
+<h2 id="h-4">4. Q3：先决定资格，再决定顺序</h2>
+<p><code>eviction_order(refcounts, last_used)</code>：两个等长列表，位置就是物理 ID。只返回 refs=0 的 ID，排序键为 <code>(last_used[ID], ID)</code>，升序。空输入返回 <code>[]</code>。不改引用数、不删除缓存条目，真正淘汰由调用者完成。</p>
+<p>refs=<code>[1,0,0,0]</code>、times=<code>[0,9,3,3]</code>：先排除仍在使用的 0；剩余 1、2、3；按时间得到 2、3 在前，同时间按 ID，结果 <code>[2,3,1]</code>。如果得到 <code>[0,2,3,1]</code>，错在资格筛选，不在排序方向。</p>
+<p>检查点：全有引用时返回空列表；refs=<code>[0,2,0]</code>、times=<code>[7,0,7]</code> 得 <code>[0,2]</code>；两列表长度不等必须报错。再自行设计一例，证明排序不应该改变原列表。</p>
+<h2 id="h-5">5. 从通过测试到解释结论</h2>
+<pre><code class="language-bash">python course/tools/grade.py hw05</code></pre>
+<p>每题仍为 10 分：代码 5、推导 3、反例 2，总分 30，仅用于本 Unit2 批次验收。交付实现、三个手算、一个失败后修复记录。记录必须包含最小输入、期望、实际、根因、回归命令，不能只写“修复了一个 bug”。</p>
+<p>出口自测：两个负载的请求命中率同为 50%，为何 token 命中率可以差很多？节省 8 槽为何不等于某个固定加速比？refs=0 为何不意味着旧内容被擦除？</p>
+<details class="study-hint"><summary>完成作业后再核对出口</summary><p>发生命中的请求可能分别只复用很短或很长的前缀，分母也不同。槽位是容量单位，推理延迟还受计算、排队与运行时影响，不能直接换算。refs=0 只表示无人活动引用，是否仍有可用旧内容还要看有效索引及覆盖状态。下一步用 <a href="project2.html">Project2 Phase1</a> 学习容量如何影响等待，但不要假定项目已经接上前缀缓存。</p></details>
       </article>
     </div>
 
@@ -64,7 +77,7 @@ python course/tools/grade.py hw05</code></pre>
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="../storage.js?v=608d22c915a6"></script>
+  <script src="../doc.js?v=8c695cbfe8d6"></script>
 </body>
 </html>

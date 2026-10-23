@@ -9,7 +9,7 @@
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=fe4449dc2f59">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -25,7 +25,7 @@
       <div class="eyebrow">作业 2</div>
       <h1>作业 2：Attention 与 KV Cache 数学</h1>
       <div class="doc-meta">
-        <span>纯阅读约 11 分钟 · 动手另计</span>
+        <span>浏览文字约 14 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../hw/hw02/README.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -33,13 +33,16 @@
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
-        <a class="toc-level-2" href="#h-1">0. 文件与依赖</a><a class="toc-level-2" href="#h-2">1. Q1–Q4：从数据流推导 bound</a><a class="toc-level-3" href="#h-3">Q1：attention_flops</a><a class="toc-level-3" href="#h-4">Q2：attention_bytes</a><a class="toc-level-3" href="#h-5">Q3：attention_ai</a><a class="toc-level-3" href="#h-6">Q4：bound</a><a class="toc-level-2" href="#h-7">2. Q5–Q6：有效 KV 容量与增长</a><a class="toc-level-2" href="#h-8">3. Q7–Q9：页数、尾页浪费与分配容量</a><a class="toc-level-2" href="#h-9">4. Q10：前缀共享省了哪几份副本</a><a class="toc-level-2" href="#h-10">5. Q11：变长批次 — 独立迁移</a><a class="toc-level-2" href="#h-11">6. Required：分析题</a><a class="toc-level-2" href="#h-12">7. 验收与选做</a>
-      </aside>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 13 节</summary>
+        <nav aria-label="本页章节">
+        <a class="toc-level-2" href="#h-1">0. 先分模型，再安排依赖</a><a class="toc-level-2" href="#h-2">1. Q1–Q4：从数据流推导 bound</a><a class="toc-level-3" href="#h-3">Q1：attention_flops——先画配对网格</a><a class="toc-level-3" href="#h-4">Q2：attention_bytes——把每次读写列成账本</a><a class="toc-level-3" href="#h-5">Q3：attention_ai——让同一组参数走过两个模型</a><a class="toc-level-3" href="#h-6">Q4：bound——比较之前先统一单位</a><a class="toc-level-2" href="#h-7">2. Q5–Q6：有效容量与增长不能互换</a><a class="toc-level-2" href="#h-8">3. Q7–Q9：从余数到分配容量</a><a class="toc-level-2" href="#h-9">4. Q10：先数副本，再算节省</a><a class="toc-level-2" href="#h-10">5. Q11：变长批次——把每条尾页保留下来</a><a class="toc-level-2" href="#h-11">6. Required：分析题</a><a class="toc-level-2" href="#h-12">7. 失败后沿哪条路径定位</a><a class="toc-level-2" href="#h-13">8. 验收与选做</a>
+        </nav>
+      </details>
       <article class="doc-content">
-        <blockquote><p><strong>先修</strong>：Lab2/3、HW1、<a href="lec05.html">L5 Attention</a>、<a href="lec06.html">L6 流量分析</a>、<a href="lec07.html">L7 KV cache</a>。  <br><strong>投入</strong>：5–7 小时。必做 Q1–Q11 与三个分析题。  <br><strong>交付</strong>：<code>hw02.py</code>、基于 <a href="hw02-report.html">REPORT_TEMPLATE.md</a> 的 IO 箭头图、分页表与分析笔记。</p></blockquote>
-<h2 id="h-1">0. 文件与依赖</h2>
+        <blockquote><p><strong>先修</strong>：Lab2/3、HW1、<a href="lec05.html">L5 Attention</a>、<a href="lec06.html">L6 流量分析</a>、<a href="lec07.html">L7 KV cache</a>、<a href="lec08.html">L8 量化</a>。L7/L8 完成后统一做 HW1/2。<br><strong>投入</strong>：5–7 小时。必做 Q1–Q11 与三个分析题。  <br><strong>交付</strong>：<code>hw02.py</code>、基于 <a href="hw02-report.html">REPORT_TEMPLATE.md</a> 的 IO 箭头图、分页表与分析笔记。</p></blockquote>
+<h2 id="h-1">0. 先分模型，再安排依赖</h2>
+<p>所有命令从<strong>课程根目录 <code>deepinfer/</code></strong> 执行，也就是包含 <code>course/</code> 的目录；个人主页源码为 <code>_courses/deepinfer/</code>。这份作业的三条线是：数学工作量与 IO → KV 有效容量 → 分页与共享分配。不要用容量数字替代流量数字，也不要从理想 FLOPs 自动推断实际设备时间。</p>
 <p>框架为 <code>hw02.py</code>，测试为 <code>test_hw02.py</code>，参考为 <code>hw02_solution.py</code>。实现依赖为 Q1/Q2→Q3；Q5→Q6/Q10；Q7→Q8；Q5/Q7→Q9；Q9→Q11。Q4 输入独立给出的 AI，所以可以单独测试。复用前题，避免多处维护同一个公式。</p>
 <pre><code class="language-bash">python3 course/tools/grade.py hw02 --question q1 --unlock
 python3 course/tools/grade.py hw02 --question q1 --failfast
@@ -48,29 +51,42 @@ python3 course/tools/grade.py hw02 --question q1 --hint 1</code></pre>
 <p>开始前，确认自己能解释 HW1 中的 K/V 系数 2、读出 Lab2 矩形 matmul 的 shape，以及 Lab3 中逻辑位置到页内偏移的映射。本作业会把这些模型组合成预算判断。</p>
 <table><thead><tr><th>题号</th><th>修改函数</th><th>自查重点</th></tr></thead><tbody><tr><td>Q1</td><td>attention_flops</td><td>矩形 full、s=1 对角线、causal shape</td></tr><tr><td>Q2</td><td>attention_bytes</td><td>每张量的读写次数、dtype、零 batch</td></tr><tr><td>Q3</td><td>attention_ai</td><td>传递 causal/materialized 参数、零分母</td></tr><tr><td>Q4</td><td>bound</td><td>TFLOP/s 与 GB/s 单位、拐点平局</td></tr><tr><td>Q5</td><td>kv_cache_bytes</td><td>K/V、KV heads、batch、dtype 各轴</td></tr><tr><td>Q6</td><td>kv_cache_growth</td><td>增量与总量的区别</td></tr><tr><td>Q7</td><td>num_pages</td><td>0、page、page+1、大整数</td></tr><tr><td>Q8</td><td>page_waste</td><td>恰好整页时的 0；浪费单位为 slot</td></tr><tr><td>Q9</td><td>paged_kv_bytes</td><td>每条序列单独保留尾页</td></tr><tr><td>Q10</td><td>prefix_cache_savings</td><td>已有副本与新消费者的基线</td></tr><tr><td>Q11</td><td>paged_batch_bytes</td><td>不同长度的独立向上取整</td></tr></tbody></table>
 <h2 id="h-2">1. Q1–Q4：从数据流推导 bound</h2>
-<h3 id="h-3">Q1：attention_flops</h3>
+<h3 id="h-3">Q1：attention_flops——先画配对网格</h3>
+<p>先选 sq=2、sk=5 的矩形 full，画 2 行 5 列得到 10 对；再选 s=3 的 causal 三角形，逐行 1+2+3=6 对。对矩形输入不能直接套等长 causal 公式，本接口会拒绝。这一层先不掺入字节数。</p>
 <p>接口支持矩形 <code>(sq,sk)</code>；full 配对数 sq×sk，causal 要求 sq=sk，配对数 s(s+1)/2；每配对 4d FLOPs，再乘 batch 和 heads。Q1 返回整数。s=3,d=2,b=h=1 时 causal=48。</p>
-<h3 id="h-4">Q2：attention_bytes</h3>
+<h3 id="h-4">Q2：attention_bytes——把每次读写列成账本</h3>
+<p>不要从“有两张中间矩阵”猜一个系数。S 生成时写一次、softmax 时读一次；P 生成时写一次、PV 时读一次，因此总共是四次中间矩阵流量。容量只数占多少空间，流量数每次访问搬多少字节，两者不能互换。</p>
 <p>在纸上画 <code>Q,K → S → P</code> 与 <code>P,V → O</code>。本题各张量按同一种 w 字节 dtype：Q/K/V 读一次、O 写一次，基础元素数 <code>b*h*(2sq+2sk)*d</code>；materialized=True 时加 S 写/读和 P 写/读，共 <code>4*b*h*sq*sk</code>，最后乘 w。</p>
 <p>False 为输入各读一次的理想下界。真实 tiled attention 的 K/V 可能重复读取；此函数不模拟缓存。输出是请求流量模型，不是 S 的容量。</p>
 <p>例子 b=1,h=8,sq=sk=128,d=64,w=2：True=1572864B，False=524288B。要求书面列出每次读取/写入，而不仅调用 Lab2 函数得到数字。</p>
-<h3 id="h-5">Q3：attention_ai</h3>
+<h3 id="h-5">Q3：attention_ai——让同一组参数走过两个模型</h3>
+<p>先单独保存 Q1 的 FLOPs 和 Q2 的 bytes，确认 flags、dtype、shape 都传递一致，再相除。否则很容易把 full 工作量与另一组流量拼在一起。零分母必须报错，不返回一个看似方便的零。</p>
 <p>复用 Q1/Q2 返回 FLOPs/Bytes，字节数为 0 时抛 <code>ValueError</code>。上例 full 的 AI 分别约 21.333 与 64 FLOP/B。causal 的有效工作模型要同时说明你是否仍保留了满矩阵的物化流量。</p>
-<h3 id="h-6">Q4：bound</h3>
+<h3 id="h-6">Q4：bound——比较之前先统一单位</h3>
+<p>例如 peak=100 TFLOP/s、bandwidth=1000 GB/s，先转成 1e14 FLOP/s 与 1e12 B/s，拐点为 100 FLOP/B，而不是 0.1。AI=64 在带宽侧，AI=200 在计算侧，AI=100 同时触及两条限制。</p>
 <p>输入 ai、peak_tflops、bandwidth_gbps，拐点是 <code>peak*1e12/(bandwidth*1e9)</code>；ai&gt;=ridge 返回 compute，否则 memory。等号时两条限制同时达到，本接口约定返回 compute。与 HW1 的平局标签不同不表示物理结论矛盾。</p>
 <p><strong>Checkpoint A</strong>：四题通过；能指出模型中哪些项会随 s 二次增长。</p>
-<h2 id="h-7">2. Q5–Q6：有效 KV 容量与增长</h2>
+<h2 id="h-7">2. Q5–Q6：有效容量与增长不能互换</h2>
+<p>先完成 Q5 的一 token 基准，再把 Q6 的新增数量代入同一个函数。假如现有 1000 token，再增加 100，增长只按 100 计算；总量要按 1100 计算。不要在 growth 函数中偷偷假定原长度，也不要把当前 decode 读取历史 KV 的流量当作新增存储。</p>
 <p>Q5 <code>kv_cache_bytes</code> 的参数与 HW1 相同，返回 <code>2*L*Hkv*D*S*B*w</code>。Q6 <code>kv_cache_growth</code> 返回每条序列新增 new_tokens 的增量：复用 Q5，以 new_tokens 代 S。</p>
 <p>L=32,Hkv=8,D=128,w=2 时每 token=131072B；B=1，新增 100 token 增长 13107200B=12.5MiB。这里是存储增量；decode 本步读取已有 KV 的总量通常远大于此增量。</p>
-<h2 id="h-8">3. Q7–Q9：页数、尾页浪费与分配容量</h2>
+<h2 id="h-8">3. Q7–Q9：从余数到分配容量</h2>
+<p>先做一张边界表，避免直接抄公式：</p>
+<table><thead><tr><th>长度（page=16）</th><th>满页外是否有余数</th><th>页数</th><th>槽位</th><th>浪费</th></tr></thead><tbody><tr><td>0</td><td>无</td><td>0</td><td>0</td><td>0</td></tr><tr><td>1</td><td>有</td><td>1</td><td>16</td><td>15</td></tr><tr><td>16</td><td>无</td><td>1</td><td>16</td><td>0</td></tr><tr><td>17</td><td>有</td><td>2</td><td>32</td><td>15</td></tr></tbody></table>
+<p>Q7 返回页数，Q8 返回槽位数，Q9 返回字节。把每一步的单位写在变量旁边，可避免乘两次 page_size 或忘乘每槽字节。</p>
 <p>Q7 <code>num_pages(seq_len,page_size)</code> 返回向上取整页数，使用整数运算；seq_len=0 返回 0。Q8 <code>page_waste</code> 返回分配 slot 数减有效 token 数。Q9 <code>paged_kv_bytes</code> 将 Q7 的分配 slot 数代入 Q5；每条序列独立分页。</p>
 <p>完整例子 S=1000,page=16：62 个满页加一个尾页，共 63 页、1008 slot、waste=8。上述模型每 token=128KiB，因此分配容量 132120576B=126MiB，有效内容 125MiB。</p>
 <p>边界自测：S=0、S=page、S=page+1；page=0 应抛异常。若 sequence 长度不同，分别向上取整后求和，不能先合并总长度再分配。</p>
-<h2 id="h-9">4. Q10：前缀共享省了哪几份副本</h2>
+<h2 id="h-9">4. Q10：先数副本，再算节省</h2>
+<p>请画出一份已经保留的前缀，再画出三个新请求。如果不复用，要额外复制三份；复用后这三份不再需要，原来的那份仍在。这个图决定公式中的 batch 是新消费者数，不是包含原所有者的总请求数。</p>
 <p><code>prefix_cache_savings(...,prefix_len,batch=1,...)</code> 的 batch 特指<strong>新消费者数</strong>：已有一份相同前缀被保留，batch 条新请求避免再复制 batch 份。结果等于 Q5 中 S=prefix_len、B=batch 的有效容量。</p>
 <p>P=512，其他参数同上，一份=64MiB；3 个新消费者避免 192MiB 额外副本。如果“总共三个请求从三份压成一份”，省的是 128MiB。必须先确定基线。这里按 token 理想共享；整页共享时 P 应先向下取整到完整页。</p>
+<p>对照第 5 周 HW5：那里是当前 n 条请求内部从 n 份变成 1 份，节省 n−1 份。两个函数都能正确，前提是写清不同基线；不要用相同 batch 名字猜同一个物理场景。</p>
 <p><strong>Checkpoint B</strong>：Q5–Q10 通过；能解释有效容量与分配容量。</p>
-<h2 id="h-10">5. Q11：变长批次 — 独立迁移</h2>
+<h2 id="h-10">5. Q11：变长批次——把每条尾页保留下来</h2>
+<p>先填写三行独立账本：</p>
+<table><thead><tr><th>长度</th><th>page=16 页数</th><th>已分配槽</th><th>浪费槽</th><th>每槽 4 B 的字节</th></tr></thead><tbody><tr><td>1</td><td>1</td><td>16</td><td>15</td><td>64</td></tr><tr><td>16</td><td>1</td><td>16</td><td>0</td><td>64</td></tr><tr><td>17</td><td>2</td><td>32</td><td>15</td><td>128</td></tr><tr><td>合计</td><td>4</td><td>64</td><td>30</td><td>256</td></tr></tbody></table>
+<p>错误合并法得到 3 页、48 槽、192 B，恰好多丢掉了一条独立尾页。结果看似节省内存，实际没有遵守布局契约。</p>
 <p>实现 <code>paged_batch_bytes(seq_lens,page_size,num_layers,num_kv_heads,head_dim,bytes_per_elem=2)</code>。输入是各请求的有效长度列表；每条请求独立分配页，不允许共享尾页。复用 Q9，返回所有请求合计的分配字节。保持 <code>seq_lens</code> 不变，空列表返回 0。即使没有请求，page_size 和模型参数仍须满足前述契约。</p>
 <p>例子：<code>seq_lens=[1,16,17]</code>、page=16、L=Hkv=D=1、w=2 时，每个 slot 是 4B，总共分配 64 slot，结果为 256B。把总长度 34 一次向上取整会错误得到 192B；错误来自模型，不是浮点精度。</p>
 <p>实现前先画三行分页表，不给出代码骨架。完成后验证两个性质：交换请求顺序不改变容量；等长列表的结果与 Q9 的 batch 版本一致。<strong>Checkpoint C</strong>：Q11 与 W2 通过，同时能解释这两个性质为什么必要，但还不足以保证任意实现正确。</p>
@@ -79,7 +95,9 @@ python3 course/tools/grade.py hw02 --question q1 --hint 1</code></pre>
 <p><strong>W2</strong>：三条请求长 <code>[1,16,17]</code>，page=16。逐条写页数、slot、waste；与“34 token 合起来分页”比较。说明后者为什么不符合每序列独立分配的接口。</p>
 <p><strong>W3</strong>：已有一份长度 35 的前缀，page=16，两个新请求共享完整页。求实际可共享 token 数、避免的 slot 数。若要共享未满尾页，画出 append 时 copy-on-write 的状态变化。</p>
 <details class="study-hint"><summary>自查锚点</summary><p>W1 full FLOPs 为 33554432、34359738368。s=4096 时基础 Q/K/V/O=16777216B，三阶段=1090519040B，读一次下界 AI=2048，三阶段 AI≈31.508。W2 分别 1/1/2 页，总 64 slot，waste=30；合并分页只得 48 slot。W3 共享 32 token，两个新请求避免 64 token slot 的副本。</p></details>
-<h2 id="h-12">7. 验收与选做</h2>
+<h2 id="h-12">7. 失败后沿哪条路径定位</h2>
+<table><thead><tr><th>现象</th><th>先看哪层</th><th>复现方式</th></tr></thead><tbody><tr><td>attention bytes 少一大项</td><td>读写账本</td><td>分列 S/P 各读一次写一次</td></tr><tr><td>AI 与预期差一倍</td><td>flags 与 dtype</td><td>分别输出 FLOPs 和 bytes</td></tr><tr><td>增长比预期大</td><td>总量/增量混淆</td><td>原长 1000、新增 100</td></tr><tr><td>页边界多一页</td><td>余数为 0 的处理</td><td>长度恰为 page</td></tr><tr><td>变长合计偏小</td><td>是否合并后取整</td><td><code>[1,16,17]</code></td></tr><tr><td>共享少或多一份</td><td>原有副本基线</td><td>现存 1 份、3 个新消费者</td></tr></tbody></table>
+<h2 id="h-13">8. 验收与选做</h2>
 <pre><code class="language-bash">python3 course/tools/grade.py hw02</code></pre>
 <p>checkoff：写出容量、流量、FLOPs 的单位；解释 Q2 False 的条件；解释 prefix_savings 中 batch 的含义。提交代码和推导记录，保留使用提示的题号。</p>
 <p>验收证据：Q1–Q11 的公开测试通过；W1 列出完整 IO 账本并标明下界；W2 的逐请求分配与 Q11 对照；W3 明确共享前后的副本数。若测试失败，先看分题反馈，再运行对应题号；<code>未完成</code> 不表示正确，只表示测试未全部执行或有跳过。</p>
@@ -92,7 +110,7 @@ python3 course/tools/grade.py hw02 --question q1 --hint 1</code></pre>
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="../storage.js?v=608d22c915a6"></script>
+  <script src="../doc.js?v=8c695cbfe8d6"></script>
 </body>
 </html>

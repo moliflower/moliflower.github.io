@@ -1,403 +1,143 @@
-# 第 5 讲：从零实现 Attention
+# 第 5 讲：从零实现 Attention，先让每个数字有来路
 
-> **课前**：35 分钟  
-> **课后**：实验 2  
-> **一句话**：Attention 的计算是 `softmax(QK^T/√d)V`；工程上的全部难点，是 **shape、mask、数值稳定性和 IO**。
+先修：预备矩阵练习、[L3 的稳定 softmax](lec03.md) 与 Lab1。建议分两次学习，每次 60–90 分钟。先做 [Lab2 Q1–Q6](../labs/lab02/README.md)，再读成本部分与 [L6](lec06.md)；先完成 L7、L8，再统一做完整 HW1/HW2。本讲不要求 PyTorch、CUDA 或 GPU。
 
----
+学习目标不是背下 `softmax(QKᵀ/√d)V`，而是能用一张纸算出 S、mask 后的 S、P 和 O；解释为什么某个概率必须为零；把多个 head 正确拆开再拼回去。最后再问：这些正确运算花了多少工作、搬了多少数据？
 
-## 0. 本讲要解决的问题
+## 1. 先把“关注”翻译成矩阵
 
-**先修**：预备矩阵练习与 Lab1 stable softmax；能解释矩阵的一行/一列和点积。不需要先会 PyTorch。主线先完成第 1–3 节及 Lab2；GPU、GQA/MLA 为理解框架时的第二遍阅读。
+一条 query 想从若干位置的信息中取一个加权平均。K 为每个可查看位置提供用于打分的向量，V 为该位置提供真正要汇总的内容；Q 与 K 点积决定权重，V 决定最后加权的数值。K 和 V 属于相同位置，所以它们的行数必须相同；Q 的行数则是“有几条查询”。
 
-1. 给定 `Q/K/V` 的 shape，写出 attention 的完整计算图和 FLOPs。
-2. causal mask 为什么在 softmax 之前？mask 的边界怎么处理？
-3. multi-head 的参数量、计算量、内存布局是什么？
-4. prefill 和 decode 的 attention，分别受什么限制？AI 各是多少？
-5. GQA/MQA/MLA 改变了什么？为什么能省 KV？
+一般单头形式为 Q:(sq,d)、K:(sk,d)、V:(sk,dv)。分数 S=`QKᵀ/√d` 是 `(sq,sk)`；逐行归一化得到同 shape 的 P；O=`PV` 是 `(sq,dv)`。P 的每行是在 sk 个位置上的概率，**不是 d 个特征上的概率**。本 Lab 为聚焦基本循环，进一步规定 dv=d；一般 attention 并不要求 dv 必然等于 d。
 
----
+![Attention的shape与数据流：QK转置得到S，mask和逐行softmax得到P，再乘V得到O](../figures/unit1-attention-shapes.svg)
 
-## 1. 形式化定义
+读图时用手遮住输出 shape，独立做两次矩阵乘的内维检查。`Q(sq,d) @ Kᵀ(d,sk)` 消去 d；`P(sq,sk) @ V(sk,dv)` 消去 sk。写成 `Q@K`，可能在偶然的方形例子里不报 shape 错，却已经改变了数学含义。
 
-给定：
-
-```
-Q: [sq, d]
-K: [sk, d]
-V: [sk, dv]
-```
-
-单头 attention：
-
-```
-S = Q K^T / sqrt(d)          # [sq, sk]
-P = softmax_row(S)            # [sq, sk]
-O = P V                       # [sq, dv]
-```
-
-- `sqrt(d)`：让点积的方差回到 1 附近，避免 softmax 饱和；
-- `softmax_row`：对每一行做 softmax；
-- causal：同起点自注意力中 `S[i,j] = -inf for j > i`，softmax 后为 0。Lab2 进一步限制 causal 输入 sq=sk、dv=d。
-
-**一遍完整手算**：Q=`[[0],[0]]`，K=`[[1],[2]]`，V=`[[2],[6]]`，d=1。S 为 2×2 的零矩阵；causal 后 `[[0,-inf],[0,0]]`；P=`[[1,0],[1/2,1/2]]`；O=`[[2],[4]]`。第一行输出只有一个值，是已看到的 V 的加权和；P 的列数是 token 数，不是 head_dim。
-
-### 1.1 为什么要除 sqrt(d)
-
-假设 `q_i, k_j ~ N(0,1)` 独立，则：
-
-```
-q·k = Σ_{p=1}^d q_p k_p
-Var(q·k) = d
-std(q·k) = sqrt(d)
-```
-
-不除，`d=128` 时点积的标准差约 11.3，softmax 会非常尖；除以 `sqrt(d)` 后方差回到 1。
-
-### 1.2 Mask 的语义
-
-causal mask：
-
-```
-S[i,j] = -inf if j > i else S[i,j]
-```
-
-softmax 后：
-
-```
-P[i,j] = 0 for j > i
-```
-
-注意：
-
-- mask 必须在 softmax **之前**；先 softmax 再置 0 会破坏归一化（分母仍然包含未来位置）。
-- 全 -inf 行会出现无效分母，例如叠加 padding mask 后没有有效 key。Lab2 明确报错。
-- decode 的 query 有绝对位置 `past+i`：应 mask `j>past+i`，不能套用 `j>i`。例如 sq=1、sk=5 的末 token 应看全部 5 个 key，而 `j>0` 只让它看第一个。一般矩形 causal 需要定义对齐；Lab2 只接受方形 causal，矩形只做 noncausal。
-
----
-
-## 2. Multi-head Attention
-
-### 2.1 定义
-
-```
-d_model = h * d_head
-Q_h = Q W_h^Q,  K_h = K W_h^K,  V_h = V W_h^V
-head_h = attention(Q_h, K_h, V_h)
-O = concat(head_1..head_h) W^O
-```
-
-参数量（单层，忽略 bias）：
-
-```
-W^Q: d_model * d_model
-W^K: d_model * d_model
-W^V: d_model * d_model
-W^O: d_model * d_model
-total: 4 * d_model^2
-```
-
-GQA/MQA 会减少 `W^K/W^V` 的 head 数：
-
-```
-W^K: d_model * (h_kv * d_head)
-W^V: d_model * (h_kv * d_head)
-```
-
-### 2.2 计算量
-
-单头、单 batch：
-
-```
-QK^T: 2 * sq * sk * d
-AV:   2 * sq * sk * dv
-```
-
-multi-head：
-
-```
-FLOPs = 2 * b * h * sq * sk * (d + dv)
-```
-
-通常 `d = dv`：
-
-```
-FLOPs = 4 * b * h * sq * sk * d
-```
-
-causal（`sq=sk=s`）的有效配对是 `1+2+...+s=s(s+1)/2`。可跳过上三角时的 FLOPs 为 `4*b*h*d*s*(s+1)/2`，长序列时才近似 full 的一半。先做完整 matmul 再 mask 的参考代码仍执行稠密工作。
-
-### 2.3 示例
-
-`b=1, h=8, s=128, d=64`：
-
-```
-full:   4 * 1 * 8 * 128 * 128 * 64 = 33,554,432
-causal: 4 * 1 * 8 * 64 * (128*129/2) = 16,908,288
-```
-
-`b=1, h=8, s=4096`：
-
-```
-full: 4 * 8 * 4096^2 * 64 = 34.36 GFLOP
-```
-
----
-
-## 3. Prefill vs Decode
-
-### 3.1 Prefill
-
-- `sq = sk = prompt_len`，通常几百到几十万；
-- QK^T 和 AV 都是大矩阵乘；
-- 长 prompt 的理想 AI 较高，优化良好的实现更可能接近计算瓶颈；物化 S/P、低利用率或小尺寸会改变结论；
-- KV cache 写入是 O(sk) 的带宽。
-
-### 3.2 Decode
-
-- `sq = 1`，`sk = 当前序列长度`；
-- 每步只算一个新 token，但要看整个 KV；
-- QK^T 产生 `1×sk` scores，PV 产生 `1×d` 输出；
-- **memory-bound**：主要成本是把 K/V 从 HBM 读出来。
-
-### 3.3 AI 的粗略估计
-
-Decode、单头、单 batch、bf16：
-
-```
-FLOPs ≈ 4 * sk * d
-Bytes ≈ 2 * sk * d * 2 = 4 sk d   （只算 K/V；Q/O 很小）
-AI ≈ 1 FLOP/Byte
-```
-
-远低于拐点，memory-bound。
-
-Prefill、`sq=sk=s`：
-
-```
-FLOPs ≈ 4 s^2 d
-Bytes_lower = Q读 + K读 + V读 + O写 = 4*s*d*2 = 8sd
-AI_upper(full) = 4s²d / 8sd = s/2
-AI_upper(causal有效工作) = 2s(s+1)d / 8sd = (s+1)/4
-```
-
-这是假设 bf16 输入/输出各访问一次、不物化 S/P 的理想模型；`s=4096` 的 full AI 上界为 2048 FLOP/B，s=128 为 64。实际 tiled attention 可能反复读 K/V，AI 会下降。与匹配 dtype 的 ridge 比较只能给模型判断，最终须测量。
-
-> 这就是为什么长上下文 prefill 要 FlashAttention，而 decode 要 KV cache/量化/split-KV。
-
----
-
-## 4. 代码：从 PyTorch 到 GPU
-
-### 4.1 PyTorch 参考
+在代码之前先写一个小点积：
 
 ```python
-import math
-import torch
+def dot_product(left, right):
+    if len(left) != len(right):
+        raise ValueError("dimensions must match")
+    return sum(left_value * right_value for left_value, right_value in zip(left, right))
 
-def attention(q, k, v, causal=True):
-    # 此示例只支持同起点、等长 causal；decode 需要位置偏移。
-    if causal and q.size(-2) != k.size(-2):
-        raise ValueError("causal example requires equal sequence lengths")
-    d = q.size(-1)
-    s = q @ k.transpose(-2, -1) / math.sqrt(d)
-    if causal:
-        mask = torch.triu(torch.ones(s.size(-2), s.size(-1), device=q.device), diagonal=1).bool()
-        s = s.masked_fill(mask, float("-inf"))
-    p = torch.softmax(s, dim=-1)
-    return p @ v
+assert dot_product([1, 2], [3, 4]) == 11
 ```
 
-### 4.2 CUDA：一个 block 一行
+这个片段假定列表元素合法，只说明“一格分数”的来源。给输出的每一行、每一列重复这一过程，就是 Lab2 Q1；把 K 的行变成列，是 Q2。先做好这两件小事，比直接调试四层 attention 嵌套循环更容易定位错误。
 
-下面是索引算法片段，限定 sq=sk>0、d>0，并依赖向整个 block 广播结果的 `block_reduce_max/sum`；没有 host 驱动，不可直接编译。先用 Lab2 的 Python 输出作 oracle。
+## 2. 为什么要除以根号 d
 
-```cuda
-__global__ void attention_row(const float* Q, const float* K, const float* V,
-                              float* O, int sq, int sk, int d) {
-    int row = blockIdx.x;
-    const float* q = Q + row * d;
-    float* o = O + row * d;
+在一个用于解释尺度的简化假设下，各分量独立、均值 0、方差 1，q 与 k 也独立。单项 q_r k_r 的均值为 0，方差为1；d个独立项相加，点积方差变成 d，标准差变成 √d。除以 √d 后方差回到1附近，而不是除以 d 把标准差压成1/√d。
 
-    // 1) score + max
-    float m = -INFINITY;
-    for (int j = threadIdx.x; j < sk; j += blockDim.x) {
-        float s = 0.0f;
-        for (int p = 0; p < d; ++p) s += q[p] * K[j * d + p];
-        s /= sqrtf((float)d);
-        if (j > row) s = -INFINITY;
-        m = fmaxf(m, s);
-    }
-    m = block_reduce_max(m);
+这里的独立假设是解释，不是宣称训练后所有 Q/K 都严格服从标准正态分布。一个直接数值检查是 q=[1,2]、k=[3,4]：点积11，d=2，缩放分数为11/√2≈7.778，不是11/2。head_dim改变时要改变缩放，不能因为最终模型宽度为4096就让每个小head都除√4096。
 
-    // 2) exp + sum
-    float sum = 0.0f;
-    for (int j = threadIdx.x; j < sk; j += blockDim.x) {
-        float s = 0.0f;
-        for (int p = 0; p < d; ++p) s += q[p] * K[j * d + p];
-        s /= sqrtf((float)d);
-        if (j > row) s = -INFINITY;
-        sum += expf(s - m);
-    }
-    sum = block_reduce_sum(sum);
+大分数差会使 softmax 更尖锐；但减最大值与除√d解决的不是同一问题。前者是**保持同一个概率分布的数值稳定变换**；后者通常会改变概率分布，是 attention 定义的一部分。不能因为做了稳定 softmax 就省掉缩放。公式与多头结构来自 [Attention Is All You Need](https://arxiv.org/abs/1706.03762)。
 
-    // 3) output
-    for (int p = threadIdx.x; p < d; p += blockDim.x) {
-        float acc = 0.0f;
-        for (int j = 0; j < sk; ++j) {
-            float s = 0.0f;
-            for (int qq = 0; qq < d; ++qq) s += q[qq] * K[j * d + qq];
-            s /= sqrtf((float)d);
-            if (j > row) continue;
-            acc += expf(s - m) / sum * V[j * d + p];
-        }
-        o[p] = acc;
-    }
-}
+## 3. 案例一：非零、非均匀的完整 Q/K/S/P/V/O
+
+取 d=1，三个 query 和三个 key；V也只有一列。使用自然对数，可以让指数权重成为易手算的2、4、8，而不是一串难记的小数。
+
+```text
+Q = [[1], [2], [1]]
+K = [[ln(2)], [ln(4)], [ln(8)]]
+V = [[2], [6], [10]]
 ```
 
-这个版本：
+第一步：乘出完整分数，因√1=1，不需要再改数值：
 
-- 每个 block 处理一行；
-- max 与 sum 各算一次 score，输出阶段又对每个输出维度重算，最多约 d+2 次，计算浪费很大；
-- 没有 tiling，没有 shared memory，没有 tensor core；
-- 仅用于理解 index。
-
-真实实现：
-
-1. Q/K/V tile 放 shared；
-2. online softmax 一遍算完；
-3. tensor core 做 QK^T 和 PV；
-4. causal mask 在 tile 级别处理；
-5. FlashAttention 不 materialize `S`。
-
-### 4.3 TileLang 伪代码
-
-```python
-@T.prim_func
-def attention(Q: T.Tensor((B, H, S, D), "float16"),
-              K: T.Tensor((B, H, S, D), "float16"),
-              V: T.Tensor((B, H, S, D), "float16"),
-              O: T.Tensor((B, H, S, D), "float16")):
-    with T.Kernel(T.ceildiv(S, BM), B * H, threads=256) as (bx, bh):
-        Qs = T.alloc_shared((BM, D), "float16")
-        Ks = T.alloc_shared((BN, D), "float16")
-        Vs = T.alloc_shared((BN, D), "float16")
-        acc = T.alloc_fragment((BM, D), "float32")
-        m = T.alloc_fragment((BM,), "float32")
-        l = T.alloc_fragment((BM,), "float32")
-        # ... online softmax + T.gemm ...
+```text
+S = [[ln(2), ln(4),  ln(8)],
+     [ln(4), ln(16), ln(64)],
+     [ln(2), ln(4),  ln(8)]]
 ```
 
-具体 API 以 TileLang 版本为准；关键是理解 `BM/BN`、online softmax、causal mask。
+注意第二行 Q=2，使每个 logit 翻倍，`2ln(4)=ln(16)`，不是把 softmax 概率直接乘2。第二步：同起点 causal 自注意力只允许第i行看0到i列，得到：
 
----
-
-## 5. GQA、MQA 与 MLA
-
-### 5.1 GQA/MQA
-
-- MHA：`h_q = h_kv`；
-- MQA：`h_kv = 1`，所有 Q head 共享一组 K/V；
-- GQA：`h_kv` 介于 1 和 `h_q` 之间。
-
-收益：
-
-```
-KV bytes ∝ h_kv
+```text
+masked_S = [[ln(2), -inf,   -inf],
+            [ln(4), ln(16), -inf],
+            [ln(2), ln(4),  ln(8)]]
 ```
 
-`h_kv` 从 32 降到 8，KV 变为 1/4；decode 的带宽压力下降。
+第三步：逐行做稳定 softmax。第一行只有一个允许位置，概率必为1。第二行减去ln16，指数为[1/4,1,0]，和为5/4，归一化成[1/5,4/5,0]。第三行减ln8，指数为[1/4,1/2,1]，和7/4，得到[1/7,2/7,4/7]。
 
-代价：K/V 的表达能力下降，需要用训练弥补。
-
-### 5.2 MLA
-
-MLA 不存完整 K/V，而存压缩 latent：
-
-```
-c_KV = x W_DKV          # [d_c]
-K = c_KV W_UK, V = c_KV W_UV
+```text
+P = [[1,   0,   0],
+     [1/5, 4/5, 0],
+     [1/7, 2/7, 4/7]]
 ```
 
-KV cache 只存 `c_KV`（加 RoPE 部分）：
+第四步：每个概率乘对应位置的V，再把位置贡献相加。O0=1×2=2；O1=(1×2+4×6)/5=26/5=5.2；O2=(1×2+2×6+4×10)/7=54/7≈7.714286。输出仍然是三行一列，不是一行三个位置权重。
 
+检查点有四个：S/P为3×3、O为3×1；每行P和为1；未来位置概率为0；O每行落在可见V的最小与最大值之间。最后一条来自非负且和为1的权重，是发现求和或分母错误的便宜检查，但单靠它不能证明正确。
+
+## 4. 案例二：先 softmax 后清零，为什么不等价
+
+仍看上例第二行。如果先对完整 `[ln4,ln16,ln64]` 归一化，权重为 `[1/21,4/21,16/21]`。随后把未来的第三项清零，变成 `[1/21,4/21,0]`，行和仅5/21；输出为26/21≈1.238，甚至小于可见V最小值2。正确值是26/5。
+
+原因不是“未来值参与了最后的加权”那么简单：即使把未来的V贡献删掉，**未来logit仍留在归一化分母里**。正确做法是先排除其分数，再对允许集合归一化。若在概率清零后重新归一化，数学上可以恢复本例，但这增加无必要工作，而且极端分数下先前下溢的信息未必能恢复；本课要求直接 mask 后 stable softmax。
+
+现在只把V最后一行从10改成100。正确causal输出的前两行应完全不变，最后一行变成 `(2+12+400)/7=414/7`。这是“未来值不影响过去”的变形测试。只检查输出shape，或者只用所有V相同的数据，通常抓不到这类错误。
+
+同起点方形causal包含对角线，因此每行至少能看自己；若以后叠加padding使某行全部为−inf，则没有合法归一化分母，Lab2 Q3明确报错。矩形decode还要处理绝对位置：已有past=4、sq=1、sk=5时，当前query可以看全部5个key，不能套用局部j>0只留下第一列。Lab2只接受方形causal；矩形只在noncausal中合法，不暗中猜对齐方式。
+
+## 5. 从单头到多头：先拆列，再各自计算，最后按列拼回
+
+真实模型通常先做学习到的Q/K/V投影，再把最后一维拆成多个head。Lab2 Q6只练拆分、单头attention和拼接，不含Wq/Wk/Wv/Wo。给定num_heads=h，必须有d_model能够整除h，d_head=d_model/h。
+
+一行 `[a,b,c,d]` 拆成两个head，应该是 `[a,b]` 与 `[c,d]`，不是 `[a,c]` 与 `[b,d]`。每个head都看到同一套token位置，但在不同特征子空间里打分；每个head单独softmax，并用自己的√d_head。拼接只恢复列布局，不再对head概率归一化。
+
+![两个head按连续列切分，独立attention，再按原列顺序拼接](../figures/unit1-attention-heads.svg)
+
+读图先沿head0计算，再沿head1计算。两个head的token行不能串到一起。最后一格是列拼接，不是把两个标量相加或平均。
+
+### 案例三：两个不同的head，抓住“看起来shape正确”的错误
+
+Q=`[[0,0],[1,1]]`，K=`[[0,0],[1,2]]`，V=`[[2,10],[6,30]]`，heads=2，所以每头d=1。head0取各行第0列，第二行可见分数[0,1]，输出 `(2+6e)/(1+e)≈4.924234`；head1取第1列，分数[0,2]，输出 `(10+30e²)/(1+e²)≈27.615942`。第一行只能看自己，所以两个head输出2、10。
+
+最终输出为 `[[2,10],[4.924234,27.615942]]`。若直接返回V，第二行会是[6,30]；若把两头混在一个softmax里，两个分母会串起来；若按√d_model=√2缩放，概率也不同。这个有区分力的例子比“所有行、所有head都相同”的测试更能揭露布局错误。
+
+## 6. 案例四：先数有效配对，再数 FLOPs
+
+按一次乘加算2 FLOPs、dv=d、忽略softmax/缩放/投影。每个query-key配对，QK点积约2d，PV对输出累计约2d，合计4d。full配对数sq×sk；方形causal有效配对数是1+2+…+s=s(s+1)/2。
+
+```text
+full FLOPs = 4 × batch × heads × sq × sk × d
+causal有效 FLOPs = 4 × batch × heads × d × s(s+1)/2
 ```
-bytes = L * (kv_lora_rank + qk_rope_head_dim) * S * B * bytes
-```
 
-好处：KV 大幅缩小；代价：attention 前向多了一次投影，计算更复杂。
+先从s=3、d=2、batch=heads=1检查：full有9对、72 FLOPs；causal有6对、48 FLOPs。48不是72的一半，因为对角线保留。长序列下才接近一半；先算完整矩阵再mask的Python参考实现依旧做稠密工作，不能把“有效工作”伪装成实际执行量。
 
-### 5.3 Sparse indexer
+再放大到batch=1、heads=8、s=128、d=64：full=33,554,432，causal有效=16,908,288 FLOPs。这个只包含attention两个乘法，不含投影。标准MHA且输入输出都为d_model时，四个方阵投影忽略bias共4d_model²参数；不要把参数容量和本次attention计算量加到同一栏。
 
-DeepInfer 的 V4 attention 还有 indexer：用 MQA 打分，选 top-k token，再对选中的 token 做 attention。这样 decode 只读 top-k 的 KV，进一步降低带宽；代价是索引本身的计算和准确性。
+## 7. Prefill 与 Decode：带着假设谈瓶颈
 
----
+Prefill常有sq=sk=s，许多query能复用K/V；decode常有sq=1、sk为已知上下文长度，一次只新增一个query。假设单batch、单头、d=dv、bf16、K/V各从HBM读一次、忽略小Q/O和额外开销，decode约4skd FLOPs，读K/V约4skd字节，AI≈1 FLOP/B。若这远低于匹配dtype的设备ridge，模型提示带宽限制；小shape、启动开销、缓存复用、GQA或并行不足会改变实际瓶颈，因此不能无条件宣布所有decode都memory-bound。
 
-## 6. 仓库对照
+同样bf16且Q/K/V/O各访问一次、不物化S/P的理想prefill下界为8sd字节。full AI上界为s/2，causal有效AI上界为(s+1)/4。s=4096时full为2048 FLOP/B，s=128仅64；真实tile重读会降低AI。这里是模型比较，不是把上界当成profiler测得的吞吐。L6将解释为什么“不物化S/P”仍不等于所有输入只读一次。
 
-- `deepinfer/model_executor/layers/attention_backend.py`：`prefill_attn_varlen_sparse`、`decode_mla_mqa_sparse`；注意 shape 和 `index_topk`。
-- `.../models/v4_modules/mla_attn.py`：`ColumnParallelLora`、`MQAIndexer`、`LoraRopeCompressFlashMHAAutoRecomp`。
-- `.../models/v4_modules/index_attn.py`：MQA indexer。
-- `.../models/v4_modules/attn.py`：V4Attention 的完整路径，包含 compressed KV、SWA、YoCo、cross-layer。
+## 8. 第二遍阅读：参数化变体与真实仓库
 
-先看 docstring 和 shape，不要逐行。
+MHA每个Q head对应自己的KV head；MQA让所有Q head共享一组KV；GQA取中间数量。固定层数、序列长度、head_dim和dtype时，KV容量正比于KV head数，32减到8是四分之一；这是模型结构选择，不是可以在任意既有权重上无损切换的开关。参见 [GQA 原论文](https://arxiv.org/abs/2305.13245)。
 
----
+MLA通过压缩latent表示减少KV缓存，实际还要考虑位置编码等分量；不能只把MHA的头数公式套过去。其结构与投影见 [DeepSeek-V2 原论文](https://arxiv.org/abs/2405.04434)。本周不实现这些变体，先把单头、多头和计账做对。
 
-## 7. 练习
+若另外有完整DeepInfer源码，可沿 `deepinfer/model_executor/layers/attention_backend.py` 看prefill/decode接口，再看 `models/v4_modules/mla_attn.py`、`index_attn.py` 的shape与索引。课程离线包不含完整推理仓库，找不到这些路径不影响实验。优先画输入输出形状，不要求逐行看懂硬件kernel。
 
-### 基础
+## 9. 自测、反例与出口
 
-**修错题**：对本讲零 logits 的手算例子，先 softmax 再把未来位置设为零，会得到哪一行和错误？
+基础：Q是2×3，K是4×3，V是4×3，S/P/O分别多大？这个输入能用Lab2的causal=True吗？
 
-<details><summary>核对</summary>
+应用：案例一只把Q第二行从2改成1，第二行输出变成多少？先写出允许的两个指数权重，再算输出。
 
-第一行变成 `[0.5,0]`，和为 0.5，输出变成 1 而非 2。先 mask 再 softmax，使归一化只针对允许的位置。接着独立做 Lab2 Q6，用非相同 head 的输入检查 split/concat，不能只用 shape 测试。
+解释：为什么减max不改变概率，而除√d会改变概率？为什么所有V相同的测试发现不了许多softmax权重错误？
 
+<details>
+<summary>展开解析</summary>
+
+S/P为2×4，O为2×3；矩形只可noncausal。Q第二行改1后权重为2、4，即1/3、2/3，输出(2+12)/3=14/3。减同一个max让分子分母同时乘相同系数，比例不变；缩放logit改变相对差值。若所有V相同，任何和为1的错误权重也会给出同一V，所以必须使用非均匀数据和因果性变形测试。
 </details>
 
-1. 推导 `Var(q·k)=d`；解释为什么除 `sqrt(d)`。
-2. 计算 `b=2,h=8,s=512,d=64,causal` 的 FLOPs。
-3. 手写 causal mask，验证 `P` 的每一行和为 1。
-4. 用 PyTorch 实现 attention，和 `F.scaled_dot_product_attention` 对比。
-
-### 进阶
-
-5. 实现一个 block 一行 attention（第 4.2 节），测 `s=128/512/2048` 的耗时，和 PyTorch 对比。
-6. 改成每个 query tile 的 online softmax，解释 K/V 为什么仍可能被不同 query tile 重读；比较请求流量。
-7. 实现 GQA：`h_q=8, h_kv=2`，验证输出 shape 和 KV bytes。
-8. 用 `ncu` 看 attention kernel 的 `dram__throughput` 和 `sm__pipe_tensor_cycles_active`，判断 prefill/decode 的瓶颈。
-
-### 挑战
-
-9. 实现 tiled FlashAttention 前向（可参考第 6 讲），支持 causal。
-10. 实现 MLA 的 latent KV 投影，比较 KV bytes 和 attention 误差。
-
----
-
-## 8. 面试追问
-
-1. 为什么 attention 要除 `sqrt(d)`？不除会怎样？
-2. causal mask 为什么在 softmax 之前？
-3. prefill 和 decode 的 attention 分别是什么 bound？AI 各是多少？
-4. GQA/MQA/MLA 分别改变了什么？为什么能省 KV？
-5. FlashAttention 省的是 FLOPs 还是 IO？
-6. 如果 decode 的 attention 只占 20% 时间，你会先优化它吗？
-
----
-
-## 9. 参考文献
-
-- Vaswani et al., *Attention Is All You Need*。
-- Dao et al., *FlashAttention* / *FlashAttention-2*。
-- DeepSeek-V2：MLA；DeepSeek-V3：MLA + MoE。
-- The Illustrated Transformer。
-
----
-
-## 10. 下一步
-
-- 做 [实验 2](../labs/lab02/README.md)；
-- 做 [作业 2](../hw/hw02/README.md) 的 FLOPs/AI 部分；
-- 读 [第 6 讲](lec06.md) 的 FlashAttention。
+出口任务：不用参考答案重算案例一，标出第一个可能出错的中间矩阵；再通过Lab2 Q1–Q6并解释一个自己构造的反例。接着读[L6](lec06.md)完成Q7/Q8的成本账本。先把“计算正确”和“计算代价”分开，再考虑更快的实现。

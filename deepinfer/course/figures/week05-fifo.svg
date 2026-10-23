@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="700" viewBox="0 0 600 700" role="img" aria-labelledby="title desc">
+  <title id="title">严格 FIFO 的队首阻塞与释放后重试</title>
+  <desc id="desc">容量三块时 A 占两块，队首 B 需要两块，C 需要一块。虽有一块空闲，C 不能越过 B。A 结束后释放两块，空闲变三块，再顺序接纳 B 和 C，最终空闲零。</desc>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#41647f"/></marker></defs>
+  <rect width="600" height="700" rx="20" fill="#f4f8fc"/>
+  <g font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" fill="#17324d" font-size="22">
+    <text x="30" y="44" font-size="26" font-weight="700">FIFO：不能越过放不下的队首</text>
+    <rect x="30" y="70" width="540" height="170" rx="12" fill="#fff" stroke="#759ac0"/>
+    <text x="50" y="108" font-weight="700">① A 活动；B、C 正在等待</text>
+    <text x="50" y="151">总容量 3 块：A 占 2，空闲 1</text>
+    <text x="50" y="194">队首 B 要 2 块 → C 要 1 块</text>
+    <text x="50" y="226" fill="#83521d">B 放不下，C 也必须继续等待。</text>
+    <path d="M300 247 V280" stroke="#41647f" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="30" y="294" width="540" height="140" rx="12" fill="#e1f3ec" stroke="#5a9c85"/>
+    <text x="50" y="332" font-weight="700">② 收到 finish A</text>
+    <text x="50" y="374">先释放 A 的 2 块，空闲变成 3。</text>
+    <text x="50" y="408">然后重新尝试整个等待队列。</text>
+    <path d="M300 441 V474" stroke="#41647f" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="30" y="488" width="540" height="180" rx="12" fill="#fff" stroke="#759ac0"/>
+    <text x="50" y="526" font-weight="700">③ 顺序接纳，最后才记录快照</text>
+    <text x="50" y="568">B 拿 2 块 → 剩 1 块</text>
+    <text x="50" y="610">C 拿 1 块 → 剩 0 块</text>
+    <text x="50" y="648">active = {B: 2, C: 1}；waiting = []</text>
+  </g>
+</svg>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="650" viewBox="0 0 600 650" role="img" aria-labelledby="title desc">
+  <title id="title">均匀整数网格与半格舍入</title>
+  <desc id="desc">scale 为一时，相邻格距离一。零点五舍入到零，一点五到二，二点五到二，平局选偶数；最大无截断误差半格。固定码范围负三到三，输入十被截断成三，误差七，不适用半格界。</desc>
+  <rect width="600" height="650" rx="20" fill="#f4f8fc"/>
+  <g font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="22" fill="#17324d">
+    <text x="30" y="44" font-size="26" font-weight="700">均匀 INT 网格，不是 FP8 编码</text>
+    <text x="40" y="98">scale = 1；相邻重建值相距 1</text>
+    <path d="M60 158 H540 M60 147 V169 M220 147 V169 M380 147 V169 M540 147 V169" stroke="#41647f" stroke-width="3"/>
+    <text x="54" y="199">0</text><text x="214" y="199">1</text><text x="374" y="199">2</text><text x="534" y="199">3</text>
+    <circle cx="140" cy="158" r="7" fill="#b26835"/><circle cx="300" cy="158" r="7" fill="#b26835"/><circle cx="460" cy="158" r="7" fill="#b26835"/>
+    <text x="119" y="137">0.5</text><text x="279" y="137">1.5</text><text x="439" y="137">2.5</text>
+    <rect x="30" y="235" width="540" height="178" rx="12" fill="#e1f3ec" stroke="#5a9c85"/>
+    <text x="50" y="273" font-weight="700">恰在中点 → 选择偶数编码</text>
+    <text x="50" y="315">0.5 → 0；1.5 → 2；2.5 → 2</text>
+    <text x="50" y="357">不是一律向上，也不是一律向零。</text>
+    <text x="50" y="394">无截断时，误差最多半格 = 0.5。</text>
+    <rect x="30" y="439" width="540" height="180" rx="12" fill="#fff2db"/>
+    <text x="50" y="477" font-weight="700">反例：输入超出固定范围</text>
+    <text x="50" y="519">码范围 −3 到 3，仍用 scale = 1。</text>
+    <text x="50" y="561">10 → clamp 为 3 → 误差 7</text>
+    <text x="50" y="598">发生截断，不再适用半格误差界。</text>
+  </g>
+</svg>

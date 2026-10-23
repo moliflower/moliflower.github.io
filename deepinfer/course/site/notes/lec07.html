@@ -9,7 +9,7 @@
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=fe4449dc2f59">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -25,7 +25,7 @@
       <div class="eyebrow">讲义 7</div>
       <h1>第 7 讲：KV Cache 基础</h1>
       <div class="doc-meta">
-        <span>纯阅读约 15 分钟 · 动手另计</span>
+        <span>浏览文字约 14 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../lectures/lec07.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -33,150 +33,99 @@
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
-        <a class="toc-level-2" href="#h-1">0. 本讲要解决的问题</a><a class="toc-level-2" href="#h-2">1. KV Cache 的容量模型</a><a class="toc-level-3" href="#h-3">1.1 公式</a><a class="toc-level-3" href="#h-4">1.2 例子</a><a class="toc-level-3" href="#h-5">1.3 容量规划</a><a class="toc-level-2" href="#h-6">2. 连续布局 vs Paged 布局</a><a class="toc-level-3" href="#h-7">2.1 连续布局</a><a class="toc-level-3" href="#h-8">2.2 Paged 布局</a><a class="toc-level-3" href="#h-9">2.3 地址计算</a><a class="toc-level-3" href="#h-10">2.4 Page size 的 trade-off</a><a class="toc-level-2" href="#h-11">3. Prefix Cache</a><a class="toc-level-3" href="#h-12">3.1 收益</a><a class="toc-level-3" href="#h-13">3.2 命中判断</a><a class="toc-level-3" href="#h-14">3.3 命中率的影响</a><a class="toc-level-2" href="#h-15">4. Eviction、SWA 与 Bounded Replay</a><a class="toc-level-3" href="#h-16">4.1 Eviction</a><a class="toc-level-3" href="#h-17">4.2 SWA</a><a class="toc-level-3" href="#h-18">4.3 Bounded Replay</a><a class="toc-level-3" href="#h-19">4.4 State Cache</a><a class="toc-level-2" href="#h-20">5. MLA：更小的 KV</a><a class="toc-level-2" href="#h-21">6. 仓库对照</a><a class="toc-level-2" href="#h-22">7. 练习</a><a class="toc-level-3" href="#h-23">基础</a><a class="toc-level-3" href="#h-24">进阶</a><a class="toc-level-3" href="#h-25">挑战</a><a class="toc-level-2" href="#h-26">8. 面试追问</a><a class="toc-level-2" href="#h-27">9. 参考文献</a><a class="toc-level-2" href="#h-28">10. 下一步</a>
-      </aside>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 12 节</summary>
+        <nav aria-label="本页章节">
+        <a class="toc-level-2" href="#h-1">1. 为什么存下 K/V 能省计算，却增加容量压力</a><a class="toc-level-2" href="#h-2">2. 从一行向量开始推导容量</a><a class="toc-level-2" href="#h-3">3. 手算一：256 MiB 是怎么来的</a><a class="toc-level-3" href="#h-4">3.1 先运行一个小维度版本</a><a class="toc-level-2" href="#h-5">4. 手算二：预算反推的是总 token，不是请求数</a><a class="toc-level-2" href="#h-6">5. 为什么引入分页：连续空间不等于全部空闲空间</a><a class="toc-level-2" href="#h-7">6. 手算三：页数、浪费与独立取整</a><a class="toc-level-3" href="#h-8">6.1 页大小没有“一句口诀”的最优值</a><a class="toc-level-2" href="#h-9">7. 手算四：非连续页表和真实地址</a><a class="toc-level-2" href="#h-10">8. Lab3 的最小生命周期：先学数据，再学有限所有权</a><a class="toc-level-2" href="#h-11">9. 拓展：共享、SWA 和 MLA 各改变哪一项</a><a class="toc-level-2" href="#h-12">10. 自测、排错和出口</a>
+        </nav>
+      </details>
       <article class="doc-content">
-        <blockquote><p><strong>课前</strong>：35 分钟  <br><strong>课后</strong>：实验 3 + 作业 2  <br><strong>一句话</strong>：KV cache 是“用显存换计算”；PagedAttention 是“用分页换碎片和共享”；KV 量化是“用精度换带宽”。</p></blockquote>
-<hr>
-<h2 id="h-1">0. 本讲要解决的问题</h2>
-<p><strong>先修</strong>：列表副本、整除/取余、Lab2 的 K/V；类与 self 可在 Lab3 第 0 节现学。必做第 1–2 节与 Lab3。prefix 共享、SWA、MLA 是后续框架阅读，不要求初学者一次实现全部机制。</p>
-<ol><li>一条序列的 KV cache 到底占多少字节？batch、seq、层数、head 数怎么影响？</li><li>为什么连续布局会碎片化？paged 布局的 block table 怎么工作？</li><li>prefix cache 能省多少？命中率受什么影响？</li><li>eviction / SWA / bounded replay 分别解决什么问题？</li><li>MLA 为什么能把 KV 压得更小？代价是什么？</li></ol>
-<hr>
-<h2 id="h-2">1. KV Cache 的容量模型</h2>
-<h3 id="h-3">1.1 公式</h3>
-<p>标准 MHA/GQA：</p>
-<pre><code>KV_bytes = 2 * L * H_kv * D * S * B * bytes_per_elem</code></pre>
-<ul><li><code>2</code>：K 和 V；</li><li><code>L</code>：层数；</li><li><code>H_kv</code>：KV head 数（GQA 时小于 Q head）；</li><li><code>D</code>：head_dim；</li><li><code>S</code>：序列长度；</li><li><code>B</code>：batch；</li><li><code>bytes_per_elem</code>：bf16=2，FP8=1。</li></ul>
-<p>每 token、每层：</p>
-<pre><code>2 * H_kv * D * bytes_per_elem</code></pre>
-<h3 id="h-4">1.2 例子</h3>
-<p><code>L=32, H_kv=8, D=128, S=2048, B=1, bf16</code>：</p>
-<pre><code>2 * 32 * 8 * 128 * 2048 * 2
-= 268,435,456 bytes
-= 256 MiB</code></pre>
-<p><code>B=32</code>：8 GiB。<code>S=8192</code>：1 GiB/条。 所以长上下文/大并发下，KV cache 往往比模型权重更先耗尽显存。</p>
-<h3 id="h-5">1.3 容量规划</h3>
-<p>给定显存 <code>M_gpu</code>、模型权重 <code>M_weights</code>、激活/workspace <code>M_act</code>：</p>
-<pre><code>M_kv = M_gpu * utilization - M_weights - M_act
-max_tokens_ideal = floor(max(0, M_kv) / (2 * L * H_kv * D * bytes))</code></pre>
-<p>如果所有序列长度都等于 S，可用 <code>floor(max_tokens_ideal/S)</code> 估计并发上界。仅知道平均长度 <code>S_avg</code> 时，下面只是规划估计，不是保证可容纳每一批请求的上限：</p>
-<pre><code>B_max ≈ max_tokens / S_avg</code></pre>
-<p>注意：这是<strong>总 token 数</strong>上限，不是请求数上限；paged 布局下，碎片和 block table 也会占空间。</p>
-<hr>
-<h2 id="h-6">2. 连续布局 vs Paged 布局</h2>
-<h3 id="h-7">2.1 连续布局</h3>
-<pre><code>seq 0: [block 0][block 1][block 2]...</code></pre>
-<p>问题：</p>
-<ul><li>需要按 <code>max_model_len</code> 预留，实际长度远小于最大值 -&gt; 内部碎片；</li><li>多条序列长度不同 -&gt; 外部碎片；</li><li>扩容要搬数据；</li><li>前缀共享困难。</li></ul>
-<p>vLLM 论文提到，传统连续布局的显存有效利用率可能只有 20%–40%。</p>
-<h3 id="h-8">2.2 Paged 布局</h3>
-<pre><code>逻辑 block 0 -&gt; 物理 block 7
-逻辑 block 1 -&gt; 物理 block 2
-逻辑 block 2 -&gt; 物理 block 9</code></pre>
-<ul><li>固定 <code>block_size</code>（常见 16/64/128）；</li><li><code>block_table[logical] = physical</code>；</li><li>物理 block 可以不连续；</li><li>按需分配，最后一块可能浪费；</li><li>前缀可以共享物理 block（copy-on-write）。</li></ul>
-<h3 id="h-9">2.3 地址计算</h3>
-<p>对 token 位置 <code>pos</code>、层 <code>l</code>、head <code>h</code>、维度 <code>d</code>：</p>
-<pre><code>logical = pos // block_size
-offset  = pos % block_size
-physical = block_table[logical]
-addr = base
-     + physical * block_bytes
-     + l * layer_stride
-     + h * head_stride
-     + offset * token_stride
-     + d * elem_bytes</code></pre>
-<p>例如每层的 K 和 V 分别有一个连续数组，单个 K 数组的布局是 <code>[num_blocks, block_size, H_kv, D]</code>，则 base 已经选定层与 K/V，不再叠加 layer_stride：</p>
-<pre><code>block_bytes = block_size * H_kv * D * bytes
-token_stride = H_kv * D * bytes
-head_stride = D * bytes
-addr = base + physical*block_bytes + offset*token_stride + h*head_stride + d*bytes</code></pre>
-<p><strong>手算</strong>：block_size=2、H_kv=2、D=3、元素2B、table=<code>[7,2]</code>。pos=3、h=1、d=2 ⇒ logical=1、offset=1、physical=2。block_bytes=24、token_stride=12、head_stride=6，地址相对 base 偏移为 <code>2*24+1*12+1*6+2*2=70B</code>。逻辑 token3 并不在物理页3。</p>
-<h3 id="h-10">2.4 Page size 的 trade-off</h3>
-<table><thead><tr><th>小 page（16）</th><th>大 page（128）</th></tr></thead><tbody><tr><td>内部碎片小</td><td>最后一块浪费大</td></tr><tr><td>block table 项多，管理开销大</td><td>block table 项少</td></tr><tr><td>前缀共享粒度细</td><td>共享粒度粗</td></tr><tr><td>gather 更碎，kernel 开销大</td><td>gather 更连续，带宽好</td></tr></tbody></table>
-<p>选择要看 workload：短序列多 -&gt; 小 page；长序列/共享前缀多 -&gt; 大 page。</p>
-<hr>
-<h2 id="h-11">3. Prefix Cache</h2>
-<h3 id="h-12">3.1 收益</h3>
-<p>如果 B 条请求共享同一个长度 P 的前缀，原来存 B 份，现在只存一份。相较独立缓存，理想节省：</p>
-<pre><code>saved = 2 * L * H_kv * D * P * (B-1) * bytes</code></pre>
-<p>例：<code>P=512, L=32, H_kv=8, D=128, B=2, bf16</code>，一份前缀占64MiB，两条共享节省一份：</p>
-<pre><code>64 MiB</code></pre>
-<p>对长 system prompt / RAG / agent 历史，收益很大。</p>
-<p>若只共享完整页，将 P 换为 <code>floor(P/block_size)*block_size</code>。B=1 时共享节省为0；仍可能通过缓存命中节省下一次 prefill 计算，两种收益不要混算。</p>
-<h3 id="h-13">3.2 命中判断</h3>
-<p>理想情况：按 token 序列的 hash 做前缀匹配：</p>
-<pre><code>hash(prefix[0:P]) -&gt; block list</code></pre>
-<p>工程上：</p>
-<ul><li>以 block 为粒度做 hash（block hash + 父 block hash）；</li><li>命中后复用物理 block，引用计数 +1；</li><li>写入时 copy-on-write（如果 block 被共享）；</li><li>淘汰时引用计数为 0 才回收。</li></ul>
-<p>复用还必须匹配模型权重、adapter、位置编码和其他影响 KV 的配置；token 一样但模型不同，不能直接共享结果。</p>
-<h3 id="h-14">3.3 命中率的影响</h3>
-<ul><li>前缀越长、重复越多，命中率越高；</li><li>路由策略：如果按 prefix affinity 路由，命中率高但负载不均；DeepInfer 选择“任意 prefill 机器都能命中任何前缀”，用集中式 KV store；</li><li>TTL：3 天 vs 7 天，对 chatbot 长尾命中率有 0.5%–1% 的影响（Q&amp;A 数据）。</li></ul>
-<hr>
-<h2 id="h-15">4. Eviction、SWA 与 Bounded Replay</h2>
-<h3 id="h-16">4.1 Eviction</h3>
-<p>当 KV 放不下：</p>
-<ul><li>LRU：淘汰最久未用的 block；</li><li>按序列优先级：短请求/高价值请求保留；</li><li>换出到 host/disk：swap，代价是 PCIe/RDMA；</li><li>重算：preemption 后重新 prefill，代价是算力。</li></ul>
-<h3 id="h-17">4.2 SWA</h3>
-<p>对于本身定义为 Sliding Window Attention 的层，若只保留最近 W 个 token 的 KV：</p>
-<pre><code>KV_bytes ∝ W  而不是 S</code></pre>
-<p>该层 cache 随 W 有界；混合全局层的模型总容量仍可能随 S 增长。不能把全局 attention 的旧 KV 任意丢弃并称为等价优化；那会改变模型计算。</p>
-<h3 id="h-18">4.3 Bounded Replay</h3>
-<p>SWA 丢了旧 KV 后，如果命中前缀但 SWA 缺失，可以只重算最近一段：</p>
-<pre><code>replay 最近 128 token -&gt; 近似恢复 SWA</code></pre>
-<p>DeepInfer 的 encoder/decoder SWA bounded replay：</p>
-<ul><li>encoder：命中 block KV，但 SWA 缺失时，重算最后 128 token；</li><li>decoder：只重算最后 128 token 的 SWA，block KV 从 encoder 最后一层投影；</li><li>代价是常数级，不随上下文长度增长。</li></ul>
-<h3 id="h-19">4.4 State Cache</h3>
-<p>SWA 不放在 paged block 里，而是每个序列一个固定大小的 <code>StateBlock</code>：</p>
-<pre><code>[stored SWA region][dropped region]</code></pre>
-<ul><li>以 128 token 为粒度存储；</li><li>环形 buffer，多留 6 个位置吸收 speculative 的越界；</li><li>只存前 20 层（V4.1 配置），减少 state 大小。</li></ul>
-<hr>
-<h2 id="h-20">5. MLA：更小的 KV</h2>
-<p>MLA 存压缩 latent：</p>
-<pre><code>c_KV = x W_DKV          # [d_c]
-K = c_KV W_UK, V = c_KV W_UV</code></pre>
-<p>KV cache：</p>
-<pre><code>bytes = L * (kv_lora_rank + qk_rope_head_dim) * S * B * bytes</code></pre>
-<p>没有 factor 2，因为 K/V 共享 latent。</p>
-<p>例：<code>L=32, rank=512, rope=64, S=2048, B=1, FP8</code>：</p>
-<pre><code>32 * 576 * 2048 * 1 = 37,748,736 bytes ≈ 36 MiB</code></pre>
-<p>对比第 1.2 节 GQA bf16 的 256MiB，小约7.11倍；这里同时改变了缓存表示与 dtype。若同为 bf16，MLA 为72MiB，仅由表示变化带来的比值为256/72≈3.56。例子未计 scale、对齐及分层混合精度。</p>
-<p>代价：</p>
-<ul><li>attention 前向多了一次投影；</li><li>latent 的精度/表达受限；</li><li>需要专门的 FlashMLA kernel。</li></ul>
-<hr>
-<h2 id="h-21">6. 仓库对照</h2>
-<ul><li><code>deepinfer/worker/cache_engine.py</code>：<code>KVCache</code>、<code>StateBlock</code>、<code>KVCacheManager</code>、<code>GPUCacheInterface</code>；看 <code>per_token_bytes</code> 和 <code>get_kvcache_layout</code>。</li><li><code>.../tilelang_ops/cuda/load_paged_kv_cache.py</code>：paged gather 的地址计算。</li><li><code>.../tilelang_ops/cuda/store_kv_cache.py</code>：写入。</li><li><code>.../tilelang_ops/cuda/state_cache.py</code>：SWA 环形 buffer。</li><li><code>.../tilelang_ops/cuda/compress.py</code>：压缩 KV 的更新。</li></ul>
-<hr>
-<h2 id="h-22">7. 练习</h2>
-<h3 id="h-23">基础</h3>
-<p><strong>预测与修错</strong>：page_size=4，长度从4增长到5，<code>length//page_size</code> 为什么会少分配一页？</p>
-<p>&lt;details&gt;&lt;summary&gt;核对&lt;/summary&gt;</p>
-<p>4个 token 占1页，5个占2页；需向上取整 <code>(length+page_size-1)//page_size</code>。在 Lab3 中只在 append 前的 length 是页大小倍数时分配新页。随后独立 hand trace 非连续页表的 get(1,5)，并验证修改返回值不会改缓存。</p>
-<p>&lt;/details&gt;</p>
-<ol><li>计算 <code>L=32, H_kv=8, D=128, S=4096, B=4, FP8</code> 的 KV bytes。</li><li>同样配置，bf16 是多少？MLA（rank=512, rope=64, FP8）是多少？</li><li><code>seq_len=5000, page_size=64</code>，需要多少 page？浪费多少 slot？</li><li>推导 paged 地址计算的每一步。</li></ol>
-<h3 id="h-24">进阶</h3>
-<ol start="5"><li>实现 <code>PagedKVCache</code>（实验 3），支持 append/get/free。</li><li>写一个 prefix cache 模拟器：随机请求、共享前缀、LRU 淘汰，测命中率 vs 容量。</li><li>扫 page size <code>16/32/64/128</code>，测 gather 带宽和 waste。</li><li>实现 <code>share_prefix</code> + copy-on-write，验证写入不会污染共享 block。</li></ol>
-<h3 id="h-25">挑战</h3>
-<ol start="9"><li>用 <code>ncu</code> 看 paged gather 的 sector 利用率，解释为什么 page size 影响带宽。</li><li>模拟 SWA bounded replay：给定前缀命中长度，计算重算 token 数和额外 FLOPs。</li></ol>
-<hr>
-<h2 id="h-26">8. 面试追问</h2>
-<ol><li>KV cache 大小怎么算？为什么 MLA 不乘 2？</li><li>PagedAttention 解决什么问题？block table 怎么工作？</li><li>prefix cache 的命中率受什么影响？怎么做 eviction？</li><li>SWA 和 bounded replay 分别解决什么问题？</li><li>page size 怎么选？小 page 和大 page 各有什么代价？</li><li>如果 KV cache 放不下，你会 swap 还是 recompute？为什么？</li></ol>
-<hr>
-<h2 id="h-27">9. 参考文献</h2>
-<ul><li>Kwon et al., *PagedAttention / vLLM*：<a href="https://arxiv.org/abs/2309.06180">https://arxiv.org/abs/2309.06180</a></li><li>vLLM blog：<a href="https://blog.vllm.ai/2023/06/20/vllm.html">https://blog.vllm.ai/2023/06/20/vllm.html</a></li><li>DeepSeek-V2：MLA；DeepSeek Q&amp;A：KV cache storage / SWA。</li><li>DeepInfer <code>doc/inference_deployment_qa.md</code>。</li></ul>
-<hr>
-<h2 id="h-28">10. 下一步</h2>
-<ul><li>做 <a href="lab03.html">实验 3</a>；</li><li>做 <a href="hw02.html">作业 2</a> 的 KV 计算；</li><li>读 <a href="lec08.html">第 8 讲</a> 的量化。</li></ul>
+        <p>先修：<a href="lec05.html">L5 Attention</a>、Lab2、整除取余、列表副本。建议 90–120 分钟读完并手算，再用 3–5 小时完成 <a href="lab03.html">Lab3</a>。本讲的<strong>容量推导、分页映射与 Lab3 四题都是必做</strong>；共享、SWA、MLA 的拓展会明确标注，不再把必做分页写成进阶。</p>
+<p>目标不是背一个长乘法，而是能从张量形状算字节，从预算反推容量，从逻辑位置找到数据，并解释模型没有计算的开销。先做 L7 与 Lab3，再读 L8；HW1/2 在 L7、L8 都完成后统一做。</p>
+<h2 id="h-1">1. 为什么存下 K/V 能省计算，却增加容量压力</h2>
+<p>自回归生成每次追加一个 token。已经计算过的位置，其 K/V 可以保留，下次让新 query 读取历史，而不必重新计算整个旧前缀。这里用存储换取重复计算的减少；它没有取消新 token 的计算，也没有免除读取历史 K/V 的流量。</p>
+<p>假如每个历史 token 在每层都有一行 K、一行 V，序列越长，保存的行越多。模型权重通常先占用一块近似固定预算；<strong>KV 是权重、workspace 等预算之后，随上下文和并发增长的动态约束</strong>。不能说任何模型中 KV 都先于权重耗尽内存：有的权重本身就放不下，有的运行时 workspace 才是限制。</p>
+<p>本讲讨论标准 MHA/GQA 的有效 KV 载荷。实际存储还可能有页尾、scale、索引和对齐开销。先把可证明的乘法做对，再讨论这些额外项。</p>
+<h2 id="h-2">2. 从一行向量开始推导容量</h2>
+<p>为了不把 batch 和 block_size 都写成 B，本讲用 N 表示并发序列数、P 表示页大小。</p>
+<table><thead><tr><th>符号</th><th>含义</th><th>单位</th></tr></thead><tbody><tr><td>L</td><td>层数</td><td>层</td></tr><tr><td>Hkv</td><td>KV head 数，不是 query head 数</td><td>head / 层</td></tr><tr><td>D</td><td>每个 KV head 的向量维度</td><td>元素 / head</td></tr><tr><td>S</td><td>每条序列长度（先假设等长）</td><td>token / 序列</td></tr><tr><td>N</td><td>并发序列数，代码里常叫 batch</td><td>序列</td></tr><tr><td>w</td><td>每元素字节数</td><td>byte / 元素</td></tr><tr><td>P</td><td>每页容纳的 token 槽位</td><td>slot / 页</td></tr></tbody></table>
+<p>一行 K 有 Hkv×D 个元素，一行 V 同样多，所以一个 token、一层是 <code>2*Hkv*D*w</code> 字节。乘 L 得一个 token 的全部层；乘 S 得一条序列；乘 N 得等长批次：</p>
+<pre><code class="language-text">bytes_per_token = 2 * L * Hkv * D * w
+KV_bytes = bytes_per_token * S * N</code></pre>
+<p>系数 2 表示 K 与 V 两份，不是因为 dtype 是 2 字节；bf16 的 2 字节还要在 w 中乘一次。GQA 的 query heads 可以多于 KV heads，这个缓存公式只乘 Hkv。</p>
+<figure class="textbook-figure"><a href="../../figures/unit1-cache-capacity.svg" target="_blank" rel="noopener" aria-label="查看大图：KV 容量从一行向量逐层累乘，再将有效 token 与分页槽位区分"><img src="../../figures/unit1-cache-capacity.svg" alt="KV 容量从一行向量逐层累乘，再将有效 token 与分页槽位区分" loading="lazy"></a><figcaption>KV 容量从一行向量逐层累乘，再将有效 token 与分页槽位区分<span class="figure-zoom">小屏可横向滑动图解；点击图解可查看原图</span></figcaption></figure>
+<p>读图从上往下：先算每 token 字节，再乘长度与并发；最后一格强调页尾未用位置也可能占分配空间。图中 128 KiB/token 来自一套具体参数，不是所有模型的常数。</p>
+<h2 id="h-3">3. 手算一：256 MiB 是怎么来的</h2>
+<p>给定 L=32、Hkv=8、D=128、w=2、S=2048、N=1。</p>
+<ol><li>每层每 token：<code>2*8*128*2=4096</code> B，即 4 KiB。</li><li>全部层每 token：<code>4096*32=131072</code> B，即 128 KiB。</li><li>一条序列：<code>131072*2048=268435456</code> B，即 256 MiB。</li><li>32 条同长序列：<code>256*32=8192</code> MiB，即 8 GiB。</li></ol>
+<p>MiB=2^20 B、GiB=2^30 B；GB=10^9 B，不要在报告中混写。若 S 变为 8192，一条变为 1 GiB，因为长度变成四倍。若只有 dtype 变成每元素 1 字节，有效载荷减半，但 scale/对齐不一定减半。</p>
+<h3 id="h-4">3.1 先运行一个小维度版本</h3>
+<p>以下代码仅演示轴的乘法，未包含作业完整校验：</p>
+<pre><code class="language-python">layers = 2
+kv_heads = 1
+head_dim = 3
+bytes_per_element = 2
+bytes_per_token = 2 * layers * kv_heads * head_dim * bytes_per_element
+for sequence_length in [0, 1, 4]:
+    print(sequence_length, sequence_length * bytes_per_token)</code></pre>
+<p>输出 <code>0 0</code>、<code>1 24</code>、<code>4 96</code>。尝试只改变层数或 head 数，观察结果是否按比例变。空序列有效载荷为零，不等于真实服务空载内存为零。</p>
+<h2 id="h-5">4. 手算二：预算反推的是总 token，不是请求数</h2>
+<p>假设<strong>已经扣除权重和 workspace</strong>，留给 KV 的预算为 512 MiB，每 token 128 KiB。除法得到 4096 个总 token。为了证明这是最大值，必须同时验证：</p>
+<pre><code class="language-text">4096 * 131072 &lt;= 536870912
+4097 * 131072 &gt; 536870912</code></pre>
+<p>若预算少 1 B，只能容纳 4095 个完整 token。用整数整除，不要四舍五入。如果每条固定 1024 token，才可进一步说最多 4 条；若各条长度不同，4096 不是并发数。</p>
+<p>从整张卡开始规划时，还需先列账本：</p>
+<pre><code class="language-text">available_for_KV = max(0, GPU_bytes * utilization - weight_bytes - workspace_bytes)
+ideal_total_tokens = floor(available_for_KV / bytes_per_token)</code></pre>
+<p>这里 utilization 是预留策略的一部分，不是自动测出的实际可用空间。页尾与元数据还会压低可容纳数量。用平均长度除总 token 只能做规划估计，不能保证任意一批变长请求都装得下。</p>
+<h2 id="h-6">5. 为什么引入分页：连续空间不等于全部空闲空间</h2>
+<p>如果给每条请求一段按最大长度预留的连续区域，实际请求较短时，区域尾部闲置。若采用可变连续区域，释放和增长也可能形成不便复用的空洞，扩容可能需要搬移。这里说的是具体分配策略的风险，不是任何连续布局都必然按最大长度分配。</p>
+<p>分页把请求切成固定 P 槽一页，逻辑页按顺序连接，物理页可以不连续。块表负责映射。这样申请下一页不需要紧挨上一页；代价是管理页表、做地址转换，而且最后一页仍可能未满。相关设计见 <a href="https://arxiv.org/abs/2309.06180">PagedAttention 论文</a>；本课不照搬其特定负载下的性能数字。</p>
+<h2 id="h-7">6. 手算三：页数、浪费与独立取整</h2>
+<p>S=5000、P=64。因为 <code>78*64=4992</code>，还差 8 个 token，需要第 79 页。分配 5056 槽，浪费 <code>5056−5000=56</code> 槽。</p>
+<pre><code class="language-text">pages = (S + P - 1) // P
+allocated_slots = pages * P
+waste = allocated_slots - S</code></pre>
+<p>边界：S=0 得 0 页；S=64 得 1 页、0 浪费；S=65 得 2 页、63 浪费。这说明从 64 增长到 65 不是仅增加一个概念分配槽位，而是需要一整页。</p>
+<p>变长反例：三条长度 <code>[1,16,17]</code>、P=16，分别需要 1、1、2 页，共 64 槽、浪费 30。把总长 34 一次取整只得到 48 槽，它假设不同请求可共用可写尾页，不符合本课独立分页契约。HW2 Q11 专门检查这一点。</p>
+<h3 id="h-8">6.1 页大小没有“一句口诀”的最优值</h3>
+<p>同一条 10-token 请求，P=4 分配 12 槽，P=16 分配 16 槽，P=128 分配 128 槽；页数分别 3、1、1。小页能减少尾部浪费、细化完整前缀共享粒度，但页表项更多；大页可能减少管理开销，却更粗。</p>
+<p>长前缀也不自动适合大页：匹配 70 token 时，P=16 可以复用 64，P=64 也可复用 64，P=128 只能复用 0 个完整 token。实际选择还依赖 kernel 支持、访问布局与长度分布。没有测量时只陈述容量与粒度权衡，不宣称 gather 必然更快。</p>
+<h2 id="h-9">7. 手算四：非连续页表和真实地址</h2>
+<p>P=2，table=<code>[7,2]</code>。逻辑 token 位置 3：逻辑页=<code>3//2=1</code>，偏移=<code>3%2=1</code>，物理页=<code>table[1]=2</code>。不是直接访问物理页 3，也不是物理页 1。</p>
+<figure class="textbook-figure"><a href="../../figures/unit1-cache-mapping.svg" target="_blank" rel="noopener" aria-label="查看大图：页表映射与两种副本：从逻辑页查物理页，输入和输出都不能泄漏内部可变列表"><img src="../../figures/unit1-cache-mapping.svg" alt="页表映射与两种副本：从逻辑页查物理页，输入和输出都不能泄漏内部可变列表" loading="lazy"></a><figcaption>页表映射与两种副本：从逻辑页查物理页，输入和输出都不能泄漏内部可变列表<span class="figure-zoom">小屏可横向滑动图解；点击图解可查看原图</span></figcaption></figure>
+<p>图中的箭头分两步，保持 token 逻辑顺序而允许物理放置不同。Lab3 测试会重编号，故不能依赖分配器恰好从 0 顺序发号。</p>
+<p>若选定某一层的 K 数组，布局为 <code>[num_blocks,P,Hkv,D]</code>，则 base 已选好层及 K/V，不再重复加层偏移。给 P=2、Hkv=2、D=3、w=2、head=1、dimension=2：</p>
+<pre><code class="language-text">block_bytes = 2 * 2 * 3 * 2 = 24
+token_stride = 2 * 3 * 2 = 12
+head_stride = 3 * 2 = 6
+relative_byte_offset = 2*24 + 1*12 + 1*6 + 2*2 = 70</code></pre>
+<p>70 B 是相对于这个 K 数组 base 的字节偏移。换一种维度顺序，stride 也会变，不能把这个表达式当作所有缓存布局的固定地址公式。</p>
+<h2 id="h-10">8. Lab3 的最小生命周期：先学数据，再学有限所有权</h2>
+<p>Lab3 有连续和分页两种容器，均只表示<strong>单条序列</strong>。append 保存输入副本；get 返回半开区间 <code>[start,end)</code> 的逐行副本；free 清空序列。分页容器字典可以继续增长，没有有限设备池和共享引用。这不是一个完整服务器。</p>
+<p>为什么副本是正确性问题？若 append 直接保存调用者列表，调用者随后改输入，缓存内容也变；若 get 只复制外层列表，调用者改返回值内层行，内部内容也变。两个方向都要保护。长度 0 的 get(0,0) 是合法空结果，不应该误当越界。</p>
+<p>第 5 周 <a href="lec09.html">L9</a> 才加入有限容量、多个所有者与失败原子性，<a href="lec10.html">L10</a> 再讨论前缀内容身份和淘汰。这里的分页是必修，但共享池不是 Lab3 的隐藏要求。</p>
+<h2 id="h-11">9. 拓展：共享、SWA 和 MLA 各改变哪一项</h2>
+<p>共享把相同、可安全复用的完整前缀只保留一份。n 条请求内部共享长 Pfx 的前缀，在不计额外保留副本的理想情况下少 <code>(n−1)*Pfx*bytes_per_token</code>。若已有一份常驻缓存，n 个新消费者避免 n 份新增复制，口径不同。refs=0 表示可回收，不表示缓存内容必然消失；第 5 周详解。</p>
+<p>SWA 是模型注意力范围的定义：若某层只依赖最近 W 个 token，该层缓存可按窗口有界。不能任意删掉全局 attention 的历史还声称计算等价。混合全局层时，总缓存仍可能随长度增长。bounded replay/state cache 属于具体引擎机制，重算多少 token、保存哪些层要查对应实现和模型，不能把固定 128 或固定层数当普遍规律。</p>
+<p>MLA 改变的是缓存表示。教学模型用一份共享 latent 加 RoPE 部分，若两者同 dtype，载荷为：</p>
+<pre><code class="language-text">MLA_bytes = L * (latent_rank + rope_dimension) * S * N * w</code></pre>
+<p>没有额外 K/V 系数 2，是因为不是各存一整份展开 K、V。L=32、rank=512、rope=64、S=2048、N=1、w=1 时为 37748736 B=36 MiB；w=2 时为 72 MiB。与前面的 GQA bf16 256 MiB 对比，同 dtype 的表示收益是 <code>256/72≈3.56</code>，混合 dtype 比较 <code>256/36≈7.11</code> 同时含量化收益。此处忽略 scale 和对齐，结构背景见 <a href="https://arxiv.org/abs/2405.04434">DeepSeek-V2 原论文</a>。这些是延伸理解，不要求 Lab3 实现 MLA kernel。</p>
+<h2 id="h-12">10. 自测、排错和出口</h2>
+<ol><li>L=32、Hkv=8、D=128、S=4096、N=4、w=1，载荷是多少？w=2 呢？</li><li>长度 5、页大小 4，需要几页？<code>length//page_size</code> 为什么错？</li><li>table=<code>[9,2,7]</code>、P=2，get(1,5) 要依次读哪些物理位置？</li><li>使用平均序列长度算并发上限，为什么不能当作硬保证？</li></ol>
+<details class="study-hint"><summary>基础解析</summary><p>第 1 题为 1 GiB 与 2 GiB。第 2 题需 2 页，整除只得 1，漏掉剩余 1 token。第 3 题依次 <code>(9,1),(2,0),(2,1),(7,0)</code>，总共四个 token。第 4 题平均值不能约束任意批次的长请求组合，还没计算各条独立页尾浪费。</p></details>
+<ol start="5"><li>KV 总量正确是否证明 get 的副本语义正确？</li><li>“长前缀就应该用大页”和“KV 一定比权重先耗尽内存”分别缺了哪些条件？</li></ol>
+<details class="study-hint"><summary>反例解析</summary><p>容量测试看不出列表别名，必须修改输入和返回行后再读缓存。页大小还影响对齐命中与尾部浪费，需结合实现和负载；权重能否装下、workspace 与预留比例先决定 KV 可用预算，KV 只是随请求增长的动态限制之一。</p></details>
+<p>调试先确定自己算的是有效容量、已分配容量还是读取流量；再查轴、单位与取整；最后检查物理查表和副本。完成 <a href="lab03.html">Lab3</a> 后读 <a href="lec08.html">L8 量化</a>，再统一做 <a href="hw01.html">HW1</a> 和 <a href="hw02.html">HW2</a>。</p>
       </article>
     </div>
 
     <nav class="doc-nav">
-      <a class="doc-nav-card" href="lec06.html"><span>← 上一篇</span><strong>第 6 讲：FlashAttention 与 Decode Attention</strong></a><a class="doc-nav-card" href="lec08.html"><span>下一篇 →</span><strong>第 8 讲：量化（FP8 / FP4）</strong></a>
+      <a class="doc-nav-card" href="lec06.html"><span>← 上一篇</span><strong>第 6 讲：FlashAttention 与 Decode Attention</strong></a><a class="doc-nav-card" href="lec08.html"><span>下一篇 →</span><strong>第 8 讲：量化——数轴、误差与存储预算</strong></a>
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="../storage.js?v=608d22c915a6"></script>
+  <script src="../doc.js?v=8c695cbfe8d6"></script>
 </body>
 </html>

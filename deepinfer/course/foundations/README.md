@@ -4,7 +4,7 @@
 
 ## 1. 第一次运行
 
-用编辑器打开整个 DeepInfer 文件夹，打开终端。终端用来输入命令，`.py` 文件用来保存 Python 代码；不要把下面的命令写进 `.py` 文件。
+用编辑器打开**课程根目录**，再打开终端。课程根目录的判断标准是能直接看到 `course` 文件夹：离线ZIP解压后进入这一层；若打开的是 `moliflower.github.io` 源码仓库，先运行 `cd _courses/deepinfer`。下文所有 `python course/...` 都从这里运行，不从 `course` 文件夹内部运行。终端用来输入命令，`.py` 文件用来保存Python代码；不要把终端命令写进 `.py` 文件。
 
 ```bash
 python --version
@@ -12,7 +12,7 @@ python course/foundations/demo.py
 python course/tools/grade.py foundations --question q0
 ```
 
-需要 Python 3.10 或更新版本。若 Windows 的 `python` 打开商店、显示“系统无法访问此文件”或找不到命令，可在 PowerShell 从仓库根目录运行本课程的启动器：
+需要 Python 3.10 或更新版本。若 Windows 的 `python` 打开商店、显示“系统无法访问此文件”或找不到命令，可在 PowerShell 从课程根目录运行本课程的启动器：
 
 ```powershell
 .\course\run.ps1 --demo
@@ -56,6 +56,8 @@ python course/tools/grade.py foundations --question q1 --hint 1
 `--unlock` 是先预测再编码的练习，不会锁住代码。需要帮助时依次看 `--hint 1`、`2`、`3`。公开测试在 [test_foundations.py](test_foundations.py)，参考解在 `foundations_solution.py`；先写自己的解释再对照。
 
 ## 4. 出口检查
+
+先按“阅读一小节→纸上预测→修改对应函数→单题测试”循环推进；不要第一天把整个课程评分器的未实现题都当作安装失败。Q0是已完成示例，不是独立编码成绩；Q1–Q4逐步减少骨架。每次通过后，换一个输入自己解释，才能判断是否理解而非只记住测试答案。
 
 ```bash
 python course/tools/grade.py foundations

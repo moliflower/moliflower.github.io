@@ -1,8 +1,8 @@
 # Syllabus
 
 > **课程**：DeepInfer 101: From Kernels to Inference Systems  
-> **版本**：2026-10-22  
-> **节奏**：15 周课程蓝图，12–15 小时/周；起步另计，按掌握度延长。当前可执行材料到 Unit1。  
+> **版本**：2026-10-24 教材重整版
+> **节奏**：15 周是主题蓝图，不是学习期限；起步另计，可分多次完成一章。当前可执行材料覆盖起步、预备、Unit1 和 Unit2 第 5–6 周；本轮暂停新增后续周次。
 > **入口**：零基础先做 [Python 起步](foundations/README.md)；会函数、循环、列表后做调试预备。不要求先学 C++ 或 CUDA。  
 > **硬件**：Unit 1 不需要 GPU；GPU 轨道可选
 
@@ -30,23 +30,29 @@
 
 入门预备单元的目标：读 traceback、构造最小复现、检查列表副本与矩阵索引、编写浮点断言。完成后进入第一讲与 Lab0 的纯 Python 核心。
 
-**分层约定**：Python 手算与实现为核心；形式化推导逐步深入；CUDA/TileLang、occupancy、profiling 和工业源码是进阶轨道。后续章节仍在按这一入口标准审校。
+**分层约定**：Python 手算与实现为核心；形式化推导逐步深入；CUDA/TileLang、occupancy、profiling 和工业源码是进阶轨道。先按 [自学路线](LEARNING_PATH.md) 检查先修，再读正文和做练习，不要求先看完外部视频。
 
 学完 Unit 1（Week 1–4），你应该能：
 
-- 解释 grid/block/warp/thread、coalescing、shared memory、bank conflict、occupancy；
+- 用编号表和访问计数解释 grid/block/thread、合并访问与局部复用；warp、bank conflict、occupancy 作为第二遍扩展；
 - 独立写出 vector add、tree reduction、softmax、RMSNorm、naive/tiled matmul；
-- 用 roofline 判断 memory-bound / compute-bound，并估算理论时间；
+- 在明确 FLOPs、字节数、硬件峰值与忽略开销的假设后，用 roofline 判断限制并估算模型时间下界；
 - 计算 KV cache 大小，解释 MLA 为什么省显存；
 - 解释 per-tensor/per-token/per-group 量化的差别和误差来源。
 
-学完 Unit 2（Week 5–8），你应该能：
+Unit2 当前已发布的 Week5–6，能够验收：
+
+- 有限块池的分配、共享引用、释放、前缀命中与逐请求容量推导；
+- Phase1 的 FIFO 准入事件和 Phase2 的固定 tick 调度轨迹；
+- TTFT、TPOT 与请求 goodput 的统计口径，以及教学模型不能说明什么。
+
+完整 Unit 2（Week5–8）的后续目标，尚未全部发布：
 
 - 解释 PagedAttention、block table、prefix cache、continuous batching、chunked prefill；
 - 写一个 mini inference engine（paged KV + batching + sampling）；
 - 解释 TTFT/TPOT/goodput 和调度 trade-off。
 
-学完 Unit 3（Week 9–12），你应该能：
+Unit3（Week9–12）的规划目标，尚未发布：
 
 - 解释 MoE top-k gate、grouped GEMM、EP、EPLB；
 - 解释投机解码的接受/拒绝、变长验证；
@@ -57,14 +63,15 @@
 
 ## 3. 课程形式
 
-### Lecture（30–45 分钟）
+### Lecture（按检查点分段学习）
 
 每节课有：
 
-- **Before class**：推荐的视频/阅读（不要求全看，按你的基础选）；
-- **Notes**：核心概念、公式、ASCII 图；
-- **仓库对照**：去 DeepInfer 里看哪几个文件；
-- **Checkpoint**：3 个问题，做完 Lab 后回答。
+- **问题与先修**：先知道旧办法哪里不够，再回顾本章需要的变量、单位与数据结构；
+- **图解与推导**：读图、逐行手算、解释中间状态，而不是只记住最终公式；
+- **实现与反例**：从最小可运行步骤扩展，主动检验边界和错误想法；
+- **自测与迁移**：先预测再展开解析，用新输入解释；章节最后对应到 Lab/HW/Project；
+- **选读**：官方资料和工业源码用于核对与扩展，不替代必修正文。
 
 ### Lab（按题推进，可分多次完成）
 
@@ -106,7 +113,7 @@
 | Quiz1–2 | 10 | 两份原始成绩合计乘 0.5 |
 | 总分 | 100 | 只计算已发布的 Unit1 |
 
-详细规则见 [掌握度与评分](ASSESSMENT.md)。Python 起步与调试预备不计分；Unit2–4 是后续计划，不进入当前分母。自动测试与浏览器勾选都不能代替书面推导和口头解释。
+详细规则见 [掌握度与评分](ASSESSMENT.md)。Python 起步与调试预备不计分；Unit2 第 5、6 周分别有独立批次验收，不进入 Unit1 分母；其余周次尚未发布。自动测试与浏览器勾选都不能代替书面推导和口头解释。
 
 ---
 
@@ -167,27 +174,13 @@ AI 是很好的 tutor，但很容易变成“代写”。建议：
 
 ## 8. 提交
 
-每个 assignment 做完后：
+每个 assignment 做完后，在课程根目录运行。课程根目录是能直接看到 course 文件夹的位置；个人主页源码仓库先 `cd _courses/deepinfer`，ZIP 则进入解压根目录：
 
 ```bash
-cd /path/to/DeepInfer
 python course/tools/grade.py lab00
 ```
 
-然后在 `notes/` 写 checkoff，commit：
-
-```bash
-git add course/labs/lab00/lab00.py notes/lab00.md
-git commit -m "lab00: vector add + coalescing"
-```
-
-建议开一个学习分支：
-
-```bash
-git switch -c study/deepinfer-101
-```
-
-不要把答案提交到主分支，也不要把 `notes/` 放进公开仓库（如果你不想公开）。
+然后使用 [作业记录模板](WORKSHEET.md) 保存手算、调试和 checkoff。建议把个人报告与实验输出保存在自己控制的学习目录，公开网站源码不要混入个人笔记或隐私。课程不要求为了完成练习提交 Git commit，更不要求把答案推送到公开主分支。
 
 ---
 

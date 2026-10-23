@@ -9,7 +9,7 @@
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=fe4449dc2f59">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -25,7 +25,7 @@
       <div class="eyebrow">起步 3</div>
       <h1>起步 3：用状态表示已经完成的工作</h1>
       <div class="doc-meta">
-        <span>纯阅读约 4 分钟 · 动手另计</span>
+        <span>浏览文字约 4 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../foundations/03-composition.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -33,13 +33,16 @@
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 5 节</summary>
+        <nav aria-label="本页章节">
         <a class="toc-level-2" href="#h-1">1. 先观察一段完整的累计程序</a><a class="toc-level-2" href="#h-2">2. 从一个总数迁移到全部边界</a><a class="toc-level-2" href="#h-3">3. 独立实现 Q4</a><a class="toc-level-2" href="#h-4">4. 测试要能推翻一个错误假设</a><a class="toc-level-2" href="#h-5">5. 离开起步单元前</a>
-      </aside>
+        </nav>
+      </details>
       <article class="doc-content">
         <p><strong>先修：</strong>前三节，能写遍历列表的循环。<strong>目标：</strong>独立实现 Q4，解释每轮的累计值，写出一个反例测试。</p>
 <h2 id="h-1">1. 先观察一段完整的累计程序</h2>
+<p><strong>本节路线</strong>：先填累计状态表，再把“只要最终总数”改成“保留每个边界”，独立完成foundations Q4。先修为起步2的循环与append；命令目录见 <a href="foundations.html">起步入口</a>。出口应有长度为0、含零长度段、一般长度三种例子；能说明输出比输入多一项的原因。</p>
 <pre><code class="language-python">total = 0
 for length in [2, 0, 3]:
     total = total + length
@@ -74,7 +77,7 @@ assert prefix_offsets([1, 2]) == [0, 1, 3]</code></pre>
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="../storage.js?v=608d22c915a6"></script>
+  <script src="../doc.js?v=8c695cbfe8d6"></script>
 </body>
 </html>

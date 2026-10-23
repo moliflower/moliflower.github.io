@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="596" viewBox="0 0 620 596" role="img" aria-labelledby="title desc">
+<title id="title">两个K块累积到同一个输出tile</title>
+<desc id="desc">输出为2乘2。第一K块深度为2，贡献25、28、73、82；第二K块深度为1，增加33、36、66、72，得到58、64、139、154。累加器不在K循环内清零，最后只写回一次。</desc>
+<rect width="620" height="596" rx="20" fill="#f3f6fb"/>
+<g font-family="sans-serif" font-size="22" fill="#18304b">
+<text x="26" y="42" font-size="26" font-weight="700">同一输出tile，沿K方向逐块累积</text>
+<text x="28" y="80">A (2×3) @ B (3×2)，tile = 2</text>
+<rect x="28" y="104" width="564" height="116" rx="12" fill="#deecfb"/>
+<text x="46" y="138" font-weight="700">第一块：K位置0、1</text>
+<text x="46" y="174">搬A 4个数，搬B 4个数</text>
+<text x="46" y="205">accumulator = [[25,28],[73,82]]</text>
+<text x="278" y="254" font-size="26">↓</text>
+<rect x="28" y="272" width="564" height="132" rx="12" fill="#c9e9de"/>
+<text x="46" y="307" font-weight="700">第二块：K位置2（尾块）</text>
+<text x="46" y="342">搬A 2个数，搬B 2个数</text>
+<text x="46" y="377">增加 [[33,36],[66,72]]，不清零</text>
+<text x="278" y="438" font-size="26">↓</text>
+<rect x="28" y="456" width="564" height="78" rx="12" fill="#ffe6b9"/>
+<text x="46" y="488">最终 [[58,64],[139,154]]</text>
+<text x="46" y="520">仅在这里写回4个C元素</text>
+<text x="28" y="574">总请求 = (6 + 6 + 4) × 4B = 64B</text>
+</g></svg>

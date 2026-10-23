@@ -12,7 +12,7 @@ window.COURSE = {
     term: "2026 秋 · 自学节奏",
     startDate: "2026-10-26",
     description:
-      "从第一行 Python 开始，经过调试、算子与实验逐步理解推理系统。Unit1 与 Unit2 第 5–6 周已发布，其余周次按批次完善。",
+      "从第一行 Python 开始，用图解、推导、手算与分步实验理解推理系统。已发布的第 1–6 周重新整理为自学教材，暂不新增后续周次。",
     release: "起步 + Unit1 + Unit2 第 5–6 周已发布",
     tagline: "先写对，再写快，再讲清楚。",
     repo: "https://github.com/deepseek-ai/DeepInfer",
@@ -33,6 +33,12 @@ window.COURSE = {
   ],
 
   announcements: [
+    {
+      date: "2026-10-24",
+      title: "教材重整：先把第 1–6 周真正学懂",
+      body: "逐章重组动机、图解、推导、完整案例、渐进练习和自测；统一先修与命令入口。保留原题号与评分，不重置已有学习进度。",
+      link: "notes/learning-path.html",
+    },
     {
       date: "2026-10-24",
       title: "第 6 周发布：逐迭代调度与延迟指标",
@@ -152,7 +158,7 @@ window.COURSE = {
       theme: "KV cache 与量化",
       items: [
         { type: "lecture", label: "讲义 7", title: "KV cache 基础", link: "notes/lec07.html", key: "w4-l7" },
-        { type: "lecture", label: "讲义 8", title: "FP8/FP4 量化", link: "notes/lec08.html", key: "w4-l8" },
+        { type: "lecture", label: "讲义 8", title: "量化：整数网格、误差与存储预算", link: "notes/lec08.html", key: "w4-l8" },
         { type: "lab", label: "实验 3", title: "连续 + Paged KV cache", link: "notes/lab03.html", key: "w4-lab3" },
         { type: "quiz", label: "小测 2", title: "Attention、KV cache、量化", link: "notes/quiz02.html", key: "w4-quiz2" },
         { type: "homework", label: "作业 1", title: "Roofline、KV cache 与量化（先修已齐）", link: "notes/hw01.html", key: "w1-hw1" },
@@ -380,8 +386,9 @@ window.COURSE = {
       <p><strong>标准节奏</strong>：15 周，12–15 小时/周。如果每周只有 8 小时，用 30 周：每一周拆成两周，实验和作业不变。</p>`,
     },
     {
-      title: "已发布 Unit1 的评分",
+      title: "已发布内容的评分",
       html: `<p>Lab0–3 共 40 分，HW1–2 共 20 分，Project1 共 30 分，Quiz1–2 共 10 分，总计 100 分。Python 起步与调试预备不计分；未发布单元不进入分母。</p>
+      <p>Unit2 第 5、6 周各自单独验收 100 分（Lab 20、HW 30、Project 阶段 50），不并入 Unit1。教材重整不改变已有评分或进度。</p>
       <p>按代码、推导、反例、解释与复现实验给出证据，详见<a href="notes/assessment.html">完整评分与掌握度 rubric</a>。网站勾选只记录进度，不代表测试通过或成绩。</p>`,
     },
     {
@@ -405,21 +412,17 @@ window.COURSE = {
         <div class="callout"><p><strong>简单规则</strong>：如果你不能在 5 分钟内给一个朋友讲清这段代码，就不要提交它。</p></div>`,
     },
     {
-      title: "提交",
-      html: `<pre><code>cd /path/to/DeepInfer
-python course/tools/grade.py lab00
-
-# 写 notes/lab00.md，然后：
-git add course/labs/lab00/lab00.py notes/lab00.md
-git commit -m "lab00: vector add + coalescing"</code></pre>
-        <p>建议开一个学习分支：<code>git switch -c study/deepinfer-101</code>。不要把答案提交到主分支，也不要把 notes/ 放进公开仓库（如果你不想公开）。</p>`,
+      title: "运行与保存作业",
+      html: `<p>课程根目录应能直接看到 course 文件夹。ZIP 使用解压根目录；个人主页源码仓库先执行 <code>cd _courses/deepinfer</code>。</p>
+        <pre><code>python course/tools/grade.py lab00</code></pre>
+        <p>在自己控制的学习目录保存手算、调试和 checkoff；无需为了完成练习提交 Git，更不需要把答案或私人笔记推送到公开仓库。<a href="notes/learning-path.html">查看完整自学路线 →</a></p>`,
     },
     {
       title: "这门课不做什么",
       html: `<ul>
           <li>不教你 CUDA 的所有 API；</li>
           <li>不逐行讲 DeepInfer 的 5 万行代码；</li>
-          <li>不要求你跑通 V4.1-Flash（你的机器跑不动）；</li>
+          <li>不要求你先运行完整上游模型或购买 GPU；</li>
           <li>不承诺 15 周后你能通过所有面试；它只是把基础打牢。</li>
         </ul>
         <p><strong>一句话：</strong>先写对，再写快，再讲清楚。测试是规格，checkoff 是镜子，项目是作品。</p>`,
@@ -850,7 +853,7 @@ git commit -m "lab00: vector add + coalescing"</code></pre>
     "understanding": "分块合并时维护最大值和归一化量；三阶段 materialized 模型计 S/P 各一次写和读。Q/K/V/O 各一次访问只是理想下界。",
     "keyPoints": [
       "先修：L3、L4、L5。",
-      "产物：Lab2 Q7–Q8；L7 后做 HW2。",
+      "产物：Lab2 Q7–Q8；完整 HW1/2 留到 L7、L8 后统一做。",
       "prefill/decode 的瓶颈必须带 shape、模型和设备条件。"
     ],
     "links": [
@@ -863,12 +866,12 @@ git commit -m "lab00: vector add + coalescing"</code></pre>
   {
     "id": "kv-cache",
     "num": "07",
-    "title": "KV Cache 与页的所有权",
+    "title": "KV Cache 容量与页映射",
     "intro": "把历史数据保留与空间管理分开理解。",
-    "understanding": "缓存避免重复计算历史 K/V；单步 attention 仍读取历史。用 append/get/free 测试副本隔离、回收、容量耗尽和失败后状态。",
+    "understanding": "缓存避免重复计算历史 K/V；单步 attention 仍读取历史。Lab3 用 append/get/free 测试单序列映射、副本隔离和清空；有限容量、共享引用与失败原子性在 L9/Lab4 学习。",
     "keyPoints": [
       "先修：L5、整数分组、列表副本。",
-      "产物：Lab3 与 HW2；不依赖尚未发布的 Unit2。"
+      "产物：Lab3；补齐 HW2 的 KV 先修，不依赖尚未发布的单元。"
     ],
     "formula": "MHA/GQA KV bytes = 2 * layers * kv_heads * head_dim * seq * batch * element_bytes",
     "links": [
@@ -890,7 +893,7 @@ git commit -m "lab00: vector add + coalescing"</code></pre>
     "understanding": "明确 scale 的单位、舍入和裁剪，单独计算元数据成本。HW1 的均匀整数编码不是 FP8/FP4 仿真。",
     "keyPoints": [
       "先修：浮点误差、归一化、KV 容量。",
-      "产物：HW1、Quiz2 与独立预算题。"
+      "产物：HW1/2、Quiz2 与独立预算题。"
     ],
     "links": [
       {
@@ -932,7 +935,7 @@ git commit -m "lab00: vector add + coalescing"</code></pre>
     "id": "engine-start",
     "num": "Unit2 · 第 5 周",
     "title": "有限容量与请求生命周期",
-    "intro": "从单序列分页走向共享块池，再用事件追踪请求准入与释放。",
+    "intro": "从页表图解、引用生命周期和前缀容量推导，逐步走到请求准入与释放。",
     "understanding": "区分物理页、逻辑 token、所有权引用与请求状态。先验证容量守恒，再讨论调度速度。",
     "keyPoints": ["先修：L7、Lab3、HW2。", "产物：Lab4、HW5 与 Project2 Phase1 报告。", "本批单独验收，不改变 Unit1 的 100 分分母。"],
     "links": [
@@ -947,7 +950,7 @@ git commit -m "lab00: vector add + coalescing"</code></pre>
     "id": "engine-scheduling",
     "num": "Unit2 · 第 6 周",
     "title": "逐迭代调度与延迟口径",
-    "intro": "Decode 优先、分块 prefill、首 token 时间和可重复的请求轨迹。",
+    "intro": "用同负载调度时间线、预算分配图和逐步实现，理解 decode、prefill 与首 token。",
     "understanding": "把准入、策略、执行、指标分开；模型 tick 不是 GPU 毫秒。",
     "keyPoints": ["先修：Phase1、L11/L12。", "产物：Lab5、HW6、Phase2 与 18 组实验。", "独立批次评分；尚未集成真实 KV 或模型执行。"],
     "links": [

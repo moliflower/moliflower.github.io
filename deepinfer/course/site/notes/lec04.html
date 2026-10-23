@@ -9,7 +9,7 @@
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=fe4449dc2f59">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -25,7 +25,7 @@
       <div class="eyebrow">讲义 4</div>
       <h1>第 4 讲：Tiling、GEMM 与 Roofline</h1>
       <div class="doc-meta">
-        <span>纯阅读约 22 分钟 · 动手另计</span>
+        <span>浏览文字约 19 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../lectures/lec04.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -33,189 +33,120 @@
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
-        <a class="toc-level-2" href="#h-1">0. 本讲要解决的问题</a><a class="toc-level-2" href="#h-2">1. GEMM 的数学与代价</a><a class="toc-level-3" href="#h-3">1.1 定义</a><a class="toc-level-3" href="#h-4">1.2 最小 traffic 与 AI</a><a class="toc-level-3" href="#h-5">1.3 朴素 GEMM 的重复读取</a><a class="toc-level-2" href="#h-6">2. Tiling：把重复读取搬到片上</a><a class="toc-level-3" href="#h-7">2.1 Block tile</a><a class="toc-level-3" href="#h-8">2.2 三层 tiling</a><a class="toc-level-3" href="#h-9">2.3 双缓冲 / pipeline</a><a class="toc-level-3" href="#h-10">2.4 Bank conflict 与 swizzle</a><a class="toc-level-3" href="#h-11">2.5 Wave quantization</a><a class="toc-level-2" href="#h-12">3. Tensor Core</a><a class="toc-level-3" href="#h-13">3.1 MMA 指令</a><a class="toc-level-3" href="#h-14">3.2 Fragment 布局</a><a class="toc-level-3" href="#h-15">3.3 精度</a><a class="toc-level-2" href="#h-16">4. 代码：一个可读的 tiled GEMM</a><a class="toc-level-3" href="#h-17">TileLang 版本</a><a class="toc-level-2" href="#h-18">5. 性能分析</a><a class="toc-level-3" href="#h-19">5.1 指标</a><a class="toc-level-3" href="#h-20">5.2 效率</a><a class="toc-level-3" href="#h-21">5.3 常见瓶颈</a><a class="toc-level-2" href="#h-22">6. 正确性与边界</a><a class="toc-level-2" href="#h-23">7. 仓库对照</a><a class="toc-level-2" href="#h-24">8. 练习</a><a class="toc-level-3" href="#h-25">基础</a><a class="toc-level-3" href="#h-26">进阶</a><a class="toc-level-3" href="#h-27">挑战</a><a class="toc-level-2" href="#h-28">9. 面试追问</a><a class="toc-level-2" href="#h-29">10. 参考文献</a><a class="toc-level-2" href="#h-30">11. 下一步</a>
-      </aside>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 13 节</summary>
+        <nav aria-label="本页章节">
+        <a class="toc-level-2" href="#h-1">0. 入口检查与学习地图</a><a class="toc-level-2" href="#h-2">1. 一格输出就是一个点积</a><a class="toc-level-2" href="#h-3">2. 数学一样，读法可以不同</a><a class="toc-level-2" href="#h-4">3. 一个输出tile：先一起搬，再反复用</a><a class="toc-level-2" href="#h-5">4. 从一块扩大到整张矩阵</a><a class="toc-level-2" href="#h-6">5. 为什么读取量会减少：推导而非背公式</a><a class="toc-level-2" href="#h-7">6. 矩形推导：不要把三条轴都写成n</a><a class="toc-level-2" href="#h-8">7. 接上Project1：让证据来自真实读写</a><a class="toc-level-3" href="#h-9">7.1 一个输入契约，不是猜shape的技巧</a><a class="toc-level-3" href="#h-10">7.2 数值和计数要相互独立地核对</a><a class="toc-level-2" href="#h-11">8. Roofline：请求减少，不等于时间同比减少</a><a class="toc-level-2" href="#h-12">9. 一个可独立完成的实验闭环</a><a class="toc-level-2" href="#h-13">10. 后置硬件桥接：同一个思想，不同的约束</a>
+        </nav>
+      </details>
       <article class="doc-content">
-        <blockquote><p><strong>课前</strong>：40 分钟  <br><strong>课后</strong>：项目 1 Phase 2  <br><strong>一句话</strong>：GEMM 的优化不是“把循环写快”，而是把 HBM 的重复读取搬到 shared memory/寄存器，再喂给 tensor core。</p></blockquote>
-<hr>
-<h2 id="h-1">0. 本讲要解决的问题</h2>
-<p><strong>先修</strong>：矩阵乘的 <code>(M,K)@(K,N)</code> shape、三层循环、FLOP/Byte 与带宽单位。必做先手算第 1–2 节，再完成 Project1 的显式 tile 搬运与计数；Tensor Core 指令、CUDA 和 TileLang 为桥接后选读。</p>
-<ol><li>一个 <code>n×n×n</code> 的 GEMM，FLOPs、Bytes、AI 各是多少？在你的卡上是 memory-bound 还是 compute-bound？</li><li>朴素 GEMM 为什么慢？tiling 为什么能把 traffic 降到 <code>1/tile</code>？</li><li>shared memory tile、register tile、warp tile 各自负责什么？</li><li>tensor core 的 mma 形状、fragment 布局、FP8/FP4 的 scale 怎么工作？</li><li>怎么用 <code>ncu</code> 判断 GEMM 是“算力没打满”还是“带宽没打满”？</li></ol>
-<hr>
-<h2 id="h-2">1. GEMM 的数学与代价</h2>
-<h3 id="h-3">1.1 定义</h3>
-<pre><code>C[m,n] = A[m,k] @ B[k,n]
-C[i,j] = Σ_{p=0}^{k-1} A[i,p] * B[p,j]</code></pre>
-<p>FLOPs：</p>
-<pre><code>2 * m * n * k   （每个输出 k 次乘加，乘加=2 FLOPs）</code></pre>
-<p>方阵 <code>n×n×n</code>：</p>
-<pre><code>FLOPs = 2 n^3</code></pre>
-<h3 id="h-4">1.2 最小 traffic 与 AI</h3>
-<p>读 A、B，写 C：</p>
-<pre><code>Bytes = (m*k + k*n + m*n) * bytes_per_elem</code></pre>
-<p>方阵、float32：</p>
-<pre><code>Bytes ≈ 12 n^2
-AI = 2n^3 / 12n^2 = n / 6</code></pre>
-<table><thead><tr><th>n</th><th>理想 AI (FP32)</th><th>假设标量 FP32 ridge=13 FLOP/B 时的 roofline 上界</th></tr></thead><tbody><tr><td>128</td><td>21.3</td><td>理想点落在算力平台；小任务未必能达到</td></tr><tr><td>1024</td><td>170.7</td><td>理想点落在算力平台</td></tr><tr><td>4096</td><td>682.7</td><td>理想点落在算力平台</td></tr></tbody></table>
-<blockquote><p>这里把 A/B 各读一次是理想流量下界。实际算法可能重读输入，故实际 AI 更低；短任务还可能受 launch/并行度限制。FP32 CUDA-core ridge 不能拿来判断 FP16/BF16 Tensor Core kernel，必须匹配峰值的 dtype 与计算单元。</p></blockquote>
-<h3 id="h-5">1.3 朴素 GEMM 的重复读取</h3>
-<pre><code class="language-cuda">// 计数用伪代码；假设 C 已清零，实际 kernel 通常先在寄存器累计。
-for (int i = 0; i &lt; n; ++i)
-  for (int j = 0; j &lt; n; ++j)
-    for (int p = 0; p &lt; n; ++p)
-      C[i][j] += A[i][p] * B[p][j];</code></pre>
-<p>每个 <code>(i,j)</code> 读 A 的一行和 B 的一列。A 被读 <code>n</code> 次，B 被读 <code>n</code> 次：</p>
-<pre><code>global reads ≈ 2 n^3 个元素</code></pre>
-<p><code>n=1024</code> 时约 2.147G 次输入元素读取 = 8.590GB（8GiB），而 A/B/C 容量合计为 12MiB。这是算法发出的标量读取量；缓存可以复用数据，实际 HBM 流量不会自动等于 8GiB。</p>
-<hr>
-<h2 id="h-6">2. Tiling：把重复读取搬到片上</h2>
-<h3 id="h-7">2.1 Block tile</h3>
-<p>把 C 切成 <code>BM × BN</code> 的块。一个 CTA 负责一个块：</p>
-<pre><code>for k0 in 0..K step BK:
-    load A[i0:i0+BM, k0:k0+BK] -&gt; shared
-    load B[k0:k0+BK, j0:j0+BN] -&gt; shared
-    compute C_tile += A_tile @ B_tile</code></pre>
-<p>global traffic（每个 CTA）：</p>
-<pre><code>A: BM * K
-B: K * BN
-C: BM * BN</code></pre>
-<p>总 CTA 数 <code>(M/BM)*(N/BN)</code>：</p>
-<pre><code>global elements ≈ (M/BM)*(N/BN)*(BM*K + K*BN) + M*N
-                = M*N*K*(1/BN + 1/BM) + M*N</code></pre>
-<p>方阵 <code>BM=BN=BT</code>：</p>
-<pre><code>≈ 2 n^3 / BT + n^2</code></pre>
-<p>相比朴素 <code>2n^3</code>，降到 <code>1/BT</code>。</p>
-<p><strong>完整手算</strong>：n=3、tile=2，C 有 2×2 个输出 tile。每个 A 元素被两个列 tile 读取，每个 B 元素被两个行 tile 读取，因此输入共 <code>2*9*2=36</code> 次，C 写 9 次，共 45 元素=180B；朴素为 <code>2*27+9=63</code> 元素=252B。尾块只统计有效元素。</p>
-<p>Project1 的精确方阵模型是 <code>elements=2*n²*ceil(n/tile)+n²</code>，而非把 n/tile 当小数。上面的 <code>2n³/BT+n²</code> 适用于可整除情形。若实际 kernel 读取 padding，须把 padding 另计。</p>
-<h3 id="h-8">2.2 三层 tiling</h3>
-<table><thead><tr><th>层级</th><th>负责</th><th>存储</th><th>典型大小</th></tr></thead><tbody><tr><td>CTA / block tile</td><td>一个 block 的 C 块</td><td>shared memory</td><td>128×128 / 128×256</td></tr><tr><td>warp tile</td><td>一个 warp 的 C 块</td><td>registers</td><td>64×64</td></tr><tr><td>thread tile</td><td>一个 thread 的 C 元素</td><td>registers</td><td>8×8</td></tr></tbody></table>
-<p>数据流：</p>
-<pre><code>HBM -&gt; shared memory -&gt; registers -&gt; tensor core</code></pre>
-<p>每往上一层，带宽更高、容量更小。</p>
-<h3 id="h-9">2.3 双缓冲 / pipeline</h3>
-<pre><code>load tile k+1 -&gt; compute tile k</code></pre>
-<p>用 <code>cp.async</code>（Ampere）或 TMA（Hopper+）把下一块数据提前搬到 shared，和当前块的计算重叠。CUTLASS/DeepGEMM 的核心就是这条 pipeline。</p>
-<h3 id="h-10">2.4 Bank conflict 与 swizzle</h3>
-<p>shared memory tile 的行 stride 若等于 32 个 word，按列访问会 32-way conflict。解决：</p>
-<ul><li>padding：行 stride 33；</li><li>XOR swizzle：<code>col ^ (row &amp; mask)</code>；</li><li>TMA swizzle：硬件支持的 128B/64B/32B swizzle 模式。</li></ul>
-<h3 id="h-11">2.5 Wave quantization</h3>
-<p>一个 SM 同时跑若干 CTA。若 grid 的 CTA 数不是 <code>SMs * CTAs_per_SM</code> 的整数倍，最后一波只有部分 CTA，利用率下降。</p>
-<p>例：108 SMs，每 SM 2 个 CTA，共 216 个并发 CTA；grid=1000 -&gt; 4 整波 + 136 个尾 CTA（63% 尾波）。对大 GEMM，尾波占比小；对小 GEMM，尾波可能是主要开销。</p>
-<hr>
-<h2 id="h-12">3. Tensor Core</h2>
-<h3 id="h-13">3.1 MMA 指令</h3>
-<p>Tensor core 一条指令做一个小矩阵乘：</p>
-<pre><code>D = A @ B + C</code></pre>
-<p>Ampere 的 <code>mma.sync.aligned.m16n8k16</code>：</p>
-<ul><li>A: 16×16（FP16/BF16）</li><li>B: 16×8</li><li>C/D: 16×8（FP32 累加）</li></ul>
-<p>Hopper 的 <code>wgmma</code> 以 warpgroup（4 warps）为单位，支持更大的 tile；Blackwell 的 <code>tcgen05</code> 进一步把 MMA 和 TMA 结合。</p>
-<h3 id="h-14">3.2 Fragment 布局</h3>
-<p>Tensor core 的操作数是分布在寄存器里的 <strong>fragment</strong>，不是普通矩阵。一个 warp 的 32 个 lane 各持有 fragment 的一部分；布局由 PTX 文档规定。CUTLASS 用 <code>Layout</code> 类型在编译期描述这些映射。</p>
-<p>如果布局错了，结果会错；如果 layout 不匹配，就需要 <code>ldmatrix</code>/<code>movmatrix</code> 重排，增加开销。</p>
-<h3 id="h-15">3.3 精度</h3>
-<table><thead><tr><th>输入</th><th>累加</th><th>特点</th></tr></thead><tbody><tr><td>FP16</td><td>FP32</td><td>精度较高，范围小</td></tr><tr><td>BF16</td><td>FP32</td><td>范围大，精度较低</td></tr><tr><td>FP8 E4M3</td><td>FP32</td><td>需要 scale，范围/精度更小</td></tr><tr><td>FP4 E2M1</td><td>FP32</td><td>需要 block scale，精度最低</td></tr></tbody></table>
-<p>关键点：</p>
-<ul><li><strong>累加用 FP32</strong>，低精度输入不等于低精度累加；</li><li><strong>scale</strong>：FP8/FP4 需要 per-tensor/per-token/per-group scale；</li><li><strong>outlier</strong>：FP8 的动态范围比 FP16 小，per-group scale 是折中；</li><li><strong>rounding</strong>：FP8 cast 的舍入模式会影响误差。</li></ul>
-<p>DeepInfer 的 Q&amp;A：</p>
-<ul><li>主 KV：per-16 e4m3；</li><li>indexer KV：per-32 ue8m0 MXFP4；</li><li>MoE 路由专家权重：per-32 ue8m0 MXFP4。</li></ul>
-<hr>
-<h2 id="h-16">4. 代码：一个可读的 tiled GEMM</h2>
-<pre><code class="language-cuda">#define BM 16
-#define BN 16
-#define BK 16
-
-__global__ void gemm_tiled(const float* A, const float* B, float* C,
-                           int M, int N, int K) {
-    __shared__ float As[BM][BK];
-    __shared__ float Bs[BK][BN];
-
-    int row = blockIdx.y * BM + threadIdx.y;
-    int col = blockIdx.x * BN + threadIdx.x;
-    float acc = 0.0f;
-
-    for (int k0 = 0; k0 &lt; K; k0 += BK) {
-        // load A tile: BM x BK
-        As[threadIdx.y][threadIdx.x] = (row &lt; M &amp;&amp; k0 + threadIdx.x &lt; K)
-            ? A[row * K + k0 + threadIdx.x] : 0.0f;
-        // load B tile: BK x BN
-        Bs[threadIdx.y][threadIdx.x] = (k0 + threadIdx.y &lt; K &amp;&amp; col &lt; N)
-            ? B[(k0 + threadIdx.y) * N + col] : 0.0f;
-        __syncthreads();
-
-        for (int p = 0; p &lt; BK; ++p)
-            acc += As[threadIdx.y][p] * Bs[p][threadIdx.x];
-        __syncthreads();
-    }
-    if (row &lt; M &amp;&amp; col &lt; N) C[row * N + col] = acc;
-}</code></pre>
-<p>启动配置为 <code>block=dim3(16,16)</code>、<code>grid=dim3((N+15)/16,(M+15)/16)</code>，共 256 个线程。这里 BM=BN=BK=16，每线程搬 A/B 各一个元素。尾块无效位置填零，所有线程都经过两次 barrier；不能提前 return 跳过同步。这个 kernel 片段需配合 host 驱动编译，host 基础见 C++/CUDA 桥接单元。</p>
-<p>这是一个教学版本：</p>
-<ul><li>每个 thread 只算 1 个输出，寄存器复用少；</li><li>没有 register blocking；</li><li>没有 vectorized load / cp.async；</li><li>没有 tensor core。</li></ul>
-<p>真实高性能 GEMM 会：</p>
-<ol><li>每个 thread 算 <code>TM×TN</code> 个输出（register tile）；</li><li>用 <code>float4</code>/<code>cp.async</code> 搬 shared；</li><li>用 <code>ldmatrix</code> 把 shared 搬到 fragment；</li><li>用 <code>mma</code>/<code>wgmma</code> 做矩阵乘；</li><li>用 double buffer 重叠 load/compute；</li><li>用 swizzle 避免 bank conflict；</li><li>用 split-K 处理小 M/N、大 K。</li></ol>
-<h3 id="h-17">TileLang 版本</h3>
-<p>以下是 API 结构示意，需要 <code>tilelang</code> 与 <code>tilelang.language as T</code>、匹配版本及 GPU host 调用；不能作为当前 Python 作业的可运行答案。尾块的编译器 mask 行为需以使用的版本验证。</p>
-<pre><code class="language-python">@tilelang.jit(out_idx=[2])
-def matmul(M, N, K, BM=128, BN=128, BK=32):
-    @T.prim_func
-    def main(A: T.Tensor((M, K), "float16"),
-             B: T.Tensor((K, N), "float16"),
-             C: T.Tensor((M, N), "float16")):
-        with T.Kernel(T.ceildiv(N, BN), T.ceildiv(M, BM), threads=256) as (bx, by):
-            As = T.alloc_shared((BM, BK), "float16")
-            Bs = T.alloc_shared((BK, BN), "float16")
-            Cl = T.alloc_fragment((BM, BN), "float32")
-            T.clear(Cl)
-            for k0 in T.Pipelined(T.ceildiv(K, BK), num_stages=3):
-                T.copy(A[by * BM, k0 * BK], As)
-                T.copy(B[k0 * BK, bx * BN], Bs)
-                T.gemm(As, Bs, Cl)
-            T.copy(Cl, C[by * BM, bx * BN])
-    return main</code></pre>
-<p>TileLang 帮你做 layout、pipeline、tensor core 映射；你要选的是 <code>BM/BN/BK</code>、<code>num_stages</code>、threads、swizzle。</p>
-<hr>
-<h2 id="h-18">5. 性能分析</h2>
-<h3 id="h-19">5.1 指标</h3>
-<table><thead><tr><th>指标</th><th>含义</th><th>目标</th></tr></thead><tbody><tr><td><code>sm__pipe_tensor_cycles_active.avg.pct_of_peak_sustained_active</code></td><td>tensor core 利用率</td><td>越高越好</td></tr><tr><td><code>sm__throughput.avg.pct_of_peak_sustained_elapsed</code></td><td>SM 总利用率</td><td>接近 100%</td></tr><tr><td><code>dram__throughput...</code></td><td>HBM 利用率</td><td>大 GEMM 通常不高</td></tr><tr><td><code>l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum</code></td><td>shared bank conflict</td><td>接近 0</td></tr><tr><td><code>smsp__average_warps_issue_stalled_*</code></td><td>stall 原因</td><td>定位 pipeline/依赖</td></tr></tbody></table>
-<h3 id="h-20">5.2 效率</h3>
-<pre><code>TFLOP/s = 2*M*N*K / (time_seconds * 1e12)
-% peak = TFLOPS / peak_TFLOPS</code></pre>
-<p>对 <code>M=N=K=4096</code>，FP16 tensor peak 312 TFLOPS（A100）：</p>
-<pre><code>FLOPs = 2 * 4096^3 = 137.4 GFLOP
-若 10 ms -&gt; 13.7 TFLOPS -&gt; 4.4% peak（很低）
-若 0.5 ms -&gt; 274.9 TFLOPS -&gt; 88% peak（接近 cuBLAS）</code></pre>
-<h3 id="h-21">5.3 常见瓶颈</h3>
-<ul><li>tile 太小：shared 复用不足，global traffic 高；</li><li>tile 太大：shared/寄存器压力大，occupancy 低；</li><li>BK 太小：pipeline 深度不够，tensor core 等数据；</li><li>bank conflict：shared load 串行；</li><li>尾波：grid 不是并发 CTA 的整数倍；</li><li>split-K 过度：额外 reduction 开销。</li></ul>
-<hr>
-<h2 id="h-22">6. 正确性与边界</h2>
-<ul><li><strong>边界</strong>：M/N/K 不是 tile 的倍数时，load 要 mask，store 要 mask；否则越界。</li><li><strong>累加精度</strong>：FP16 输入用 FP32 累加；如果累加也用 FP16，误差会很大。</li><li><strong>NaN/Inf</strong>：FP8 cast 可能把大值 clamp 到 amax；检查 scale。</li><li><strong>对齐</strong>：tensor core 对 shared layout 有对齐要求；<code>ldmatrix</code> 需要 16B 对齐。</li><li><strong>确定性</strong>：GEMM 的归约顺序由 tile 决定；split-K 会改变顺序，可能影响结果。</li></ul>
-<hr>
-<h2 id="h-23">7. 仓库对照</h2>
-<ul><li><code>deepinfer/model_executor/models/v4_modules/mlp.py</code>：<code>DeepseekMoE</code>、<code>_grouped_gemm</code>、<code>mega_moe_forward</code>；看它如何调用 DeepGEMM。</li><li><code>deepinfer/model_executor/layers/linear.py</code>：<code>ReplicatedLinear</code> 的 FP8/FP16 路径。</li><li><code>vendor/DeepGEMM</code>（需初始化 submodule）：grouped GEMM、mega MoE、FP8/FP4。</li><li><code>deepinfer/model_executor/layers/tilelang_ops/cuda/quant.py</code>：scale 布局。</li></ul>
-<p>读的时候问：这个 GEMM 的 M/N/K 是多少？FP8 还是 BF16？scale 粒度？为什么用 grouped/contiguous layout？</p>
-<hr>
-<h2 id="h-24">8. 练习</h2>
-<h3 id="h-25">基础</h3>
-<p><strong>预测—解释—修错</strong>：有人用 <code>2*n**3/tile+n**2</code> 给 n=3、tile=2 预测 36 个元素，测试却计到 45。先不用代码解释差的 9 个元素来自哪里，再把公式改成对任意正整数 tile 成立的版本。</p>
-<p>&lt;details&gt;&lt;summary&gt;核对&lt;/summary&gt;</p>
-<p>有两个输出 tile 行/列，不能把它们当成 1.5 个；A/B 各被读 2 次。改成 <code>2*n*n*((n+tile-1)//tile)+n*n</code>。随后做 Project1 的尾块测试，确认是数据复用带来计数下降，而非只换循环顺序。</p>
-<p>&lt;/details&gt;</p>
-<ol><li>计算 <code>n=512/1024/4096</code> 的 FLOPs、最小 Bytes、AI；判断你的卡上是否 compute-bound。</li><li>推导 tiled GEMM 的 global traffic 公式，验证 <code>tile=32</code> 时约降到 <code>1/32</code>。</li><li>用 <code>matmul_traffic(n, tile)</code> 画 <code>n=1024</code> 时 traffic 随 tile 的曲线。</li></ol>
-<h3 id="h-26">进阶</h3>
-<ol start="4"><li>实现第 4 节的 tiled GEMM，测 <code>n=512/1024/2048</code> 的 TFLOPS，和 PyTorch <code>matmul</code> 对比。</li><li>加 register blocking（每个 thread 算 4×4 个输出），再测。</li><li>用 <code>ncu</code> 看 tensor core 利用率、shared bank conflict、occupancy；解释每个数字。</li><li>用 TileLang 写一个 <code>BM=BN=128, BK=32</code> 的 GEMM，扫 <code>num_stages=1/2/3</code>。</li></ol>
-<h3 id="h-27">挑战</h3>
-<ol start="8"><li>实现 split-K GEMM，比较 <code>K</code> 很大、<code>M/N</code> 很小时的性能。</li><li>把 FP16 输入换成 FP8（per-tensor scale），比较 TFLOPS 和误差。</li><li>读 DeepGEMM 的 grouped GEMM 接口，画一张 token permutation → grouped GEMM → combine 的数据流。</li></ol>
-<hr>
-<h2 id="h-28">9. 面试追问</h2>
-<ol><li>朴素 GEMM 为什么慢？tiling 的收益来自哪里？</li><li>block tile / warp tile / thread tile 各自负责什么？</li><li>tensor core 的 mma 形状是什么？FP16 输入为什么要 FP32 累加？</li><li>FP8/FP4 的 scale 粒度怎么选？outlier 怎么处理？</li><li>什么是 wave quantization？小 GEMM 为什么效率低？</li><li><code>sm__pipe_tensor_cycles_active</code> 只有 20%，你会先查什么？</li></ol>
-<hr>
-<h2 id="h-29">10. 参考文献</h2>
-<ul><li>CUTLASS docs：Efficient GEMM、CuTe layout。</li><li>NVIDIA, *CUDA C++ Programming Guide*：WMMA / tensor core。</li><li>DeepGEMM：<a href="https://github.com/deepseek-ai/DeepGEMM">https://github.com/deepseek-ai/DeepGEMM</a></li><li>PMPP, chapter 7；siboehm, *How to Optimize a CUDA Matmul Kernel*。</li></ul>
-<hr>
-<h2 id="h-30">11. 下一步</h2>
-<ul><li>做 <a href="project1.html">项目 1</a> 的 Phase 2；</li><li>用 <code>matmul_traffic</code> 填报告表；</li><li>读 <a href="lec05.html">第 5 讲</a> 的 attention。</li></ul>
+        <blockquote><p><strong>先修</strong>：预备2的矩阵乘、L1的请求字节、L3的归约与浮点比较；不要求GPU。<br><strong>安排</strong>：分三次完成手算与小程序，再做Project1 Phase2；不要在Python跑8192维矩阵验证公式。<br><strong>主问题</strong>：不改变矩阵乘的数学结果，怎样减少跨“全局内存”边界的重复读取？</p></blockquote>
+<h2 id="h-1">0. 入口检查与学习地图</h2>
+<p>先不看代码：<code>(2,3)@(3,4)</code> 的结果shape是什么？输出 <code>[1][2]</code> 应用A哪一行、B哪一列？答案是 <code>(2,4)</code>，用A第1行和B第2列相乘相加，索引从0开始。若还不能手算一格，回 <a href="prep02.html">预备2</a>，不要同时调试矩阵规则和分块规则。</p>
+<table><thead><tr><th>本章部分</th><th>对应实现</th><th>完成证据</th></tr></thead><tbody><tr><td>第1–2节</td><td>Project1 Q5朴素矩阵乘</td><td>每格独立累计、矩形shape</td></tr><tr><td>第3–4节</td><td>先手算，不写完整引擎</td><td>同一输出块跨两个归约块的状态</td></tr><tr><td>第5–6节</td><td>Q7请求模型</td><td>有效尾块、整数向上取整</td></tr><tr><td>第7节</td><td>Q9显式搬运，再Q6包装</td><td>读取计数与参与乘法的数据一致</td></tr><tr><td>第8–9节</td><td>Q8模型与实验报告</td><td>不把Python耗时当GPU时延</td></tr><tr><td>第10节</td><td>硬件扩展选读</td><td>能区分算法复用与CUDA实现</td></tr></tbody></table>
+<p>Project1题号保留兼容，推荐顺序为 <strong>Q1–Q5 → Q7 → Q9 → Q6 → Q8</strong>，不是按编号逐项往下做。所有命令在含 <code>course</code> 的课程根目录运行；个人主页源仓库先 <code>cd _courses/deepinfer</code>，离线包直接进入解压根。</p>
+<h2 id="h-2">1. 一格输出就是一个点积</h2>
+<p>本章研究 <code>C=A@B</code>，不读旧C、不加bias。GEMM通常还可表达alpha/beta等参数，但课程接口先限定这个简单问题。设A为M×K、B为K×N：</p>
+<pre><code class="language-text">C[row,col] = sum(A[row,inner] * B[inner,col] for inner in 0..K-1)</code></pre>
+<p>M是输出行数，N是输出列数，K是每格需要累积的长度；三者可以完全不同。用下面一组数贯穿本章：</p>
+<pre><code class="language-text">A = [[1,2,3],      B = [[ 7, 8],
+     [4,5,6]]           [ 9,10],
+                        [11,12]]</code></pre>
+<p>C[0,0]=1×7+2×9+3×11=58；C[0,1]=1×8+2×10+3×12=64；C[1,0]=4×7+5×9+6×11=139；C[1,1]=4×8+5×10+6×12=154。</p>
+<p>每开始一格必须将accumulator清零，做完K次贡献再写出。放到inner循环内清零只保留最后一项；放到整个矩阵外清零则把不同格子的值混起来。输出各行必须独立，不能用 <code>[[0]*N]*M</code> 共享同一行列表。</p>
+<p>本课程性能模型按一次乘加为2 FLOPs，因此 <code>F=2*M*N*K</code>，例子为24。若精确数数学点积会有K次乘法和K−1次必要加法；性能表采用“每轮乘加2次”的统一约定，不能在不同算法比较时偷偷更换。模型忽略索引、循环、校验和内存计数器开销。</p>
+<h2 id="h-3">2. 数学一样，读法可以不同</h2>
+<p>朴素三层循环计算每个C格时，重新读A的一整行、B的一整列。例子的4个输出格，每格读3个A和3个B，共24次输入标量读取；最后写4次C，float32请求量 <code>(24+4)*4=112B</code>。</p>
+<p>但A只有6个数、B只有6个数、C只有4个数，容量合计仅64B。为什么请求量能大于容量？因为A[0,0]在算C[0,0]和C[0,1]时分别被读了一次；同一值可以被反复访问。容量数“要容纳几份数据”，流量数“跨边界发生了几次搬运”。</p>
+<table><thead><tr><th>口径</th><th>本例元素次数</th><th>本例float32字节</th></tr></thead><tbody><tr><td>A/B/C容量合计</td><td>6+6+4=16</td><td>64</td></tr><tr><td>A/B各读一次、C写一次的理想下界</td><td>16</td><td>64</td></tr><tr><td>朴素请求</td><td>2×2×2×3+2×2=28</td><td>112</td></tr></tbody></table>
+<p>两个64数值相等，但概念不相同。容量是静态空间，第二行还假设数据复用足够好。设备有缓存时，请求不一定都到HBM；Python计数器也不是测DRAM字节的仪器。接下来的优化目标先限定为课程的显式load/store请求。</p>
+<h2 id="h-4">3. 一个输出tile：先一起搬，再反复用</h2>
+<p>tile就是一个小矩形块，不是新运算。先把本例整个2×2输出当一个tile。对K维按2分块，第一块inner=0,1，第二块inner=2。输出块始终是同一个，只是累积的K区间向前移动。</p>
+<figure class="textbook-figure"><a href="../../figures/unit1-tiling-accumulator.svg" target="_blank" rel="noopener" aria-label="查看大图：同一个2乘2输出块先累积K的前两项，再累积尾项，最后一次写回"><img src="../../figures/unit1-tiling-accumulator.svg" alt="同一个2乘2输出块先累积K的前两项，再累积尾项，最后一次写回" loading="lazy"></a><figcaption>同一个2乘2输出块先累积K的前两项，再累积尾项，最后一次写回<span class="figure-zoom">小屏可横向滑动图解；点击图解可查看原图</span></figcaption></figure>
+<p>第一轮将A的 <code>[[1,2],[4,5]]</code> 与B的 <code>[[7,8],[9,10]]</code> 搬入局部列表。A[0,0]=1可同时用于本地C[0,0]和C[0,1]；B[0,0]=7可用于本地C[0,0]和C[1,0]。这才是复用：<strong>搬入一次，局部乘法用多次</strong>，不是仅把循环头改名成tile。</p>
+<pre><code class="language-text">初始 accumulator = [[0,0],[0,0]]
+第一轮增加        = [[25,28],[73,82]]
+第一轮结束        = [[25,28],[73,82]]
+第二轮增加        = [[33,36],[66,72]]
+第二轮结束        = [[58,64],[139,154]]</code></pre>
+<p>第二轮搬A的 <code>[[3],[6]]</code>、B的 <code>[[11,12]]</code>，只是深度1的尾块。第一轮搬4+4个数，第二轮搬2+2个数，共12次输入读取，最终写4个数，64B。相对朴素112B减少了输入重复读取，乘法数量没有变。</p>
+<p>下面是可以直接运行的<strong>固定2×3乘3×2演示</strong>，只展示一个输出tile，不是Q9完整答案，也没有计数器：</p>
+<pre><code class="language-python">left = [[1, 2, 3], [4, 5, 6]]
+right = [[7, 8], [9, 10], [11, 12]]
+accumulator = [[0, 0], [0, 0]]
+for inner_start in range(0, 3, 2):
+    depth = min(2, 3 - inner_start)
+    left_tile = [row[inner_start:inner_start + depth] for row in left]
+    right_tile = [row[:] for row in right[inner_start:inner_start + depth]]
+    for row in range(2):
+        for col in range(2):
+            for inner in range(depth):
+                accumulator[row][col] += left_tile[row][inner] * right_tile[inner][col]
+    print(inner_start, accumulator)</code></pre>
+<p>两行分别输出0与第一轮矩阵、2与最终矩阵。注意accumulator在 <code>inner_start</code> 循环之前创建。循环不变式是：进入下一轮时，accumulator已经包含所有更早K区间对当前输出块的贡献。</p>
+<p><strong>暂停自测</strong>：如果每个K块开始都清零，会留下哪一张矩阵？如果每轮都写回C，数值也许正确，但违反哪项计数契约？</p>
+<details class="study-hint"><summary>核对</summary><p>清零后只留下 <code>[[33,36],[66,72]]</code>。每轮写回会写8次而非4次；本项目要求所有K块完成后每个有效C元素只写一次。若还从全局读旧C累计，又引入模型没有的读取。</p></details>
+<h2 id="h-5">4. 从一块扩大到整张矩阵</h2>
+<p>大矩阵需要多个输出行块、列块。外层先选输出块的起点 <code>(row_start,col_start)</code>，内层沿K扫。对每个输出块，重新创建独立accumulator；A tile大小为rows×depth，B tile大小为depth×cols，局部输出为rows×cols。</p>
+<pre><code class="language-text">选择输出行块
+  选择输出列块
+    accumulator清零一次
+    逐个K块：搬A块、搬B块、用局部数据累计
+    把这个输出块写回一次</code></pre>
+<p>例如M=3、N=4、K=5、tile=2，有2个行块、2个列块、3个K块。最后一个输出行块只有1行，最后一个K块只有1项。每个范围都独立取剩余长度：<code>rows=min(tile,M-row_start)</code>，<code>cols=min(tile,N-col_start)</code>，<code>depth=min(tile,K-inner_start)</code>。不能用rows代替depth，也不能因某一轴整除就省掉另两轴的边界。</p>
+<p>这里局部索引和全局索引是两套坐标。局部A[row,inner]对应全局A[row_start+row,inner_start+inner]；局部B[inner,col]对应全局B[inner_start+inner,col_start+col]。画出一格的两个坐标，比一次打印整个矩阵更容易定位尾块错误。</p>
+<h2 id="h-6">5. 为什么读取量会减少：推导而非背公式</h2>
+<p>先看方阵n×n，令q=ceil(n/tile)为每个方向的输出块数。A中的任意一个元素属于某个行和K位置；每个输出<strong>列块</strong>都需要它，因此总共读取q次。B中的任意一个元素被每个输出<strong>行块</strong>使用一次，也是q次。C不管怎么分块都只有n²个最终元素。</p>
+<pre><code class="language-text">naive_elements = 2*n³ + n²
+tiled_elements = 2*n²*q + n²
+q = (n+tile-1)//tile
+bytes = elements * dtype_bytes</code></pre>
+<p>这里假设不同输出tile之间不共享缓存、尾块只搬有效元素、局部列表访问不计全局请求。可整除时q=n/tile，才得到输入读量约为朴素的1/tile；总请求还包含不能省掉的C写回，因此连整除情形的总字节比也不严格等于tile。</p>
+<p>完整核对n=3、tile=2：输出块有2行×2列，各A元素读2次，共18；B同样18；C写9，共45元素=180B。朴素为54读+9写=63元素=252B。若把ceil错误换成1.5，会得到36元素=144B，虚构了半个输出块。</p>
+<table><thead><tr><th>n=3</th><th>tile=1</th><th>tile=2</th><th>tile=16</th></tr></thead><tbody><tr><td>输出行/列块数q</td><td>3</td><td>2</td><td>1</td></tr><tr><td>A读取</td><td>27</td><td>18</td><td>9</td></tr><tr><td>B读取</td><td>27</td><td>18</td><td>9</td></tr><tr><td>C写入</td><td>9</td><td>9</td><td>9</td></tr><tr><td>总字节</td><td>252</td><td>180</td><td>108</td></tr></tbody></table>
+<p>tile大于n后只剩一个输出块，不能继续无限降低请求。108B恰好是A/B各读一次、C写一次的下界。对n=0，纯模型函数返回零；但实际矩阵接口拒绝空矩阵，这不是冲突：模型允许零工作，嵌套空列表不能表达通用二维shape。</p>
+<h2 id="h-7">6. 矩形推导：不要把三条轴都写成n</h2>
+<p>矩形M×K乘K×N时，A每个元素重复ceil(N/tile)次，B重复ceil(M/tile)次：</p>
+<pre><code class="language-text">A_reads = M*K*ceil(N/tile)
+B_reads = K*N*ceil(M/tile)
+C_writes = M*N</code></pre>
+<p>M=3、K=5、N=4、tile=2时：A读3×5×2=30，B读5×4×2=40，C写12，共82元素=328B；朴素共 <code>(2*3*4*5+3*4)*4=528B</code>。K维的三块只是把相同K区间分段扫完，不额外乘三。若再乘ceil(K/tile)，就把已经含K的读取重复计算。</p>
+<p><strong>渐进自测</strong>：①本例tile=1的计数是否回到朴素？②tile=8能到多少B？③只交换M/N，不交换A/B大小，能否直接复用读取计数？</p>
+<details class="study-hint"><summary>核对</summary><p>①A60+B60+C12=132元素，即528B。②A15+B20+C12=47元素，即188B。③不能机械复制A/B各自计数；每个矩阵元素数和对应复用方向都要重新定义。总公式在同步转置整个问题时有对称性，单个读取项的含义没有消失。</p></details>
+<h2 id="h-8">7. 接上Project1：让证据来自真实读写</h2>
+<h3 id="h-9">7.1 一个输入契约，不是猜shape的技巧</h3>
+<p>Project1的矩阵要求至少一行一列、每行等长、内维匹配，元素为有限数且中间值可表示。空矩阵、锯齿矩阵和不匹配内维应按契约抛ValueError；tile与dtype字节数按题目要求是正整数，不能让True作为整数1混进来。Lab2另有空列表返回约定，不表示一个接口可以任意套另一个接口的错误处理。</p>
+<p>先完成验证，再创建内存对象或进入循环。若只看第一行长度，而第二行短一项，错误可能很晚才表现为IndexError；那时你容易误以为是尾块逻辑坏了。把结构问题挡在入口，才能让内部每次load的含义明确。验证不应该修改矩阵；将输入直接转置或原地补零，会把布局方便建立在破坏调用者数据之上。</p>
+<h3 id="h-10">7.2 数值和计数要相互独立地核对</h3>
+<p>固定的一个样例只能证明一个输入。自己的第二组例子应包含负数、非方阵，以及M/K/N中至少一个尾块；再把tile改成1和大于全部维度。tile=1检查是否退化成每格读取；大tile检查是否到达读一次下界；中间大小检查取整。输出接近参考值但计数比公式高，可能是局部值未复用；计数恰好相同但输出错，则可能是搬了正确数量的错误位置。</p>
+<p>最强的解释不是“统计字段等于公式”，而是能指出某个A值在哪里被load、放进哪个局部格、供哪些乘法消费。比如第一块的A[0,0]=1参与两个输出列，使用时不再load；换到下一个输出列块，按本模型才需重新load它。这样你能从程序结构预测统计，也能从统计反查结构，而不是让两者共享同一个可能错误的计算公式。</p>
+<p>Q7实现方阵公式。随后Q9用提供的 <code>MatrixMemory</code>，只通过 <code>load_a/load_b</code> 将数搬到局部tile，再真正用这些数计算；全部K块完成后用 <code>store_c</code> 写回，最后返回output和stats。构造前可以验证shape，构造后不能绕过内存对象直接读a/b元素。</p>
+<p>“先调用load做计数、但乘法仍直接读a/b”不是实现复用，只是造了好看的统计。测试会替换load的返回行为，检查被搬入的数是否参与计算。反之，计数正确也不足以保证数值正确：例如把B的局部行列弄反，读取次数可能完全一样。因此数值oracle与访问账本是两条独立证据。</p>
+<p>Q9通过后，Q6只调用Q9并取矩阵结果。这样对外接口、测试与实验使用同一个引擎，不会出现“测试一个实现，实验另一个实现”。</p>
+<pre><code class="language-bash">python course/tools/grade.py project1 --question q7
+python course/tools/grade.py project1 --question q9 --failfast
+python course/tools/grade.py project1 --question q6</code></pre>
+<p>排错时按第一个错误阶段定位：shape先错查契约；首个K块正确、第二块错查累加器生命周期；只在尾块错查三条边界；数值对但计数高查是否重复load或中途store。不要先改公式配合错误计数器输出。</p>
+<h2 id="h-11">8. Roofline：请求减少，不等于时间同比减少</h2>
+<p>算术强度AI是FLOPs除以选择的字节模型，不是shape自带的固定常数。方阵float32的理想读一次流量为12n²，按2n³ FLOPs得到AI=n/6；tiled实现若有跨块重读，AI更低。设备缓存可能又改变实际HBM口径。</p>
+<p>给定带宽BW、匹配计算精度和单元的峰值P：</p>
+<pre><code class="language-text">memory_seconds = bytes/BW
+compute_seconds = FLOPs/P
+lower_bound = max(memory_seconds,compute_seconds)
+ridge = P/BW</code></pre>
+<p>例如虚构加速器P=100TFLOP/s、BW=1000GB/s，拐点为100FLOP/B。某算法100GFLOP、2GB，AI=50，搬运下界2ms、计算下界1ms，总下界2ms。把字节减到0.5GB后，搬运只需0.5ms，但计算仍需1ms，总下界1ms，只改善2倍，不是4倍。</p>
+<p>这还只是下界。小shape可能根本不能充分利用硬件，启动、同步、局部内存容量和额外计算都会影响时间。不能拿FP32标量峰值判断BF16 Tensor Core kernel，也不能把Python wall time除以GPU下界声称“设备利用率”。Project1 Q8相等时返回memory是接口标签；物理上两条约束同时活跃。</p>
+<h2 id="h-12">9. 一个可独立完成的实验闭环</h2>
+<p>先只测小shape，完整测试后运行项目固定协议：</p>
+<pre><code class="language-bash">python course/projects/project1/experiment.py --sizes 3 8 17 --tiles 1 2 8 16 --seed 61 --warmups 2 --repeats 7 --output course/projects/project1/experiment.csv</code></pre>
+<p>先预测，再看CSV。n=3、tile=16的请求应到下界；n=17、tile=8会有尾块。若tile变大后Python反而更慢，保留结果：Python列表分配、循环、计数器方法调用都在计时范围内，请求减少不能消除这些成本。7次重复的最近秩p90是最大样本，不足以代表稳定的尾延迟分布。</p>
+<p>报告至少对照一行数字与手算：写出A_reads、B_reads、C_writes、字节、FLOPs、AI、两个下界，再分别说明“实际测了什么”和“尚未测什么”。不运行1024/4096/8192的大Python乘法；这些尺寸只计算模型表即可。</p>
+<p><strong>出口迁移题</strong>：给A=<code>[[2,-1,3]]</code>、B=<code>[[4,0],[5,2],[-1,1]]</code>，tile=2，手算每个K块的贡献、最终值及请求量，再用自己的Q9核对。</p>
+<details class="study-hint"><summary>核对</summary><p>第一块贡献 <code>[3,-2]</code>，尾块贡献 <code>[-3,3]</code>，最终 <code>[[0,1]]</code>。一个输出块，A读3、B读6、C写2，共11元素=44B。原始A/B保持不变；中间贡献不是两个独立输出，不能直接拼接。</p></details>
+<h2 id="h-13">10. 后置硬件桥接：同一个思想，不同的约束</h2>
+<p>真实GEMM常把全局数据搬到shared memory，再利用寄存器中的局部累加器；block、warp、thread可各负责不同层级tile。Tensor Core执行小块矩阵乘加，但操作数分散在指定寄存器布局里，不等于把Python列表交给一条指令。分块复用与硬件映射是两个学习阶段。<a href="https://docs.nvidia.com/cutlass/latest/media/docs/cpp/efficient_gemm.html">NVIDIA CUTLASS的GEMM说明</a>给出了这种层级组织的官方解释。</p>
+<p>移植时要重新检查：尾块load填零但不能提前退出而跳过barrier；消费shared tile之前等待写入完成；覆盖shared缓冲之前等待所有消费者完成。增大tile虽改善复用，也增加shared/寄存器用量，可能降低并发。双缓冲尝试重叠搬运与计算，但不是免费省掉等待；矩阵规模、资源约束与测量共同决定选择。</p>
+<p>完成本章应能不看公式解释一次复用和一次尾块，而不是背“tile越大越好”。继续做 <a href="project1.html">Project1</a> 的对应checkpoint，再读 <a href="lec05.html">L5 Attention</a>。硬件Tensor Core、TileLang、split-K等扩展留在后置路线，不影响当前纯Python验收。</p>
       </article>
     </div>
 
@@ -224,7 +155,7 @@ def matmul(M, N, K, BM=128, BN=128, BK=32):
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="../storage.js?v=608d22c915a6"></script>
+  <script src="../doc.js?v=8c695cbfe8d6"></script>
 </body>
 </html>

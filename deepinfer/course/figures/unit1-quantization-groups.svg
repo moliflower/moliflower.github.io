@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="710" viewBox="0 0 600 710" role="img" aria-labelledby="title desc">
+  <title id="title">离群值影响与独立分组</title>
+  <desc id="desc">输入零点一、零点二、零点三、一百。八位对称整数全张量量化用一百除一百二十七为 scale，前三项全为零。每组三元素时，前三项独立用零点三除一百二十七，重建更精确，最后一百为独立尾组。</desc>
+  <rect width="600" height="710" rx="20" fill="#f4f8fc"/>
+  <g font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="22" fill="#17324d">
+    <text x="30" y="44" font-size="26" font-weight="700">outlier 拉大网格，分组隔离影响</text>
+    <text x="40" y="94">输入：[0.1, 0.2, 0.3, 100]；bits = 8</text>
+    <rect x="30" y="120" width="540" height="188" rx="12" fill="#fff2db" stroke="#bc924b"/>
+    <text x="50" y="158" font-weight="700">① 全部共用一个 scale</text>
+    <text x="50" y="199">scale = 100 / 127 ≈ 0.787402</text>
+    <text x="50" y="240">重建：[0, 0, 0, 100]</text>
+    <text x="50" y="281">最大绝对误差 = 0.3</text>
+    <rect x="30" y="334" width="540" height="246" rx="12" fill="#e1f3ec" stroke="#5a9c85"/>
+    <text x="50" y="372" font-weight="700">② 每组三个元素，尾组不补数据</text>
+    <text x="50" y="413">[0.1, 0.2, 0.3]：scale = 0.3 / 127</text>
+    <text x="50" y="454">重建约 [0.09921, 0.20079, 0.3]</text>
+    <text x="50" y="495">[100]：独立 scale，精确重建 100</text>
+    <text x="50" y="546">总体最大误差 ≈ 0.0007874</text>
+    <rect x="30" y="606" width="540" height="74" rx="12" fill="#e2edf8"/>
+    <text x="50" y="637">代价：多存一个 scale。</text>
+    <text x="50" y="668">这个例子改善，不代表每个指标必改善。</text>
+  </g>
+</svg>

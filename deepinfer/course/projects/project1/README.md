@@ -20,7 +20,19 @@
 | `report_template.md` | 复制为自己的 `report.md`，填入证据和解释 |
 | `project1_solution.py` | 完成尝试后对照；不要导入或复制成学生文件 |
 
-所有命令从仓库根目录运行。下文用 `python`；WSL 中可替换为 `python3`，Windows 可使用已安装解释器或 `py -3`。
+所有命令从**课程根目录**运行，即直接包含 `course` 的位置；离线ZIP解压后进入这一层，个人主页源仓库先 `cd _courses/deepinfer`。下文用 `python`；WSL中可替换为 `python3`，Windows可使用已安装解释器、`py -3`或 `.\course\run.ps1 project1 --question q1`。
+
+### 先修到checkpoint的路线
+
+| 先完成的阅读/练习 | 本项目实现顺序 | 本次新增能力 |
+| :--- | :--- | :--- |
+| Lab0与L3、Lab1 | Q1–Q4 | 迁移本人算子，统一输入契约 |
+| 预备2、L4第1–2节 | Q5 | 矩形点积与逐格累计 |
+| L4第3–6节、两个K块的图 | Q7 | 用尾块手算推导请求模型 |
+| L4第7节、下面的内存API | Q9 → Q6 | 显式搬运、真实复用、共用引擎 |
+| L4第8–9节 | Q8 → 实验 → 报告 | 分开数值、请求、Python时间与模型 |
+
+题号不重新编号。尤其Q6依赖Q9，先做Q7/Q9再回Q6是有意的路线，不代表学生漏做。每到一个checkpoint先看本阶段证据，后续未实现函数失败不会抹掉前一阶段已完成的工作。
 
 **Problem 0：工具检查（不计分）**
 
@@ -149,6 +161,10 @@ bytes = elements * dtype_bytes
 
 **完整的小例子**：A=`[[1,2,3],[4,5,6]]`，B=`[[7,8],[9,10],[11,12]]`，tile=2。只有一个输出 tile，但有两个归约 tile。第一轮产生 `[[25,28],[73,82]]`，第二轮增加 `[[33,36],[66,72]]`，最终 C=`[[58,64],[139,154]]`。A/B 各搬 6 个标量，C 写 4 个，总请求量 `(6+6+4)*4=64` bytes。
 
+![一个输出tile跨两个K块累计，最后才写回](../../figures/unit1-tiling-accumulator.svg)
+
+动手顺序建议：先只实现这组固定shape的手算过程，在自己的草稿中观察每轮accumulator；接着加入输出行/列块；最后加入三个方向各自的尾块。正式Q9仍须通过Memory读取和写回，不能把讲义中的固定列表演示原样当答案。若数字正确但计数错，先数load/store发生在哪一层循环，而不是给stats字典填公式。
+
 矩形矩阵可用于自查，m/k/n 都不能偷换成同一个 n：
 
 ```text
@@ -256,5 +272,7 @@ Checkoff（可录 5 分钟视频或写逐题回答）：
 这部分是后续 GPU 单元的桥梁。Python 的列表 tile 表达复用思想，但没有模拟 shared memory 容量、bank conflict、线程调度或 Tensor Core 布局；不要把相同循环顺序当成已经完成 GPU 实现。
 
 保存 `project1.py`、`report.md`、实验结果和 `notes/project1.md`。调试记录至少一条：最小失败输入 → 期望/实际 → 原因 → 修复 → 回归命令。仓库当前忽略 `*.csv`；如果用 Git 保存实验，需显式 `git add -f course/projects/project1/experiment.csv`，或者把 CSV 作为报告附件单独保留。
+
+这里“保存”指自己的学习副本或报告附件，不要求将个人作业上传到公共课程仓库。使用Git时先确认仓库根目录；个人主页源码仓库中的路径是 `_courses/deepinfer/course/...`，上述短路径是相对于课程根目录的路径。公共发布包不会收集个人report或实验CSV。
 
 若实验很慢，先缩小 n 和 repeats；若 tile 越大 Python 时间反而更长，保留结果并解释计数器/解释器/分配成本，不要删除不符合预期的数据。后续阅读从 [第四讲](../../lectures/lec04.md)和 [CS61A Hog](https://cs61a.org/fa26/projects/hog/)的项目组织方式开始。

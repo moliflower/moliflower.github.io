@@ -252,7 +252,7 @@
 
       <div class="section-title"><h2>课程怎么运作</h2><a href="#/syllabus">完整大纲 →</a></div>
       <div class="grid-2">
-        <div class="card"><h3>讲义</h3><p>30–45 分钟阅读 + 视频。先建立心智模型，不要背 API。</p></div>
+        <div class="card"><h3>讲义</h3><p>按检查点分段学习：问题、图解、推导、手算与自测。看完文字不等于已经掌握。</p></div>
          <div class="card"><h3>实验</h3><p>从示例、填空走到独立实现和修错。按题测试、逐层提示，可分多次完成。</p></div>
         <div class="card"><h3>作业</h3><p>3–5 小时的数学 + 小函数。“为什么”在这里。</p></div>
         <div class="card"><h3>项目</h3><p>2–3 周，分 phase + checkpoint。把多个概念组合成一个能展示的作品。</p></div>
@@ -260,7 +260,8 @@
 
       <div class="callout"><p><a class="btn primary" href="../../deepinfer-101-course.zip" download>下载课程代码（含参考答案）</a></p><p>解压后在文件夹内运行下方命令。网页用于阅读和记录进度，Python 练习在电脑本地完成。进度保存在当前浏览器，不会跨设备自动同步。</p></div><div class="section-title"><h2>快速开始</h2><a href="../../START_HERE.md">从这里开始 →</a></div>
       <div class="card">
-        <pre><code># 在 DeepInfer 根目录运行；WSL 若无 python，使用 python3
+        <p>命令从能直接看到 course 文件夹的目录运行：ZIP 使用解压根目录；个人主页源码仓库先 <code>cd _courses/deepinfer</code>。只有 python3 时统一替换 python。</p>
+        <pre><code>
 python course/foundations/demo.py
 python course/tools/grade.py foundations --question q0
 
@@ -370,8 +371,9 @@ python course/tools/grade.py foundations --question q1 --hint 1
     return `
       <div class="page-head">
         <div class="eyebrow">教材</div>
-        <h1>教材：从第一行 Python 到推理算子</h1>
-        <p>按先修阅读本地正文，先手算、再编码、再解释。每章直接连接练习；外部资源留作扩展阅读。<a href="notes/textbook.html">完整教材路线与术语表 →</a></p>
+        <h1>教材：从第一行 Python 到推理系统</h1>
+        <p>起步、预备与第 1–6 周按自学教材重整：先看问题与图解，再推导、手算、分步实现和自测。不新增后续周次，也不把通过测试当成已经学懂。</p>
+        <div class="hero-actions"><a class="btn primary" href="notes/learning-path.html">先选自学路线 →</a><a class="btn" href="notes/textbook.html">章节、先修与练习总索引 →</a></div>
       </div>
       <div class="textbook-layout">
         <aside class="toc"><h3>章节目录</h3>${toc}</aside>

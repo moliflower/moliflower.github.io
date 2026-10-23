@@ -1,355 +1,159 @@
-# 第 6 讲：FlashAttention 与 Decode Attention
+# 第 6 讲：FlashAttention，为什么不保存整张概率表也能算对
 
-> **课前**：40 分钟  
-> **课后**：实验 2 Q7/Q8 + 画 IO 图  
-> **一句话**：FlashAttention 不是“更快的 attention 公式”，而是“**不把 S×S 矩阵写回 HBM**”的 IO 优化；decode attention 则是“**用带宽换并行度**”的 split-KV 问题。
+先修：[L3 的在线 softmax](lec03.md)、[L5 的 S/P/O 与 causal mask](lec05.md)。建议分两次学习，每次 60–90 分钟。本讲先推导标量状态，再推广到向量和tile；完成 [Lab2 Q7/Q8](../labs/lab02/README.md) 与纸面合并练习即可，不要求自己写GPU kernel。先完成L7、L8，再统一做完整HW1/HW2。
 
----
+核心问题是：输出是对V的加权和，我们真的需要把每一对query-key的分数S和概率P都存到显存吗？答案不是“忽略小概率”，而是改变求和顺序，保留足以继续计算的状态。理解状态的含义，才能分清精确重排与近似算法。
 
-## 0. 本讲要解决的问题
+## 1. 先把容量、流量和运算分成三本账
 
-**先修**：Lab1 的 `(m,s)` 不变式、Lab2 的 S/P/O shape 与有效 causal 配对。必会内容是第 2.1/2.2 的状态合并、2.3 的 IO 口径和 4.2 的 split 合并；无需先实现 CUDA kernel。
+三阶段稠密实现是：算S并写回；读S做softmax并写P；读P乘V得到O。容量问“某个时刻需要保留多少元素”，请求流量问“这些数组共被读写多少次”，FLOPs问“做多少算术”。三者单位不同，不能拿一张矩阵的容量直接当整个过程的IO。
 
-1. 标准 attention 的 HBM traffic 是多少？为什么长上下文会被 IO 卡住？
-2. FlashAttention 如何用 tiling + online softmax 避免 materialize `S`？
-3. 它的 HBM 访问量大概降到多少？block size 怎么选？
-4. FlashAttention-2/3 分别改了什么？
-5. decode attention 为什么 memory-bound？split-KV / FlashDecoding 解决什么问题？
+假定单头、sq=sk=N、d=dv，所有数组同为2字节元素，Q/K/V各读一次、O写一次，暂不计投影、缓存和额外临时值：
 
----
-
-## 1. 标准 attention 的 IO
-
-标准实现：
-
-```
-S = Q K^T          # 写 S: sq x sk
-P = softmax(S)     # 读 S，写 P: sq x sk
-O = P V            # 读 P，写 O: sq x dv
+```text
+Q/K/V/O 容量合计：4Nd 个元素
+S/P 同时保留时额外容量：2N² 个元素
+S 写、S 读、P 写、P 读：4N² 次元素访问
+三阶段请求流量：(4Nd + 4N²) × 2 字节
+两次稠密矩阵乘：4N²d FLOPs
 ```
 
-对 `sq = sk = s`、单头、bf16：
+如果复用S/P缓冲，峰值容量会不同，但不能因此把一次写和下一次读合成零流量。若中间S/P为FP32而输入为bf16，也必须分开字节数；上面统一2字节只是可检查的教学模型，不是所有库的实际实现。
 
-```
-S/P 各 s^2 个元素，每个 2B
-写 S + 读 S + 写 P + 读 P ≈ 4 * s^2 * 2 = 8 s^2 bytes
-```
+### 案例一：先从8字节的矩阵数起
 
-`s=4096`：
+N=2、d=1、每元素2字节。Q/K/V/O合计8个元素、16B；S单张4个元素、8B，S/P同时保留16B；S/P四次访问16个元素、32B。三阶段总请求流量48B，理想不物化下界16B。若把每元素改为4字节，两数翻倍为96B和32B。这正是Lab2 Q8的小尺寸检查。
 
-```
-8 * 4096^2 ≈ 134 MB
-```
+再取N=4096、d=64、仍单头2字节：S单张32MiB；S/P容量64MiB；四次访问128MiB=134,217,728B。Q/K/V/O读写合计2MiB，总请求流量130MiB。8个头时仅中间S/P访问已是1GiB。MiB使用2²⁰B，不要把128MiB写成128MB而又按十进制解释。
 
-如果有 8 个头、batch 1，就是 1GB 级别；而 Q/K/V/O 本身只有几十 MB。  
-**中间矩阵 S/P 是 IO 的主要来源。**
+![物化S/P的四次跨显存访问与tile保留在片上的对照图](../figures/unit1-flash-io.svg)
 
-### 1.1 标准 attention 的复杂度
+读图先找粗体中间数组：上半图有完整S/P跨越HBM边界，下半图只有tile和状态留在片上。下半图的K/V可能被另一个Q tile再次读取，所以“没有S/P写回”不等于“只读一次全部输入”。
 
-先分别数元素容量、请求流量和计算。单头同类型张量、每个输入读一次的三阶段模型：
+## 2. 从L3的两个数，扩展到Attention的三个状态
 
-```
-Q/K/V/O 容量：4sd 个元素
-S/P 同时保留时额外容量：2s² 个元素
-S/P 写读请求：4s² 个元素
-三阶段请求流量：(4sd + 4s²) * 元素字节数
-两个矩阵乘的稠密 FLOPs：4s²d
+固定一条query，设已看过的合法logit集合为J，某个logit记x_j，对应value向量V_j。L3用最大值m与指数和s表示softmax归一化；attention再增加一个未归一化的value加权和o：
+
+```text
+m = max(x_j)
+s = Σ exp(x_j - m)                 normalizer，标量
+o = Σ exp(x_j - m) × V_j           numerator，向量
+output = o / s                    已归一化的输出向量
 ```
 
-因此该流量模型是 `Θ(sd+s²)` 个元素，计算量为 `Θ(s²d)`。输入重复读取、不同中间精度和缓存命中会改变实际 HBM 字节；模型中不计 Q/K/V 投影的 `Θ(sd²)` 计算。
+本讲中**小写o永远是分子，不是最终output**；s永远是normalizer，不用它表示序列长度，序列长度改写N。一些论文写l代替s，读别人的实现时先对照语义，不要仅凭字母猜。V只有一维时，o才是标量。
 
----
+假如新tile的最大logit更大，旧的exp基准也得改变。设新全局最大值为m_new，则：
 
-## 2. FlashAttention 的核心
-
-### 2.1 分块
-
-把 Q 切成 `Br` 行，把 K/V 切成 `Bc` 列：
-
-```
-for each Q block Q_i (Br x d):
-    m = -inf; l = 0; O = 0
-    for each K/V block K_j, V_j (Bc x d):
-        S_ij = Q_i K_j^T / sqrt(d)     # Br x Bc，留在 SRAM
-        m_new = max(m, rowmax(S_ij))
-        l = l * exp(m - m_new) + rowsum(exp(S_ij - m_new))
-        O = O * exp(m - m_new) + exp(S_ij - m_new) V_j
-        m = m_new
-    O = O / l
+```text
+exp(x_j - m_new) = exp(x_j - m_old) × exp(m_old - m_new)
+alpha = exp(m_old - m_new)
+s_new = alpha × s_old + Σ新tile exp(x_j - m_new)
+o_new = alpha × o_old + Σ新tile exp(x_j - m_new) × V_j
 ```
 
-关键：
+旧分母与旧分子必须乘**同一个alpha**。因为二者都以同一个旧最大值为基准；只重缩放s，相当于只改变旧信息的分母，已经不再表达原来的加权平均。m变大时alpha≤1，避免对很大的正差取exp。
 
-- `S_ij` 只在 shared memory/寄存器，**不写 HBM**；
-- `m, l, O` 是 running statistics/accumulator；
-- 当 `m` 变大时，旧的 `l` 和 `O` 都要乘 `exp(m_old - m_new)` 重新缩放。
+这就是归纳证明：旧状态准确概括已看集合；统一基准后加入新集合贡献，新状态就概括并集。全部tile结束时o/s与稠密softmax加权和相同。在实数算术中精确，浮点归约顺序不同可有小误差，不能要求bitwise相同。[FlashAttention 原论文](https://arxiv.org/abs/2205.14135)把这个思想与分块IO组织结合，避免完整中间矩阵物化。
 
-### 2.2 为什么是精确的
+## 3. 案例二：两个tile，最大值变化时怎么补偿
 
-归纳不变式：处理完前 `j` 个 K/V block 后，
+使用L3同一行logits `[0,ln2,ln4]`，增加values `[2,6,10]`。先将前两项当tileA，最后一项当tileB。先遮住结果，手算每一行状态。
 
-```
-O / l = 前 j 个 block 的精确 softmax 加权和
-```
+| 步骤 | m | s：归一化分母 | o：未归一化分子 | 当前output |
+| :--- | :--- | :--- | :--- | :--- |
+| 只有第一项 | 0 | 1 | 2 | 2 |
+| 看完前两项 | ln2 | 1/2+1=1.5 | (1/2)×2+6=7 | 14/3 |
+| tileB到来，旧状态缩放 | ln4 | 1.5×1/2=0.75 | 7×1/2=3.5 | 此时还未加入新项 |
+| 加入第三项 | ln4 | 0.75+1=1.75 | 3.5+10=13.5 | 13.5/1.75=54/7 |
 
-新 block 到来时，旧的 `O` 和 `l` 用同一个标量 `exp(m_old - m_new)` 缩放，比例不变，再加入新贡献。这里 O 是未归一化分子，最终除以 l。在实数算术中它与稠密 attention 相同；浮点中归约顺序不同，允许小误差，不能要求 bitwise 相同。[FlashAttention 原论文](https://arxiv.org/abs/2205.14135)
+直接稠密算是 `(1×2+2×6+4×10)/(1+2+4)=54/7`，两种路径一致。若只缩放s却不缩放o，错误输出会是 `(7+10)/1.75=68/7`。错误仍在2到10的值域里，因此“输出没越界”并不足以检验在线更新。
 
-**手算两个 tile**：一行 logits 为 `[0,ln(2),ln(4)]`，V 为 `[2,6,10]`。第一 tile 处理前两个：`m=ln(2),l=1.5,O=7`。第二 tile 的最大值是 ln(4)，旧状态都乘 1/2，得到 `l=1.75,O=13.5`；最终 `O/l=54/7`。直接稠密算是 `(1*2+2*6+4*10)/(1+2+4)=54/7`。
+![两个tile在统一最大值基准下合并m、s和o的数值推导](../figures/unit1-flash-state.svg)
 
-### 2.3 IO 复杂度
+读图注意橙色缩放步骤：旧s与旧o一起乘1/2。新value10的权重是exp(ln4−ln4)=1，不是未经重标定的4。最后只除一次s；中途展示output是帮助理解，不要求每轮把已归一化结果写回。
 
-FlashAttention 将 S/P tile 留在片上。在论文采用的两级存储模型和适用 SRAM 容量区间中，访问量可写为：
+## 4. 先运行一个最小toy，再扩成tile
 
-```
-Θ(s^2 d^2 / M + s d)
-```
+下面只支持有限标量logit、标量value，输入已验证，不处理mask；它是状态推导的可运行练习，不是GPU实现或Lab评分接口。初始状态是最大值−inf、分母0、分子0。首项单独把旧贡献系数设0，避免无意义的初始比例。
 
-其中 `M` 以元素数计量，论文常用区间为 `d ≤ M ≤ sd`；结果也是元素访问数。固定片上容量时仍可随 s 二次增长。Q-major 遍历中每个 Q block 扫一遍 K/V，读写约 `2sd + 2sd*ceil(s/Br)` 个元素；容量允许 Br 随 M/d 增大，便能增加复用。收益是省掉完整 S/P 的物化并改善 IO 复用，不能把剩余 HBM IO 直接写成 O(sd)。
+```python
+import math
 
-实际解释要同时说明：消除的是哪个中间数组、tile 遍历导致哪些输入重读、M 的单位是什么。先用 [第五讲](lec05.md) 的小 shape 区分容量与流量，再用本讲的分块过程数出重读次数。
+def update_state(state, score, value):
+    maximum, normalizer, numerator = state
+    new_maximum = max(maximum, score)
+    old_scale = 0.0 if normalizer == 0 else math.exp(maximum - new_maximum)
+    weight = math.exp(score - new_maximum)
+    return (new_maximum,
+            old_scale * normalizer + weight,
+            old_scale * numerator + weight * value)
 
-### 2.4 Block size 的选择
-
-论文给出（SRAM 大小 `M`、head dim `d`）：
-
-```
-Bc = ceil(M / (4d))
-Br = min(ceil(M / (4d)), d)
-```
-
-直觉：
-
-- `Bc` 越大，K/V 复用越多，但 shared memory 压力越大；
-- `Br` 越大，Q 复用越多，但寄存器/occupancy 压力越大；
-- 要保证 `Q_i`、`K_j`、`V_j`、`O`、`m/l` 都能放下。
-
-### 2.5 Causal 的优化
-
-当 Br=Bc 且 tile 同起点对齐时，列 tile 编号大于行 tile 编号的块完全不需要计算。对任意 Br/Bc，用绝对 token 起点判断更可靠：若 `key_start >= query_start + query_rows`，整个 tile 都在未来。
-
-```
-for j in 0..i:
-    ...
+state = (-math.inf, 0.0, 0.0)
+for score, value in zip([0, math.log(2), math.log(4)], [2, 6, 10]):
+    state = update_state(state, score, value)
+assert math.isclose(state[2] / state[1], 54 / 7)
 ```
 
-对角线 block 需要 mask；非对角线 block 全部有效。这样 FLOPs 约减半，IO 也减少。
+第一步逐项运行，打印每次状态，与上表对齐；第二步把value改成向量，o的每个分量都乘同一个old_scale；第三步用一个tile内的指数和、加权和替换单项weight；第四步才处理多query，每条query有自己独立的m/s/o。不要把某一行的最大值或normalizer借给另一行。
 
----
+Mask带来一个必须显式处理的边界：全被mask的新tile没有贡献，直接跳过，保留旧状态；若整条query最终都无合法key，按课程契约报错。不能直接计算 `-inf-(-inf)` 再期待exp自然变零，它会产生NaN。同起点causal自注意力通常有对角线合法，但通用padding或矩形对齐可能打破这一前提。
 
-## 3. FlashAttention-2/3
+## 5. 从一行扩展到Q tile：少存矩阵，不代表零重读
 
-### 3.1 FA2
+Q tile有Br行，K/V tile有Bc行。把一个Q tile留在片上，顺次扫描K/V各tile；局部分数仅为Br×Bc，算完就用于更新每个query的状态，不写完整N×N的S/P。所有K/V扫完后，输出这Br行，再换下一组query。
 
-- 减少非 matmul FLOPs（softmax、rescaling）；
-- 更好的 work partitioning：Q 在 warp 之间切分，减少跨 warp 通信；
-- 支持更大的 head dim；
-- 在 sequence 维拆分 thread blocks，提高低 batch/head 情形的并行度。FA2 论文主要展示 A100 上的优化，不把 Hopper 的 TMA/WGMMA 管线作为其贡献。[FA2 论文](https://arxiv.org/abs/2307.08691)
+如果按照这种Q-major顺序，忽略边缘和缓存，Q读与O写约2Nd个元素；每个Q tile会扫一遍K/V，所以它们共约 `2Nd×ceil(N/Br)` 个元素。这是明确循环顺序下的模型，和“Q/K/V/O各一次”下界不是同一个数。增大Br能减少重复扫描，但还要容纳Q/K/V tile、score tile、输出累加器及m/s，不能无限增大。
 
-### 3.2 FA3
+原论文在两级存储及适用片上容量范围内，给出约 `Θ(N²d²/M + Nd)` 的元素访问量模型；M按元素计，而非字节，典型讨论区间d≤M≤Nd。固定M时仍可随N二次增长，因此把FlashAttention剩余IO直接写成O(Nd)会误导。它消除完整S/P物化并改善数据复用，但不承诺所有输入永远只访问一次。
 
-- Hopper 的 WGMMA + TMA；
-- warp-specialization：生产者 warp 负责 TMA，消费者 warp 负责 MMA/softmax；
-- ping-pong scheduling：两个 warpgroup 交替，重叠 GEMM 和 softmax；
-- FP8 支持：layout conformance、incoherent processing。
+### 案例三：一个可核对的重读账本
 
-上述 Hopper 异步与低精度设计对应 [FA3 论文](https://arxiv.org/abs/2407.08608)。学习时应区分算法不变式和特定硬件上的实现优化。
+N=128、d=64、单头、2字节元素，取Br=32、共有4个Q tile。Q/O合计16,384个元素；K/V每次16,384元素，共扫4次为65,536；合计81,920元素=163,840B。理想read-once下界是65,536B，三阶段物化模型为196,608B。这个简化Q-major遍历位于两者之间；它只展示重读计数，不保证某个真实kernel恰好请求这些字节，更不宣称这个Br在任意硬件上都是最优。
 
-### 3.3 面试表述
+Causal下还可以跳过全未来tile。例如Q tile覆盖query索引2、3，K tile覆盖4、5，则每个key都大于每个query，可整块跳过；K tile覆盖2、3时，query2只能看key2而query3可看两者，必须逐元素mask。只有Br=Bc且同起点对齐时，才可简写成“列tile编号大于行tile编号就跳过”。尾tile不足整块也要使用真实行数。
 
-不要只说“FA2 更快”。要能说：
+## 6. Decode与Split-KV：增加并行度，但合并不能丢权重
 
-> FA2 减少了非 matmul 开销、改善了 warp 间的工作划分；FA3 利用 Hopper 的 WGMMA/TMA 和 warp specialization，把 GEMM 与 softmax 重叠，并用 FP8 提高吞吐。
+Decode的sq通常为1。按单batch、单头、bf16、d=dv、K/V各从HBM读一次并忽略小Q/O的模型：FLOPs≈4N d，字节≈4N d，AI≈1 FLOP/B。对N=4096、d=64，约1,048,576 FLOPs、1,048,576B。若低于设备匹配dtype的ridge，可判断带宽压力；但小负载也可能受启动或并行不足限制。不能从一个公式替所有部署下最终结论。
 
----
+若每个head只给一个线程块，低batch/head可能没有足够并行任务。Split-KV把KV序列切成多个非空段，各段独立算 `(m_r,s_r,o_r)`，再合并。不是改变attention定义，也不是只保留某一段。
 
-## 4. Decode Attention
-
-### 4.1 为什么 memory-bound
-
-Decode 时 `sq=1`：
-
-```
-scores = q(1 x d) @ K^T(d x sk)   -> 1 x sk
-O      = softmax(scores) @ V(sk x d) -> 1 x d
-```
-
-FLOPs：
-
-```
-4 * sk * d
-```
-
-Bytes（bf16，只算 K/V）：
-
-```
-2 * sk * d * 2 = 4 sk d
-```
-
-AI：
-
-```
-AI ≈ 1 FLOP/Byte
-```
-
-远低于拐点，memory-bound。
-
-### 4.2 Split-KV / FlashDecoding
-
-一个 decode 请求只有 1 个 query，GPU 的并行度不足：一个 block 处理一个 head，SM 利用率低。  
-split-KV 把 KV 切成 R 个非空段，每段一个 block 计算 partial `(o_r,m_r,l_r)`；o_r 是以 m_r 为基准的未归一化加权和：
-
-```
+```text
 m = max_r(m_r)
-l = Σ_r l_r * exp(m_r-m)
-o = Σ_r o_r * exp(m_r-m)
-O = o/l
+s = Σ s_r × exp(m_r-m)
+o = Σ o_r × exp(m_r-m)
+output = o / s
 ```
 
-如果各段保存的是已归一化输出 `O_r=o_r/l_r`，合并分子必须是 `Σ O_r*l_r*exp(m_r-m)`，不能丢掉 l_r。空段用中性状态并跳过，避免 `-inf-(-inf)`。
+### 案例四：直接平均两段output，为什么错
 
-收益：
+所有logits=0。第一段只有V=0，状态(0,1,0)，output=0；第二段有三个V=4，状态(0,3,12)，output=4。直接平均两个output得2，但全体四位置应等权，真实结果 `(0+4+4+4)/4=3`。正确合并s=1+3=4，o=0+12=12，再除得3。
 
-- 增加并行度，打满 SM；
-- 每段只读自己的 KV 区间，增加独立工作；是否增加 L2 命中由布局与复用决定；
-- 代价：最后 reduction 的通信/额外 kernel。
+如果一段只保存了已归一化output_r，必须先乘回s_r，再乘基准转换系数，不能丢s_r。此反例检验分母权重；案例二检验不同最大值的重缩放，两类都通过才更有说服力。空段跳过，用中性状态表示而不计算−inf减−inf。
 
-### 4.3 Paged KV
+Split-KV可增加独立工作，但需要临时partial状态和最终归约，额外kernel、通信也有代价；不保证总是更快，也不保证L2命中一定提升。Paged KV改变地址映射：逻辑块经block table找物理块，再加块内偏移；具体页大小和访存合并要看实现，不能给一个全硬件通用的最优常数。
 
-decode 的 K/V 不连续，按 block table gather：
+## 7. 算法与硬件优化分别学
 
-```
-physical = block_table[logical]
-addr = base + physical * block_bytes + offset
-```
+[FlashAttention-2](https://arxiv.org/abs/2307.08691)主要讨论减少非matmul操作、改善thread block/warp工作划分与并行度；[FlashAttention-3](https://arxiv.org/abs/2407.08608)针对Hopper异步能力，将数据移动、矩阵乘与softmax重叠，并研究低精度设计。m/s/o不变式是理解它们的地基，不是知道几个GPU缩写就掌握了算法。
 
-这会让访存不连续，所以：
+本周先不要求照着不完整CUDA片段编译：完整GPU实现还需线程间归约、同步、边缘mask和内存布局。可选实践是先用自己的Python稠密输出作oracle，再实现标量/向量在线版本，比较误差；有GPU后再测kernel，不把Python循环速度当FlashAttention性能。
 
-- block size 要够大（16/64/128）；
-- kernel 要按 block 组织，尽量让一个 warp 读连续 token；
-- L2 命中率很重要。
+若有额外完整仓库，可从attention backend、FlashMLA接口、cache_engine的paged布局读起；课程包不包含这些硬件依赖。保持提问具体：哪块数据留在片上？哪个输入被重读？合并时的o究竟是分子还是已归一化输出？
 
-### 4.4 GQA/MQA/MLA
+## 8. 自测与Lab2成本账本
 
-- GQA/MQA 减少 KV head 数，直接降低 bytes；
-- MLA 存压缩 latent，进一步降低 bytes；
-- 代价：投影计算/精度。
+基础：N=2、d=1、4字节元素时，S单张容量、S/P四次访问、总请求流量各是多少？
 
----
+应用：把案例二分成三块分别处理，最终output会变吗？若只修改最后一个V为14，最终输出是多少？
 
-## 5. 代码：FlashAttention 前向伪代码
+解释：一个tile全mask与整条query全mask应分别怎么处理？`materialized=False`为什么不是实际FlashAttention HBM读写量？
 
-```python
-def flash_attention(Q, K, V, Br, Bc, causal=True):
-    # Q: [s, d], K/V: [s, d]
-    O = zeros_like(Q)
-    for i in range(0, s, Br):
-        Qi = Q[i:i+Br]
-        rows = len(Qi)  # 最后一个 query tile 可能不足 Br 行
-        m = full((rows,), -inf)
-        l = zeros((rows,))
-        Oi = zeros((rows, d))
-        for j in range(0, s, Bc):
-            if causal and j >= i + rows:
-                break
-            Kj = K[j:j+Bc]
-            Vj = V[j:j+Bc]
-            S = Qi @ Kj.T / sqrt(d)          # rows x len(Kj)
-            if causal:
-                S = mask(S, i, j)
-            m_new = maximum(m, S.max(dim=-1))
-            l = l * exp(m - m_new) + exp(S - m_new[:, None]).sum(dim=-1)
-            Oi = Oi * exp(m - m_new)[:, None] + exp(S - m_new[:, None]) @ Vj
-            m = m_new
-        O[i:i+Br] = Oi / l[:, None]
-    return O
-```
+<details>
+<summary>展开解析</summary>
 
-这是混合数组 API 的算法伪代码：`s,d` 来自 Q.shape；`mask(S,i,j)` 按全局行列位置屏蔽未来 key；zeros/full/maximum 由数组库提供，不能原样执行。输入为有限、等长非空自注意力，Br/Bc 为正；从 key0 顺序处理使每个有效 query 的首 tile 至少含一个允许的 key。在 GPU 上需另行 mask 尾块并满足同步规则。
-
-### TileLang 结构
-
-```python
-with T.Kernel(T.ceildiv(S, Br), heads, threads=256) as (bx, bh):
-    Qs = T.alloc_shared((Br, D), "float16")
-    Ks = T.alloc_shared((Bc, D), "float16")
-    Vs = T.alloc_shared((Bc, D), "float16")
-    acc = T.alloc_fragment((Br, D), "float32")
-    m = T.alloc_fragment((Br,), "float32")
-    l = T.alloc_fragment((Br,), "float32")
-    for j in T.Pipelined(T.ceildiv(S, Bc), num_stages=2):
-        T.copy(K[j*Bc, 0], Ks)
-        T.copy(V[j*Bc, 0], Vs)
-        # S = Qs @ Ks^T; online softmax; acc += P @ Vs
-```
-
-具体 API 以 TileLang 版本为准；关键是 `Br/Bc`、online softmax、causal。
-
----
-
-## 6. 仓库对照
-
-- `deepinfer/model_executor/layers/attention_backend.py`：`prefill_attn_varlen_sparse`、`decode_mla_mqa_sparse`；看 `fused_norm_rope_attn_rope_cast` 如何把 norm/rope/cast 融进 attention。
-- `vendor/FlashMLA`：prefill/decode 的 kernel 实现；先读 README 和接口。
-- `.../models/v4_modules/mla_attn.py`：MLA 投影；`LoraRopeCompressFlashMHAAutoRecomp`。
-- `.../models/v4_modules/index_attn.py`：sparse indexer。
-- `.../worker/cache_engine.py`：paged KV 的布局，和 decode attention 的地址计算对应。
-
----
-
-## 7. 练习
-
-### 基础
-
-**预测与修错**：两个 split 的 logits 都为 0，第一段含一个 V=0，第二段含三个 V=4。若把两段输出直接平均，得到 2；真实结果是多少？
-
-<details><summary>核对</summary>
-
-真实结果是 `(0+4+4+4)/4=3`。两段的 l 分别为 1 和 3，合并必须按 l 加权。再用第 2.2 节最大值不同的例子检查 exp 重缩放；两类反例一起才能检验正确的 split 合并。
-
+S单张16B，S/P四次64B，总流量96B。分成三块实数结果不变，都是54/7；V最后改14后为(2+12+56)/7=10。全mask的tile跳过；整条query无合法项则无法归一化，课程要求报错。False只算输入各读一次和输出写一次的下界，真实tile重读、缓存、精度和归约状态都未包含。
 </details>
 
-1. 计算标准 attention 在 `s=512/2048/8192`、bf16、单头下的 S/P HBM bytes。
-2. 推导 online softmax 的 `O` 和 `l` 的 rescale 公式。
-3. 画一张 FlashAttention 的 `Q/K/V/S/O` 在 HBM/SRAM 之间的数据流图。
-4. 计算 decode `s=4096, d=64, bf16` 的 KV bytes 和 AI。
-
-### 进阶
-
-5. 用 Python 实现第 5 节的 FlashAttention 伪代码，和标准 attention 对比误差。
-6. 在 CUDA/Triton 中实现一个简化版（`Br=64, Bc=64`），测 `s=512/2048` 的耗时。
-7. 实现 split-KV decode：`S=4` 段，比较 `s=4096` 时单 block 和 split 的耗时。
-8. 用 `ncu` 看 `dram__throughput`、`sm__pipe_tensor_cycles_active`，判断 prefill/decode 的瓶颈。
-
-### 挑战
-
-9. 加 causal mask，验证对角线 block 的边界；比较 mask 版本和非 mask 版本的 FLOPs。
-10. 读 FlashMLA 的 decode 接口，画出 paged KV + sparse index + MLA 的数据流。
-
----
-
-## 8. 面试追问
-
-1. 标准 attention 的 IO 为什么是 `O(s^2)`？FlashAttention 省了哪几次 HBM 读写？
-2. online softmax 的 `m/l/O` 分别是什么？为什么旧值要 rescale？
-3. FlashAttention 是精确的还是近似的？为什么？
-4. FA2/FA3 各改了什么？
-5. decode attention 为什么 memory-bound？split-KV 解决什么问题？
-6. paged KV 对 attention kernel 的访存有什么影响？
-
----
-
-## 9. 参考文献
-
-- Dao et al., *FlashAttention*：<https://arxiv.org/abs/2205.14135>
-- Dao, *FlashAttention-2*：<https://arxiv.org/abs/2307.08691>
-- Shah et al., *FlashAttention-3*：NeurIPS 2024。
-- FlashMLA：<https://github.com/deepseek-ai/FlashMLA>
-- NVIDIA, *From Online Softmax to FlashAttention*（博客/讲义）。
-
----
-
-## 10. 下一步
-
-- 完成 [实验 2](../labs/lab02/README.md)；
-- 做 [作业 2](../hw/hw02/README.md) 的 AI/bound 计算；
-- 读 [第 7 讲](lec07.md) 的 KV cache。
+出口：用纸笔完成两个tile状态表、一个split反例和一张IO账本，再运行Lab2 Q7/Q8。必须同时写出“容量”“请求流量”“有效FLOPs”的单位和假设。接着完成[L7](lec07.md)的KV跨步保留与[L8](lec08.md)的量化，再统一做完整HW1/HW2；不要把今天的成本模型当成已经测完真实引擎的性能。

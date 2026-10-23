@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="940" viewBox="0 0 600 940" role="img" aria-labelledby="title desc">
+  <title id="title">从 Python 基础到逐迭代调度的学习地图</title>
+  <desc id="desc">六层先修路径。每一层输出下一层所需能力；共享块池和调度器目前分开验证，还未接入真实模型与显存。</desc>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="#64748b"/></marker></defs>
+  <rect width="600" height="940" rx="18" fill="#f8fafc"/>
+  <g font-family="system-ui, sans-serif" fill="#172554" font-size="22">
+    <text x="30" y="42" font-size="26" font-weight="700">每一步都带着一个可检查的产物</text>
+    <rect x="28" y="68" width="544" height="108" rx="12" fill="#e0f2fe" stroke="#0284c7"/>
+    <text x="48" y="103" font-weight="700">起步 → 调试预备</text><text x="48" y="137">函数、列表、副本；读懂一条失败</text><text x="48" y="163" font-size="19">产物：自己的小函数与调试记录</text>
+    <path d="M300 179 V206" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="28" y="214" width="544" height="108" rx="12" fill="#e0f2fe" stroke="#0284c7"/>
+    <text x="48" y="249" font-weight="700">L1–4：地址 → 算子 → 数据复用</text><text x="48" y="283">尾部 guard、稳定归约、分块矩阵乘</text><text x="48" y="309" font-size="19">产物：Lab0/1 与 Project1 前两阶段</text>
+    <path d="M300 325 V352" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="28" y="360" width="544" height="108" rx="12" fill="#e0f2fe" stroke="#0284c7"/>
+    <text x="48" y="395" font-weight="700">L5–8：Attention → KV → 量化</text><text x="48" y="429">区分数值、容量、流量与模型代价</text><text x="48" y="455" font-size="19">产物：Lab2/3、HW1/2、Project1 报告</text>
+    <path d="M300 471 V498" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="28" y="506" width="544" height="108" rx="12" fill="#dcfce7" stroke="#15803d"/>
+    <text x="48" y="541" font-weight="700">L9–10：多请求如何共享有限空间</text><text x="48" y="575">映射、引用、前缀、FIFO 准入</text><text x="48" y="601" font-size="19">产物：Lab4、HW5、Project2 Phase1</text>
+    <path d="M300 617 V644" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="28" y="652" width="544" height="108" rx="12" fill="#ede9fe" stroke="#7c3aed"/>
+    <text x="48" y="687" font-weight="700">L11–12：每一轮怎样分配工作</text><text x="48" y="721">decode / prefill、时间线、延迟口径</text><text x="48" y="747" font-size="19">产物：Lab5、HW6、Phase2 与实验</text>
+    <path d="M300 763 V790" stroke="#64748b" stroke-width="3" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
+    <rect x="28" y="798" width="544" height="112" rx="12" fill="#fff7ed" stroke="#c2410c" stroke-dasharray="6 4"/>
+    <text x="48" y="833" font-weight="700">尚未连接：显存 + 调度 + 模型执行</text><text x="48" y="867">本次不新增后续周次或生产能力</text><text x="48" y="894" font-size="19">虚线表示未来集成，不是已经实现</text>
+  </g>
+</svg>

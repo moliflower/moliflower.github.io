@@ -9,7 +9,7 @@
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=fe4449dc2f59">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -25,7 +25,7 @@
       <div class="eyebrow">项目 2 Phase1</div>
       <h1>Project2 Phase1：请求生命周期</h1>
       <div class="doc-meta">
-        <span>纯阅读约 5 分钟 · 动手另计</span>
+        <span>浏览文字约 9 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../projects/project2/README.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -33,34 +33,61 @@
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
-        <a class="toc-level-2" href="#h-1">1. 把输入事件变成可观察的状态</a><a class="toc-level-2" href="#h-2">2. Q1：严格 FIFO 准入</a><a class="toc-level-2" href="#h-3">3. Q2：重放事件</a><a class="toc-level-2" href="#h-4">4. 完整追踪</a><a class="toc-level-2" href="#h-5">5. 测试、报告与出口</a>
-      </aside>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 10 节</summary>
+        <nav aria-label="本页章节">
+        <a class="toc-level-2" href="#h-1">1. 先说清楚“引擎”没有模拟什么</a><a class="toc-level-2" href="#h-2">2. Q1：严格 FIFO 准入</a><a class="toc-level-3" href="#h-3">2.1 先手算同一队列的三种容量</a><a class="toc-level-3" href="#h-4">2.2 实现台阶与失败定位</a><a class="toc-level-2" href="#h-5">3. Q2：事件处理、重试、快照，顺序不能换</a><a class="toc-level-2" href="#h-6">4. 完整手算：六个事件如何推进</a><a class="toc-level-2" href="#h-7">5. 最小程序：理解快照为什么要复制</a><a class="toc-level-2" href="#h-8">6. 从单事件到完整项目的实现顺序</a><a class="toc-level-2" href="#h-9">7. 运行、报告与评分</a><a class="toc-level-2" href="#h-10">8. 出口：能解释才进入下一阶段</a>
+        </nav>
+      </details>
       <article class="doc-content">
-        <p>本页是 Phase1：有限容量下的 FIFO 准入、等待、结束和释放。约 3–4 小时。先修 Lab4、HW5；纯 Python，无模型权重或 GPU。<a href="project2-scheduler.html">Phase2 逐迭代调度</a> 已单独发布，保持本阶段代码和通过条件不变。Sampling、真实设备 benchmark 与模型执行集成仍待后续发布。</p>
-<h2 id="h-1">1. 把输入事件变成可观察的状态</h2>
-<p>修改 <code>course/projects/project2/project2.py</code>。本阶段按已知请求长度预留整条请求的页数，不存真实 KV；Lab4 的物理 ID 与共享引用暂不接入。这样先验证请求生命周期，下阶段再逐 token 增长。</p>
-<p>始终维护：<code>sum(active.values()) + free_blocks == capacity</code>。active 是 ID→预留页数的字典，waiting 按提交顺序排列。请求不得同时出现在 active 和 waiting。</p>
+        <p>这一阶段把输入事件变成可解释的状态机：有限容量下的 FIFO 准入、等待、结束、释放。先修 Lab4、HW5，预计 3–4 小时，纯 Python，无 GPU。<a href="project2-scheduler.html">Phase2 逐迭代调度</a> 是独立下一阶段，不改变这里的接口或验收条件；Sampling、模型执行与真实设备 benchmark 不在本阶段。</p>
+<h2 id="h-1">1. 先说清楚“引擎”没有模拟什么</h2>
+<p>编辑 <code>course/projects/project2/project2.py</code>。本模型已知每条请求总长度，一次预留整条请求的页数。它不存 KV 数值，也不接入 Lab4 的物理 ID 或共享引用；这里 active 中的数字只是预留页数。先把生命周期做对，才有基础讨论逐 token 增长。</p>
+<p>状态只需三个核心量：active 为 ID→预留页数字典；waiting 为按提交顺序排队的 <code>(ID,length)</code> 列表；capacity 为总块数。空闲块由 <code>capacity−sum(active.values())</code> 得到，避免维护两个互相矛盾的账本。另需 seen 集合记住整个重放中已经用过的 ID，防止结束后重复提交同一 ID。</p>
+<p>始终成立的不变式：<code>sum(active.values()) + free_blocks == capacity</code>；同一请求不能同时 active 和 waiting；容量不能为负。不要把 refs 总和与这里的页数总和混淆。</p>
 <h2 id="h-2">2. Q1：严格 FIFO 准入</h2>
-<p><code>admit_fifo(waiting,free_blocks,block_size)</code> 返回 <code>(accepted_ids, remaining_free_blocks)</code>。</p>
-<ul><li>waiting 为 <code>(非空字符串 ID, 正整数 token 长度)</code> 的列表，ID 不重复。</li><li>free_blocks 是非负整数；block_size 是正整数；整数排除 bool。</li><li>先验证整个队列，包括当前无法接纳的尾部。非法值抛 ValueError。</li><li>每请求需要 <code>(length+B-1)//B</code> 页。从队首开始，遇到第一个放不下的就停止；不能跳过它接纳小请求。</li><li>返回独立的新 ID 列表，不修改输入。空队列合法。</li></ul>
-<p>手算：队列 A=5 tokens、B=1 token，块大小 4。空闲 1 块时一个也不接纳；空闲 2 块时只接纳 A；空闲 3 块时接纳 A、B。</p>
-<h2 id="h-3">3. Q2：重放事件</h2>
-<p><code>replay(events,capacity,block_size)</code> 返回每个事件处理完后的独立快照列表。capacity/block_size 是正整数；events 是事件列表，每项为 tuple 或 list：</p>
-<table><thead><tr><th>事件</th><th>行为</th></tr></thead><tbody><tr><td><code>("submit",id,length)</code></td><td>ID 为非空字符串且整个重放中不能重复；长度为正整数；单请求所需页数不能超过池容量，否则 ValueError；合法请求加入队尾</td></tr><tr><td><code>("finish",id)</code></td><td>只允许结束当前活动请求；释放全部预留页数；未知、等待中、已结束 ID 均 ValueError</td></tr><tr><td>其他事件名或错误长度</td><td>ValueError</td></tr></tbody></table>
-<p>每个事件后都调用 Q1 重试 waiting，再记录：<code>{"active": {id: pages}, "waiting": [ids], "free_blocks": integer}</code>。快照中的字典、列表不能被后续事件修改。函数保留输入；失败抛异常，不返回部分结果，没有外部状态需要回滚。空事件列表返回 []。</p>
-<h2 id="h-4">4. 完整追踪</h2>
-<p>容量 3 块、块大小 4：</p>
-<table><thead><tr><th>事件</th><th>active</th><th>waiting</th><th>free</th></tr></thead><tbody><tr><td>submit A,5</td><td>A:2</td><td>空</td><td>1</td></tr><tr><td>submit B,5</td><td>A:2</td><td>B</td><td>1</td></tr><tr><td>submit C,1</td><td>A:2</td><td>B,C</td><td>1</td></tr><tr><td>finish A</td><td>B:2,C:1</td><td>空</td><td>0</td></tr><tr><td>finish B</td><td>C:1</td><td>空</td><td>2</td></tr><tr><td>finish C</td><td>空</td><td>空</td><td>3</td></tr></tbody></table>
-<p>第三行 C 明明放得下却等待，这是本阶段刻意定义的严格 FIFO 行为；它暴露队首阻塞的代价，不是要求你偷偷修改策略。下一阶段才比较不同调度规则。</p>
-<h2 id="h-5">5. 测试、报告与出口</h2>
+<p><code>admit_fifo(waiting, free_blocks, block_size)</code> 返回 <code>(accepted_ids, remaining_free_blocks)</code>。</p>
+<ul><li>waiting 是 <code>(非空字符串 ID, 正整数 token 长度)</code> 列表，ID 不重复。</li><li>free_blocks 是非负整数，block_size 是正整数，整数均排除 bool。</li><li>先验证整个队列，包含当前放不下的尾部；规定的非法值抛 <code>ValueError</code>。</li><li>每条需要 <code>(length+B−1)//B</code> 页，从队首开始，首条放不下就停止，不能跳过它。</li><li>返回新 ID 列表，不修改输入，空队列有效。</li></ul>
+<h3 id="h-3">2.1 先手算同一队列的三种容量</h3>
+<p>队列 <code>[('A',5),('B',1)]</code>，块大小 4。A 要 2 页，B 要 1 页：</p>
+<table><thead><tr><th>初始 free</th><th>是否接纳 A</th><th>是否接纳 B</th><th>返回</th></tr></thead><tbody><tr><td>1</td><td>放不下，立即停止</td><td>不准越过 A</td><td><code>([],1)</code></td></tr><tr><td>2</td><td>接纳，剩 0</td><td>放不下</td><td><code>(['A'],0)</code></td></tr><tr><td>3</td><td>接纳，剩 1</td><td>接纳，剩 0</td><td><code>(['A','B'],0)</code></td></tr></tbody></table>
+<p>这体现“准入策略”与“装箱最优”不同。严格 FIFO 允许队首阻塞：小请求本来放得下，但必须等。作业要求复现这个策略，而不是悄悄改成优先小请求。</p>
+<h3 id="h-4">2.2 实现台阶与失败定位</h3>
+<p>先独立写出页数计算并试 length=1、4、5；再遍历合法队列但只打印“能否放下”；确认行为后才更新局部 free 与 accepted。最后增加完整验证，并确保验证在准入循环之前。</p>
+<p>反例：waiting=<code>[('A',5),('B',0)]</code>，free=0，B=4。虽然 A 立刻阻塞，尾部 B 的长度 0 仍非法，必须 <code>ValueError</code>。如果返回 <code>([],0)</code>，说明你把“当前不会执行”误当成“无需验证”。</p>
+<h2 id="h-5">3. Q2：事件处理、重试、快照，顺序不能换</h2>
+<p><code>replay(events, capacity, block_size)</code> 返回每个事件后的独立快照列表。capacity、block_size 为正整数，排除 bool；events 是事件列表，各项为 tuple 或 list。</p>
+<table><thead><tr><th>输入事件</th><th>校验和更新</th></tr></thead><tbody><tr><td><code>('submit',id,length)</code></td><td>ID 非空且整个重放不重复；长度为正整数；所需页数不超过总容量；通过后进入队尾</td></tr><tr><td><code>('finish',id)</code></td><td>只能结束当前 active 请求；释放全部预留页数</td></tr><tr><td>错误事件名、错误字段数</td><td>ValueError</td></tr></tbody></table>
+<p>每个事件后都运行 Q1 重试 waiting，再保存 <code>{'active': {id:pages}, 'waiting': [ids], 'free_blocks': integer}</code>。不能在释放之前重试，也不能在重试之前拍最终快照。未知、等待中、已结束请求都不能 finish。单条请求比整个池还大应拒绝，不应让其永远堵在队首。</p>
+<p>函数保留输入。异常时不返回部分结果；内部状态是局部变量，没有外部引擎状态需要回滚。空事件列表返回 <code>[]</code>，但容量与块大小仍需合法。</p>
+<h2 id="h-6">4. 完整手算：六个事件如何推进</h2>
+<p>容量 3 块，块大小 4。A、B 长 5 各需 2 块，C 长 1 需 1 块：</p>
+<table><thead><tr><th>事件</th><th>事件后 active</th><th>waiting</th><th>free</th></tr></thead><tbody><tr><td>submit A,5</td><td>A:2</td><td>空</td><td>1</td></tr><tr><td>submit B,5</td><td>A:2</td><td>B</td><td>1</td></tr><tr><td>submit C,1</td><td>A:2</td><td>B,C</td><td>1</td></tr><tr><td>finish A</td><td>B:2,C:1</td><td>空</td><td>0</td></tr><tr><td>finish B</td><td>C:1</td><td>空</td><td>2</td></tr><tr><td>finish C</td><td>空</td><td>空</td><td>3</td></tr></tbody></table>
+<figure class="textbook-figure"><a href="../../figures/week05-fifo.svg" target="_blank" rel="noopener" aria-label="查看大图：FIFO 队首阻塞：C 虽放得下也不能越过 B；A 结束释放容量后先 B 再 C"><img src="../../figures/week05-fifo.svg" alt="FIFO 队首阻塞：C 虽放得下也不能越过 B；A 结束释放容量后先 B 再 C" loading="lazy"></a><figcaption>FIFO 队首阻塞：C 虽放得下也不能越过 B；A 结束释放容量后先 B 再 C<span class="figure-zoom">小屏可横向滑动图解；点击图解可查看原图</span></figcaption></figure>
+<p>第三行先把 C 加队尾，再尝试 B；B 放不下，因此 C 不能被接纳。第四行分成三个小步骤：删掉 active 的 A，空闲变 3；顺序接纳 B 后剩 1，再接纳 C 后剩 0；最后才记录快照。图中的中间 free=3 是临时状态，不是这一事件的最终快照。</p>
+<p>请在第一次运行前手写全表，并对每行检验“活动页数 + free = 3”。如果某行对不上，不要先改测试，先查看页数与重试顺序。</p>
+<h2 id="h-7">5. 最小程序：理解快照为什么要复制</h2>
+<p>先单独运行这个程序，不必等 Q2 完成。它没有状态机答案，只展示 Python 容器别名：</p>
+<pre><code class="language-python">active = {'A': 2}
+snapshot = dict(active)
+active['B'] = 1
+print(snapshot)
+print(active)</code></pre>
+<p>输出应为 <code>{'A': 2}</code> 与 <code>{'A': 2, 'B': 1}</code>。如果把第二行改成 <code>snapshot = active</code>，两个打印都会出现 B，历史被现在改写了。Q2 快照要分别复制 active 字典和 waiting ID 列表；这里只有字符串和整数值，不需要为它们做更深复制。</p>
+<h2 id="h-8">6. 从单事件到完整项目的实现顺序</h2>
+<ol><li>先让空 events 在合法参数下返回 <code>[]</code>。</li><li>只支持一个合法 submit，核对页数与快照格式。</li><li>连续两个 submit，让第二条出现等待，检查 ID 不会同时处在两个容器。</li><li>加入 finish，并确认释放后立刻重试队列。</li><li>加入整个重放唯一的 seen 集合，测试结束后再次 submit 同 ID 仍拒绝。</li><li>最后验证快照独立性：修改第一行字典和列表，第二行必须不变。</li></ol>
+<p>这不是建议保留一个不完整版本交作业，而是让每次新增行为都能定位。若六步一口气写完，错误往往难以区分来自容量、顺序还是别名。</p>
+<h2 id="h-9">7. 运行、报告与评分</h2>
+<p>从<strong>课程根目录 <code>deepinfer/</code></strong>（能看到 <code>course/</code>）运行；个人主页源码对应 <code>_courses/deepinfer/</code>：</p>
 <pre><code class="language-bash">python course/tools/grade.py project2 --question q1 --unlock
 python course/tools/grade.py project2 --question q1 --failfast
 python course/tools/grade.py project2 --question q2 --hint 1
 python course/tools/grade.py project2</code></pre>
-<p>复制 <a href="project2-report.html">报告模板</a> 写一页报告。交付代码、上表的实际快照、一次调试记录，以及一个自己设计的队首阻塞案例。阶段自评 50 分：Q1 10、Q2 20、守恒/快照解释 10、报告与反例 10，不并入 Unit1 分母。</p>
-<p>必须讲清：什么时候释放容量；为什么每条请求独立向上取整；为何历史快照要复制；为什么这里没有测到 TTFT/TPOT。完成后按 <a href="lec11.html">L11</a> → <a href="lec12.html">L12</a> → <a href="lab05.html">Lab5</a> → <a href="project2-scheduler.html">Phase2</a> 继续；Phase2 暂不接入页池，不能把并发数当显存容量。</p>
+<p>评分保持 50 分：Q1 10、Q2 20、守恒/快照解释 10、报告与反例 10，不并入 Unit1。复制 <a href="project2-report.html">报告模板</a> 写自己的报告，包含实际六事件快照、逐行不变式检查、最小失败修复记录，以及一例自己设计的队首阻塞。不要只提交“全部测试通过”。</p>
+<h2 id="h-10">8. 出口：能解释才进入下一阶段</h2>
+<p>先回答：等待中的请求能 finish 吗？原来用过的 ID 能否在结束后再次 submit？一个比总容量更大的请求为什么不该留在 waiting？这个事件表能算 TTFT 吗？</p>
+<details class="study-hint"><summary>核对模型边界</summary><p>等待请求不拥有预留页，不能 finish；ID 在整个 replay 内唯一，结束后仍不能复用。超过总容量的请求永远不会通过本策略，必须拒绝而不是永久阻塞队列。事件索引没有真实时间，模型也没有输出 token，因此不能据此计算 GPU 吞吐、TTFT 或 TPOT。</p></details>
+<p>下一步按 <a href="lec11.html">L11</a> → <a href="lec12.html">L12</a> → <a href="lab05.html">Lab5</a> → <a href="project2-scheduler.html">Phase2</a>。Phase2 学习逐迭代工作预算，暂不接入页池；并发请求数不是显存容量。两阶段未来集成时需要同时满足计算预算和内存容量，而不是拿一个替代另一个。</p>
       </article>
     </div>
 
@@ -69,7 +96,7 @@ python course/tools/grade.py project2</code></pre>
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="../storage.js?v=608d22c915a6"></script>
+  <script src="../doc.js?v=8c695cbfe8d6"></script>
 </body>
 </html>

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="760" viewBox="0 0 600 760" role="img" aria-labelledby="title desc">
+  <title id="title">共享块的引用生命周期</title>
+  <desc id="desc">A 拥有块零和一，B 共享块零并拥有块二。引用数为二一一。A 结束后仅块一空闲，引用数一零一。B 结束后全部归零。引用总数不等于物理块占用数。</desc>
+  <rect width="600" height="760" rx="20" fill="#f4f8fc"/>
+  <g font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" fill="#17324d" font-size="22">
+    <text x="30" y="44" font-size="26" font-weight="700">看所有者，而不只是看容量</text>
+    <rect x="30" y="70" width="540" height="184" rx="12" fill="#fff" stroke="#759ac0"/>
+    <text x="50" y="108" font-weight="700">① 两个请求仍在使用</text>
+    <text x="50" y="147">A → 块 0、1</text><text x="310" y="147">B → 块 0、2</text>
+    <rect x="50" y="171" width="150" height="57" rx="8" fill="#d5e7ff"/>
+    <rect x="225" y="171" width="150" height="57" rx="8" fill="#e1f3ec"/>
+    <rect x="400" y="171" width="150" height="57" rx="8" fill="#e1f3ec"/>
+    <text x="72" y="207">块 0：2</text><text x="247" y="207">块 1：1</text><text x="422" y="207">块 2：1</text>
+    <rect x="30" y="280" width="540" height="184" rx="12" fill="#fff" stroke="#759ac0"/>
+    <text x="50" y="318" font-weight="700">② A 结束：每块减去一个所有者</text>
+    <text x="50" y="357">块 0 仍由 B 持有，不能覆盖</text>
+    <rect x="50" y="381" width="150" height="57" rx="8" fill="#d5e7ff"/>
+    <rect x="225" y="381" width="150" height="57" rx="8" fill="#f2f3f5"/>
+    <rect x="400" y="381" width="150" height="57" rx="8" fill="#e1f3ec"/>
+    <text x="72" y="417">块 0：1</text><text x="247" y="417">块 1：0</text><text x="422" y="417">块 2：1</text>
+    <rect x="30" y="490" width="540" height="141" rx="12" fill="#fff" stroke="#759ac0"/>
+    <text x="50" y="530" font-weight="700">③ B 结束：释放自己的块 0、2</text>
+    <text x="50" y="573">refs = [0, 0, 0]</text>
+    <text x="50" y="609">所有块现在都允许重新分配</text>
+    <rect x="30" y="657" width="540" height="74" rx="12" fill="#fff2db"/>
+    <text x="50" y="687">① 的引用总数是 4，物理块只有 3。</text>
+    <text x="50" y="718">refs = 0 不等于旧内容已被擦除。</text>
+  </g>
+</svg>

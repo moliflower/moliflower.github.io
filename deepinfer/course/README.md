@@ -6,6 +6,7 @@
 > **本地课程网站**：[`site/index.html`](site/index.html)（双击打开，或运行 `site/open.bat`）。网站包含**排版好的讲义/实验/作业页面**和**精选 B 站视频页**。  
 > **零基础入口**：先做 [Python 起步](foundations/README.md)，再做 [调试预备](prep/README.md)。已会函数、列表与循环可直接进入预备课。GPU 扩展不计入入门验收。
 > **教材主线**：[教材索引与术语表](TEXTBOOK.md) · **验收**：[掌握度与评分](ASSESSMENT.md)。
+> **本次教材重整**：不新增周次；起步、预备与第 1–6 周重新梳理。先读 [自学路线与诊断入口](LEARNING_PATH.md)，再按“问题 → 图解 → 推导 → 手算 → 最小实现 → 练习 → 自测”推进。已有题号、接口、评分与学习标记保留。
 
 ---
 
@@ -17,7 +18,7 @@
 4. 做 [`Lab0 Q0–Q6`](labs/lab00/README.md)，用 `--question q1 --failfast` 按题运行。
 5. 记录一次调试过程，再做出口检查，不急着安装 CUDA。
 
-以上命令从 DeepInfer 根目录运行；若环境只有 `python3`，统一替换命令名。
+以上命令从能够直接看到 `course` 文件夹的课程根目录运行。ZIP 使用解压根目录；个人主页源码仓库先执行 `cd _courses/deepinfer`。若环境只有 `python3`，统一替换命令名。
 
 > 不需要 GPU。Unit 1 的核心轨道是纯 Python；GPU 是可选加速轨道。
 

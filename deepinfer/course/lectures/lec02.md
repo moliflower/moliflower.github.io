@@ -1,6 +1,6 @@
 # 第 2 讲：合并访问、共享内存与 Occupancy
 
-> **课前**：35 分钟  
+> **学习安排**：核心阅读两次，每次 30–45 分钟；后半硬件扩展另计。
 > **课后**：实验 0 Q2/Q3  
 > **学习分层**：先读第 1 节并做 Lab0；第 2 节 bank 为推导选读，第 3–5 节和 CUDA/profiling 练习留待补过 C++ 后再做。第一讲的进度不以这些进阶内容为门槛。  
 > **一句话**：同一条 warp 访存指令触及的 sector 越少，有用字节占传输字节的比例通常越高；不要把 warp 请求、sector 和 cache line 当成同一个计数。
@@ -19,7 +19,16 @@
 2. **bank conflict**：shared memory 的一个 warp 访问会串行几拍？
 3. **occupancy**：一个 SM 能同时驻留多少 warp？受什么限制？
 
-学完要能在给定对齐、访问宽度、活跃 lane 与资源上限的前提下，计算 sector 数、bank conflict 和理想 occupancy 上界。复杂 vector 指令和架构分配粒度需要另查手册。
+第一次学完的证据是：给定 word 地址和活跃 lane，分别数清 line 与 sector，并说明计数不是实测时间。bank conflict 和 occupancy 是后置扩展，不作为 Lab0 的额外必做题。复杂 vector 指令和架构分配粒度需要另查手册。
+
+| 阅读顺序 | 动手动作 | 课程题目 |
+| :--- | :--- | :--- |
+| 第 1.1–1.4 节 | 列地址、分桶、数不同编号 | Lab0 Q2/Q3；复习 Q1 尾部 guard |
+| 第 1.5 节 | 手算变式，比较“请求”与“实际传输” | Lab0 checkoff；Quiz1 Q1 |
+| 第 2 节 | 用 bank 表解释同址广播与异址冲突 | 理解性选读，无新增评分 |
+| 第 3–5 节 | 只在具备 C++/CUDA 后做设备实验 | 选做，不阻塞 L3/Lab1 |
+
+先修检查：word 9 对应 byte 多少？`9//8` 和 `9%8` 各表示什么？答案为36B、sector 1、sector内第1个word。若不清楚，先回 [L1 第7节](lec01.md)。所有命令在能看到 `course` 的课程根目录运行；源码仓库先 `cd _courses/deepinfer`，离线包直接进入解压根目录。
 
 ---
 
@@ -34,7 +43,7 @@
 1 sector = 32B = 8 个 float32
 ```
 
-一个 warp 的 32 个 lane 发出 32 个地址。硬件会：
+一个 warp 的 32 个 lane 发出 32 个地址。可用以下请求分组模型理解：
 
 1. 把地址按 sector 分组；
 2. 确定这条 warp 请求需要哪些 sector；
@@ -66,7 +75,7 @@ sectors = len({word // 8 for word in addresses})
 efficiency = 128B / (sectors * 32B)
 ```
 
-> 这里的 `s` 是“相邻 lane 的 word 步长”。`s=1` 是 coalesced，`s=gridDim.x` 常见于错误写法。
+> 这里的 `s` 是“相邻 lane 的 word 步长”。`s=1` 是连续访问，`s=gridDim.x` 是 Lab0 用来比较的跨步分配；它可以数值正确，但相邻lane的局部性可能更差。
 
 ### 1.3 例子：`i = tid * grid + bid`
 
@@ -78,13 +87,13 @@ int i = threadIdx.x * gridDim.x + blockIdx.x;
 
 固定一个 block（`bid` 固定），一个 warp 的 `tid` 连续，但 `i` 的步长是 `gridDim.x`。若 `gridDim.x=8`，就是 `s=8`：一个 warp 的 load 会拆成 8 条 line / 32 个 sector，效率 12.5%。
 
-正确写法：
+同一问题的连续分工写法：
 
 ```cuda
 int i = blockIdx.x * blockDim.x + threadIdx.x;
 ```
 
-`s=1`，一个 warp 的 32 个 float 落在一个 128B line 里。
+`s=1`。若首地址同时按128B对齐，一个warp的32个float落在一个line内；若仅按32B对齐，也可能跨两个line，但仍只需四个sector。两种索引方案都要保留有效范围判断；不能把请求布局的改进说成修复加法结果。
 
 ### 1.4 对齐的影响
 
@@ -99,15 +108,64 @@ line 0: 0..31，line 1: 32..63
 
 sector 编号为 `word//8`，此处为 2、3、4、5。若从 word 1 而非 16 开始，地址 1..32 才会触及 5 个 sector。不要把 line 个数直接乘 4 当作实际 sector 个数。
 
-这就是为什么：
+![相同32个连续word，从0、1、16开始分别触及4、5、4个sector；line计数分别为1、2、2](../figures/unit1-memory-sectors.svg)
 
-- tensor 的 leading dimension 常 pad 到 32/64/128；
-- KV cache 的 block size 常取 16/64/128；
-- 自定义 kernel 会要求输入 16B/128B 对齐。
+图中每格是一个sector，不是一个lane。把起点从0移到16 word，只换了所处的sector，没有增加sector数量；移到1 word才多触及一个。对齐要求还取决于访问宽度、矩阵行stride和具体kernel，不能据此推出“所有张量或KV页都必须取某个固定大小”。
+
+### 1.5 从地址表到一个可复核程序
+
+先逐行算部分地址，体会为什么集合比“按跨度估计”可靠。base=0、s=3时：
+
+| lane | word地址 | line编号（除32） | sector编号（除8） |
+| ---: | ---: | ---: | ---: |
+| 0 | 0 | 0 | 0 |
+| 1 | 3 | 0 | 0 |
+| 2 | 6 | 0 | 0 |
+| 3 | 9 | 0 | 1 |
+| 10 | 30 | 0 | 3 |
+| 11 | 33 | 1 | 4 |
+| 31 | 93 | 2 | 11 |
+
+把中间lane补齐会发现sector 0–11都出现，共12个；line 0–2共3个。32个不同word的有用数据为128B，sector覆盖384B，占比1/3。不要因stride不是2的幂就改成近似公式。
+
+下面是可直接用标准库Python运行的核对器，不需要tracer或GPU。先在纸上预测四行输出，再运行：
+
+```python
+def address_counts(base_word, stride_words, active_lanes):
+    addresses = [base_word + lane * stride_words for lane in range(active_lanes)]
+    lines = {address // 32 for address in addresses}
+    sectors = {address // 8 for address in addresses}
+    return len(lines), len(sectors)
+
+for case in [(0, 1, 32), (1, 1, 32), (16, 1, 32), (0, 3, 32)]:
+    print(case, address_counts(*case))
+```
+
+应分别得到 `(1,4)`、`(2,5)`、`(2,4)`、`(3,12)`。本例限定非负word地址、非负stride、0–32个活跃lane；它数地址桶，不模拟一次设备传输的全部细节。
+
+**渐进自测**：①只有lane0–7有效且读取word0–7，几个sector？②32个lane都读word0，几个sector？③同一warp先读a再读b，地址恰好落同一sector，能把两条指令合并计一次吗？
+
+<details><summary>核对与容易混淆的单位</summary>
+
+①一个sector，实际请求了8个不同word，32B；不能仍以128B作有用数据分子。②也是一个sector，但只有4B不同的数据，32次lane读取不代表128B不同内容。③不能；统计单位包括指令身份。相同地址被不同指令读取，仍需分别记请求，至于缓存是否避免下层传输是另一个模型。
+
+</details>
+
+最后把模型应用回Lab0：对n=1024、block=128，连续布局96次line触及、384次sector触及；跨步布局768次line触及、3072次sector触及。二者请求的标量总数相同。第一次比较应交付地址表和计数，不是一个没有设备计时的“加速8倍”。
 
 ---
 
 ## 2. Shared memory 与 bank conflict
+
+### 2.0 先分清“数据在哪里”和“谁在访问”
+
+L1的word地址把所有数据画在一条存储线上，方便数请求。真实GPU还有多个层次：全局内存给不同block共享大规模数据；一个block可以协作使用自己的shared memory；线程用寄存器保留局部值。名字中都有memory，不意味着它们遵守同一种分桶规则。global访存这里按32B sector分组，shared标量访问下面按bank分组；不能把“触及四个sector”改名为“四路bank冲突”。
+
+这两类优化也不同。让相邻lane读取相邻word，是让同一条指令用更少sector；把某个A值搬到shared后用于多个输出，是减少对全局层的重复读取。前者叫合并访问，后者叫复用。一个算法可能访存很连续却重复读很多遍，也可能读次数少却访问很分散；仅报告其中一个指标不能证明整套算法最优。L4会用矩阵tile专门练第二种变化。
+
+**同一地址集合，不同lane顺序**：lane0–31按倒序读取word31–0，仍只触及sector0–3，和正序一样。再把lane顺序随机打乱，只要地址集合、指令身份和活跃lane不变，本模型计数仍然一样。所以“相邻lane必须严格升序”不是必要条件；真正要数的是哪些sector被访问。反过来，若同一线程分两条指令读取原来一条指令的地址，必须重新按指令分组，不应只比较整个函数访问过的集合。
+
+**一个值得保留的反例**：仅lane0读word0时，覆盖一个32B sector，只有4B不同有效数据，占比12.5%；32个lane都读取同一word0也覆盖一个sector，但语义是32个消费者共享同一4B值。此时若把lane读取次数直接乘4当独特有用字节，会得出400%的“覆盖效率”。报告应说明算的是消费者请求量还是不同数据量，不能为了让比例好看换分子。
 
 ### 2.1 Bank 的地址映射
 
@@ -120,6 +178,8 @@ bank(addr) = (addr / 4) % 32
 一个 warp 访问 shared memory 时，若多个 lane 落在同一 bank 的**不同地址**，硬件串行执行，称为 bank conflict。
 
 ### 2.2 冲突度公式
+
+先不背公式，手算 `smem[lane*2]`。lane0读word0→bank0；lane1读word2→bank2；lane15读word30→bank30；lane16读word32→bank0。最后一项和第一项是同bank的**不同word**，不能广播。32个lane只覆盖16个bank，每bank承接2个不同地址，因此为2-way conflict。若所有lane都读word0，则是同址广播，不能套这个结论。
 
 对 `smem[lane * s]`（word 地址）：
 
@@ -235,6 +295,8 @@ occupancy    = warps_per_sm / max_warps_per_sm
 
 > 具体上限查 `cudaDeviceProp`，实际驻留计算用 `cudaOccupancyMaxActiveBlocksPerMultiprocessor`；上式是解释限制来源的简化模型。
 
+逐步核对第二行：256线程需要8个warp；每block寄存器用量为256×64=16384；65536个寄存器只能容纳4个block。线程资源本来允许2048/256=8个block，但较紧的寄存器约束将它降至4个，驻留32个warp，occupancy=32/64=50%。这叫“由资源上限推导”，不是已经测到执行中恰好有32个warp活跃。寄存器分配粒度、编译结果和动态停顿要另查。
+
 ### 3.3 Occupancy 不是目的
 
 - 如果 kernel 是 memory-bound，需要足够多 outstanding load 来隐藏延迟；occupancy 太低会打不满带宽。
@@ -276,7 +338,7 @@ occupancy    = warps_per_sm / max_warps_per_sm
 - **bank conflict 不是正确性问题**，只影响性能；但 padding 改变布局时要注意 index。
 - **越界**：tile 转置在 `n` 不是 TILE 倍数时要边界检查，否则读写越界。
 - **对齐**：`float4`/`int4` 访问要求 16B 对齐；shared memory 的 vector 访问同样。
-- **volatile / fence**：block 内 `__syncthreads()` 提供内存可见性；跨 block 需要 global fence/atomics。
+- **同步与可见性**：`__syncthreads()` 的参与范围是block；fence提供指定范围的内存排序，不会让整个grid同时到达同一点；atomic也不自动成为grid barrier。跨block协作需要正确的协议、支持的协作同步或分开kernel，不能用一句“加fence”替代设计。
 
 ---
 
@@ -321,7 +383,7 @@ occupancy    = warps_per_sm / max_warps_per_sm
 ## 8. 面试追问
 
 1. 一个 warp 读 32 个连续 int32，起始 word 16，要几个 sector/line？
-2. 为什么 `i = tid*grid + bid` 慢？用 stride 和 sector 解释。
+2. `i = tid*grid + bid` 在什么条件下触及更多sector？为什么grid=1不是这样的反例？
 3. bank conflict 的公式是什么？padding 为什么有效？
 4. occupancy 受哪些资源限制？高 occupancy 一定快吗？
 5. `long_scoreboard` 和 `short_scoreboard` 分别代表什么？
@@ -338,7 +400,15 @@ occupancy    = warps_per_sm / max_warps_per_sm
 
 ---
 
-## 10. 下一步
+## 10. 出口证据与下一步
+
+### 只读地址还不够：先固定比较协议
+
+写下一组比较时至少固定五项：同一数学任务、同一元素宽度、同一活跃lane集合、同一对齐、同一计数层。比如连续与跨步vector add都做同样n次加法，才能把请求变化归因于分工；若一侧多了一次复制，或尾组多读无效值，计数差就不再只有布局这一原因。实际设备实验还要固定数据规模、缓存状态、预热、计时边界和编译配置。
+
+当理论sector增多但时间几乎不变时，不必把理论表删掉；可能任务被别的开销主导，或缓存避免了部分下层搬运。正确的报告把问题拆为“地址模型预测什么”“当前测量对象是什么”“还需要哪条证据区分解释”。本课tracer只能回答前一个问题，不能通过重复运行Python替代GPU性能测量。
+
+第一遍不看答案完成三件事：用word1–32列出5个sector；解释word16–47为什么跨2个line却只触及4个sector；说明只有8个活跃lane时为何不能固定以128B计算有用数据。保留一张地址表，便于以后对照真实profiler的统计单位。bank与occupancy尚不熟可以记录待复习，不阻止进入数值算子。
 
 - 完成 [实验 0](../labs/lab00/README.md) 的 Q2/Q3；
 - 读 [第 3 讲](lec03.md) 的 reduction / softmax；

@@ -19,7 +19,19 @@
 
 `walkthrough.py` 是完整示例，`simt.py` 是访问追踪工具，`lab00_solution.py` 是完整解法。**先会用 tracer，不要求读懂它的内部实现。**
 
-所有 `python course/...` 命令从 DeepInfer 根目录运行；使用 WSL 且命令名为 `python3` 时统一替换即可。
+所有 `python course/...` 命令从**课程根目录**运行，即能直接看到 `course` 的位置。离线ZIP解压后进入这一层；个人主页源仓库先 `cd _courses/deepinfer`。使用WSL且命令名为 `python3` 时统一替换；Windows也可用 `.\course\run.ps1 lab00 --question q0`。
+
+### 教材与题目对应
+
+| 先读与手算 | 再做 | 完成后自己解释 |
+| :--- | :--- | :--- |
+| L1 第2–4节、五元素尾组图 | Q0/Q1，随后Q6 | 有效索引不漏、不重；guard在读写前 |
+| L1 第5–6节 | Q2 | 分工变化不等于输出顺序变化 |
+| L1 第7–8节、L2 第1节 | Q3 | word/byte/line/sector是不同单位 |
+| L1 第9节 | Q4 | 两条下界为什么取max |
+| 以上全部 | Q5 | 一次load一次store与新算子的关系 |
+
+Q6虽保留原题号，但可在Q1后先修；Q5是迁移题，不要求在看懂tracer前独立摸索它的内部代码。每次先手算一个新输入，再运行单题；别从全量红色输出猜哪一题是当前问题。
 
 ## 2. Q0：一个确定能运行的起点
 
@@ -221,5 +233,7 @@ python course/tools/grade.py lab00
 1. n=10、block=4 时，最后一组谁应该跳过？
 2. Q5 为什么只有一次 load，而 Q1 有两次？
 3. 为什么 line 计数、sector 计数、有用字节不能混为一个指标？
+
+**独立变式**：输入长度9、block=4、factor=−2。先写三个组的有效tid，再预测Q5计数：9次load、9次store、72B请求；最后一组只有tid=0有效。运行自己的函数核对结果与输入副本。解释为什么单看输出正确，仍发现不了绕过tracer的实现。
 
 下一步是 [第 3 讲](../../lectures/lec03.md) 和 Lab1 的 Python 算法部分。也可先读 [第 2 讲](../../lectures/lec02.md) 的访存推导；CUDA、occupancy、profiling 都可留待后续。现在不要求做 KV/量化作业，也不要求实现完整 Project1。

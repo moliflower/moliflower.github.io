@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="700" viewBox="0 0 600 700" role="img" aria-labelledby="title desc">
+  <title id="title">从逻辑 token 位置到物理块</title>
+  <desc id="desc">块大小为四，token 下标五分解成逻辑块一与偏移一。块表为九、二、七，因此逻辑块一映射到物理块二，最终位置为物理块二的偏移一。已分配空间不等于真实序列长度。</desc>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#41647f"/></marker></defs>
+  <rect width="600" height="700" rx="20" fill="#f4f8fc"/>
+  <g font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" fill="#17324d" font-size="22">
+    <text x="30" y="45" font-size="26" font-weight="700">地址转换：先分组，再查表</text>
+    <rect x="30" y="70" width="540" height="102" rx="12" fill="#e2edf8" stroke="#759ac0"/>
+    <text x="50" y="108">输入：token 下标 = 5，块大小 = 4</text>
+    <text x="50" y="145">块表 = [9, 2, 7]（从 0 开始索引）</text>
+    <path d="M300 178 V212" stroke="#41647f" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="30" y="225" width="540" height="116" rx="12" fill="#fff" stroke="#759ac0"/>
+    <text x="50" y="263" font-weight="700">① 除法定位逻辑块</text>
+    <text x="50" y="303">5 = 1 × 4 + 1</text>
+    <text x="294" y="303">逻辑块 1，偏移 1</text>
+    <path d="M300 348 V382" stroke="#41647f" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="30" y="395" width="540" height="116" rx="12" fill="#e1f3ec" stroke="#5a9c85"/>
+    <text x="50" y="433" font-weight="700">② 查表选择物理块</text>
+    <text x="50" y="477">table[1] = 2 → 返回 (2, 1)</text>
+    <rect x="30" y="542" width="540" height="127" rx="12" fill="#fff2db" stroke="#bc924b"/>
+    <text x="50" y="578" font-weight="700">两个边界，不要混在一起</text>
+    <text x="50" y="616">槽位范围：0 ≤ 下标 &lt; 3 × 4</text>
+    <text x="50" y="650">真实可读：还必须 下标 &lt; 序列长度</text>
+  </g>
+</svg>

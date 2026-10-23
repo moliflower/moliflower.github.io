@@ -8,6 +8,10 @@
 
 ## 0. 本讲要解决的问题
 
+**本页是后置硬件资料，不是第一讲第二页必做题。** 当前自学主线在 [L1](lec01.md)、[L2核心](lec02.md)、[L3](lec03.md)、[L4](lec04.md) 已完整展开，Lab0–3与Project1均可只用标准库Python完成。下面出现的CUDA编译、设备规格和kernel片段要等C++/CUDA桥接准备好再实践；没有host驱动的片段不是可直接运行脚本。复习只需把thread/block、word/byte、请求/设备流量三个对应关系连起来。
+
+从课程材料运行 `python course/...` 时，当前目录必须直接包含 `course`；离线包进入解压根目录，个人主页源仓库先 `cd _courses/deepinfer`。上游DeepInfer的实现源码属于额外阅读，不在课程离线包中；不要为做Python必修题安装整个推理引擎。
+
 给定一个 kernel，你要能回答四个问题：
 
 1. 它受**带宽**限制，还是受**算力**限制？
@@ -41,7 +45,7 @@ i = blockIdx.x * blockDim.x + threadIdx.x
 
 - `Bx * By * Bz <= 1024`（大多数 NVIDIA GPU）；
 - 一个 block 被调度到一个 SM 上，block 内 thread 可以共享 shared memory；
-- 不同 block 之间**不能**用 `__syncthreads()` 同步，只能通过 global memory / atomics / 多 kernel 通信。
+- 不同block之间**不能**用 `__syncthreads()` 同步。global memory和atomic本身也不构成全grid barrier；跨block协作需要正确协议、受支持的协作同步或多个kernel阶段，不能用自旋等待假定所有block都已驻留。
 
 ### 1.2 SIMT 与分支发散
 

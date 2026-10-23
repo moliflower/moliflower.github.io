@@ -9,7 +9,7 @@
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=fe4449dc2f59">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -25,7 +25,7 @@
       <div class="eyebrow">项目 2 报告</div>
       <h1>Project2 Phase1 报告模板</h1>
       <div class="doc-meta">
-        <span>纯阅读约 1 分钟 · 动手另计</span>
+        <span>浏览文字约 2 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../projects/project2/report_template.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -33,21 +33,28 @@
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
-        <a class="toc-level-2" href="#h-1">实验条件</a><a class="toc-level-2" href="#h-2">状态证据</a><a class="toc-level-2" href="#h-3">调试记录</a><a class="toc-level-2" href="#h-4">队首阻塞反例</a><a class="toc-level-2" href="#h-5">局限</a>
-      </aside>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 6 节</summary>
+        <nav aria-label="本页章节">
+        <a class="toc-level-2" href="#h-1">1. 实验条件与假设</a><a class="toc-level-2" href="#h-2">2. 先预测，再运行</a><a class="toc-level-2" href="#h-3">3. 一次真实调试记录</a><a class="toc-level-2" href="#h-4">4. 自己的队首阻塞案例</a><a class="toc-level-2" href="#h-5">5. 快照与输入保护证据</a><a class="toc-level-2" href="#h-6">6. 局限与结论</a>
+        </nav>
+      </details>
       <article class="doc-content">
-        <h2 id="h-1">实验条件</h2>
-<p>Python 版本、capacity、block_size、原始事件列表、运行命令。</p>
-<h2 id="h-2">状态证据</h2>
-<p>逐事件记录 active、waiting、free_blocks，并核对容量守恒。</p>
-<h2 id="h-3">调试记录</h2>
-<p>最小失败输入 → 期望/实际 → 原因 → 修复 → 回归命令。</p>
-<h2 id="h-4">队首阻塞反例</h2>
-<p>给出一个小请求必须等待的案例。讨论允许越过队首可能带来的收益与公平性问题，不实现新策略。</p>
-<h2 id="h-5">局限</h2>
-<p>说明固定长度预留与真实逐 token 增长的差别；说明为什么不能从这些事件推导 GPU 吞吐、TTFT 或 TPOT。</p>
+        <p>本模板用于记录可复核的学习证据，不预填测试成功或性能结论。使用自己的运行结果；本地个人报告不需要放进公开课程包。</p>
+<h2 id="h-1">1. 实验条件与假设</h2>
+<p>填写 Python 版本、capacity、block_size、完整事件列表、从课程根目录执行的命令。说明请求长度提前已知、一次预留整条请求、不存 KV、不计 GPU 时间。</p>
+<h2 id="h-2">2. 先预测，再运行</h2>
+<p>先写六事件案例的预测，再填实际结果。每个事件的快照必须是在处理事件和重试 waiting 之后记录。</p>
+<table><thead><tr><th>事件</th><th>预测 active/waiting/free</th><th>实际 active/waiting/free</th><th>活动页数 + free</th><th>是否一致</th></tr></thead><tbody><tr><td>submit A,5</td><td>待填写</td><td>待填写</td><td>待填写</td><td>待填写</td></tr><tr><td>submit B,5</td><td>待填写</td><td>待填写</td><td>待填写</td><td>待填写</td></tr><tr><td>submit C,1</td><td>待填写</td><td>待填写</td><td>待填写</td><td>待填写</td></tr><tr><td>finish A</td><td>待填写</td><td>待填写</td><td>待填写</td><td>待填写</td></tr><tr><td>finish B</td><td>待填写</td><td>待填写</td><td>待填写</td><td>待填写</td></tr><tr><td>finish C</td><td>待填写</td><td>待填写</td><td>待填写</td><td>待填写</td></tr></tbody></table>
+<p>额外核对每行 active 与 waiting 无交集。解释 finish A 中“先释放、再准入、再快照”的中间状态，不要把临时 free 当最终 free。</p>
+<h2 id="h-3">3. 一次真实调试记录</h2>
+<p>最小失败输入 → 期望输出/异常 → 实际结果 → 首次产生偏差的位置 → 根因 → 修复 → 回归命令和结果。没有遇到 bug 时，刻意检查一个危险假设，例如历史字典别名，并记录反例；不要编造失败经历。</p>
+<h2 id="h-4">4. 自己的队首阻塞案例</h2>
+<p>给出与教材不同的容量、块大小和请求长度，逐步计算所需页数。展示小请求放得下却必须等待的那一行。讨论若允许越过队首可能怎样提高利用率，又可能怎样损害大请求公平性；无需修改 FIFO 契约。</p>
+<h2 id="h-5">5. 快照与输入保护证据</h2>
+<p>记录如何验证输入没有变化，以及修改第一条快照的 active/waiting 后其他快照不变。解释这里浅复制为什么足够，若值以后变成可变嵌套对象又会有什么区别。</p>
+<h2 id="h-6">6. 局限与结论</h2>
+<p>分别说明：固定长度预留与真实逐 token 增长的差别；页数账本与 Lab4 物理所有权的差别；事件顺序与时间度量的差别。结论应限定于 FIFO 准入和容量守恒，不能从本事件表推导 GPU 吞吐、TTFT、TPOT 或前缀缓存加速。</p>
       </article>
     </div>
 
@@ -56,7 +63,7 @@
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="../storage.js?v=608d22c915a6"></script>
+  <script src="../doc.js?v=8c695cbfe8d6"></script>
 </body>
 </html>

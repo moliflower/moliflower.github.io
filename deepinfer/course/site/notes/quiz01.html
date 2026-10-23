@@ -9,7 +9,7 @@
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=fe4449dc2f59">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -25,7 +25,7 @@
       <div class="eyebrow">小测 1</div>
       <h1>小测 1：GPU 模型、Roofline、Softmax 与索引</h1>
       <div class="doc-meta">
-        <span>纯阅读约 4 分钟 · 动手另计</span>
+        <span>浏览文字约 5 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../quizzes/quiz01.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -33,18 +33,21 @@
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
-        <a class="toc-level-2" href="#h-1">Q1（2 分）</a><a class="toc-level-2" href="#h-2">Q2（2 分）</a><a class="toc-level-2" href="#h-3">Q3（2 分）</a><a class="toc-level-2" href="#h-4">Q4（2 分）</a><a class="toc-level-2" href="#h-5">Q5（2 分）</a><a class="toc-level-3" href="#h-6">A1</a><a class="toc-level-3" href="#h-7">A2</a><a class="toc-level-3" href="#h-8">A3</a><a class="toc-level-3" href="#h-9">A4</a><a class="toc-level-3" href="#h-10">A5</a><a class="toc-level-2" href="#h-11">评分</a>
-      </aside>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 12 节</summary>
+        <nav aria-label="本页章节">
+        <a class="toc-level-2" href="#h-1">Q1（2 分）</a><a class="toc-level-2" href="#h-2">Q2（2 分）</a><a class="toc-level-2" href="#h-3">Q3（2 分）</a><a class="toc-level-2" href="#h-4">Q4（2 分）</a><a class="toc-level-2" href="#h-5">Q5（2 分）</a><a class="toc-level-3" href="#h-6">A1</a><a class="toc-level-3" href="#h-7">A2</a><a class="toc-level-3" href="#h-8">A3</a><a class="toc-level-3" href="#h-9">A4</a><a class="toc-level-3" href="#h-10">A5</a><a class="toc-level-2" href="#h-11">评分</a><a class="toc-level-2" href="#h-12">隔日迁移检查（不计分）</a>
+        </nav>
+      </details>
       <article class="doc-content">
         <blockquote><p><strong>时间</strong>：10 分钟  <br><strong>规则</strong>：闭卷，不看笔记，不用 AI。  <br><strong>目的</strong>：检查你是否真的理解了 Week 1–2 的核心数字，而不是只会跑测试。</p></blockquote>
+<p>先完成L1/L2的核心访存、L3第8节和Lab0/1再闭卷作答。Q1对照L2地址分桶；Q2对照L1两条时间下界；Q3对照L3读写账本；Q4对照L1尾部；Q5对照起步2/预备2的副本。每题分值仍为2分，合计10分；下面的复习变式不新增评分。</p>
 <hr>
 <h2 id="h-1">Q1（2 分）</h2>
 <p>一个 warp 的 32 个 thread 读取 32 个连续的 <code>int32</code>，起始地址是 word 16（不是 0）。 本题采用 Lab0 的简化模型：以 128 字节（32 个 word）的 line 为一次统计单位。触及几条 line？如果改用 32B sector 统计，又触及几个？这里不把 line 计数称为真实 GPU 的 transaction 数。</p>
 <h2 id="h-2">Q2（2 分）</h2>
 <p><code>vector_add</code> 处理 <code>n = 1,000,000</code> 个 float32：</p>
-<ul><li>搬多少字节？</li><li>做多少 FLOPs？</li><li>如果带宽 500GB/s、算力 10TFLOP/s，它是 memory-bound 还是 compute-bound？预测时间是多少？</li></ul>
+<ul><li>搬多少字节？</li><li>做多少 FLOPs？</li><li>如果带宽 500GB/s、算力 10TFLOP/s，在给定模型中哪条限制主导？时间下界是多少？不能将它直接称为实测时间。</li></ul>
 <h2 id="h-3">Q3（2 分）</h2>
 <p>一个 4096 维 float32 的 softmax：</p>
 <ul><li>3-pass 搬多少字节？</li><li>2-pass 搬多少字节？</li><li>采用 Lab1 的 activation-only 口径，分别为 <code>16n</code> 与 <code>12n</code> 字节；在 2TB/s 带宽下，两者的带宽时间下界差多少？这能直接当实测提速吗？</li></ul>
@@ -72,6 +75,9 @@
 <hr>
 <h2 id="h-11">评分</h2>
 <ul><li>8–10 分：Week1–2 核心已掌握，可以继续下一阶段。</li><li>5–7 分：回看 Lecture 2/3 的对应小节，再做一遍 Lab。</li><li>0–4 分：不要赶进度；先把 Lab 0/1 的 checkoff 问题讲一遍。</li></ul>
+<h2 id="h-12">隔日迁移检查（不计分）</h2>
+<p>错题复习后，不照抄相同数字：Q1把起始word改为1；Q2只将字节减半；Q3把n改为1024；Q4改n=9；Q5改为二维列表只复制外层。先写改变了哪个假设，再重新推导。能解释新例子，才说明复习不只是在记答案。</p>
+<details class="study-hint"><summary>变式锚点</summary><p>word1–32为2 lines、5 sectors。Q2只改字节模型后memory下界12µs，compute仍0.1µs；这不是保持相同算法不变时可以随意承诺的流量减半。n=1024时三遍16384B、两遍12288B。n=9的最后组只有tid0有效。二维列表切片只复制外层，内部行仍共享。</p></details>
       </article>
     </div>
 
@@ -80,7 +86,7 @@
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="../storage.js?v=608d22c915a6"></script>
+  <script src="../doc.js?v=8c695cbfe8d6"></script>
 </body>
 </html>

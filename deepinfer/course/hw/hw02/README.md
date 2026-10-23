@@ -1,10 +1,12 @@
 # Homework2：Attention IO、分页和共享预算
 
-> **先修**：Lab2/3、HW1、[L5 Attention](../../lectures/lec05.md)、[L6 流量分析](../../lectures/lec06.md)、[L7 KV cache](../../lectures/lec07.md)。  
+> **先修**：Lab2/3、HW1、[L5 Attention](../../lectures/lec05.md)、[L6 流量分析](../../lectures/lec06.md)、[L7 KV cache](../../lectures/lec07.md)、[L8 量化](../../lectures/lec08.md)。L7/L8 完成后统一做 HW1/2。
 > **投入**：5–7 小时。必做 Q1–Q11 与三个分析题。  
 > **交付**：`hw02.py`、基于 [REPORT_TEMPLATE.md](REPORT_TEMPLATE.md) 的 IO 箭头图、分页表与分析笔记。
 
-## 0. 文件与依赖
+## 0. 先分模型，再安排依赖
+
+所有命令从**课程根目录 `deepinfer/`** 执行，也就是包含 `course/` 的目录；个人主页源码为 `_courses/deepinfer/`。这份作业的三条线是：数学工作量与 IO → KV 有效容量 → 分页与共享分配。不要用容量数字替代流量数字，也不要从理想 FLOPs 自动推断实际设备时间。
 
 框架为 `hw02.py`，测试为 `test_hw02.py`，参考为 `hw02_solution.py`。实现依赖为 Q1/Q2→Q3；Q5→Q6/Q10；Q7→Q8；Q5/Q7→Q9；Q9→Q11。Q4 输入独立给出的 AI，所以可以单独测试。复用前题，避免多处维护同一个公式。
 
@@ -34,11 +36,15 @@ python3 course/tools/grade.py hw02 --question q1 --hint 1
 
 ## 1. Q1–Q4：从数据流推导 bound
 
-### Q1：attention_flops
+### Q1：attention_flops——先画配对网格
+
+先选 sq=2、sk=5 的矩形 full，画 2 行 5 列得到 10 对；再选 s=3 的 causal 三角形，逐行 1+2+3=6 对。对矩形输入不能直接套等长 causal 公式，本接口会拒绝。这一层先不掺入字节数。
 
 接口支持矩形 `(sq,sk)`；full 配对数 sq×sk，causal 要求 sq=sk，配对数 s(s+1)/2；每配对 4d FLOPs，再乘 batch 和 heads。Q1 返回整数。s=3,d=2,b=h=1 时 causal=48。
 
-### Q2：attention_bytes
+### Q2：attention_bytes——把每次读写列成账本
+
+不要从“有两张中间矩阵”猜一个系数。S 生成时写一次、softmax 时读一次；P 生成时写一次、PV 时读一次，因此总共是四次中间矩阵流量。容量只数占多少空间，流量数每次访问搬多少字节，两者不能互换。
 
 在纸上画 `Q,K → S → P` 与 `P,V → O`。本题各张量按同一种 w 字节 dtype：Q/K/V 读一次、O 写一次，基础元素数 `b*h*(2sq+2sk)*d`；materialized=True 时加 S 写/读和 P 写/读，共 `4*b*h*sq*sk`，最后乘 w。
 
@@ -46,23 +52,41 @@ False 为输入各读一次的理想下界。真实 tiled attention 的 K/V 可�
 
 例子 b=1,h=8,sq=sk=128,d=64,w=2：True=1572864B，False=524288B。要求书面列出每次读取/写入，而不仅调用 Lab2 函数得到数字。
 
-### Q3：attention_ai
+### Q3：attention_ai——让同一组参数走过两个模型
+
+先单独保存 Q1 的 FLOPs 和 Q2 的 bytes，确认 flags、dtype、shape 都传递一致，再相除。否则很容易把 full 工作量与另一组流量拼在一起。零分母必须报错，不返回一个看似方便的零。
 
 复用 Q1/Q2 返回 FLOPs/Bytes，字节数为 0 时抛 `ValueError`。上例 full 的 AI 分别约 21.333 与 64 FLOP/B。causal 的有效工作模型要同时说明你是否仍保留了满矩阵的物化流量。
 
-### Q4：bound
+### Q4：bound——比较之前先统一单位
+
+例如 peak=100 TFLOP/s、bandwidth=1000 GB/s，先转成 1e14 FLOP/s 与 1e12 B/s，拐点为 100 FLOP/B，而不是 0.1。AI=64 在带宽侧，AI=200 在计算侧，AI=100 同时触及两条限制。
 
 输入 ai、peak_tflops、bandwidth_gbps，拐点是 `peak*1e12/(bandwidth*1e9)`；ai>=ridge 返回 compute，否则 memory。等号时两条限制同时达到，本接口约定返回 compute。与 HW1 的平局标签不同不表示物理结论矛盾。
 
 **Checkpoint A**：四题通过；能指出模型中哪些项会随 s 二次增长。
 
-## 2. Q5–Q6：有效 KV 容量与增长
+## 2. Q5–Q6：有效容量与增长不能互换
+
+先完成 Q5 的一 token 基准，再把 Q6 的新增数量代入同一个函数。假如现有 1000 token，再增加 100，增长只按 100 计算；总量要按 1100 计算。不要在 growth 函数中偷偷假定原长度，也不要把当前 decode 读取历史 KV 的流量当作新增存储。
+
 
 Q5 `kv_cache_bytes` 的参数与 HW1 相同，返回 `2*L*Hkv*D*S*B*w`。Q6 `kv_cache_growth` 返回每条序列新增 new_tokens 的增量：复用 Q5，以 new_tokens 代 S。
 
 L=32,Hkv=8,D=128,w=2 时每 token=131072B；B=1，新增 100 token 增长 13107200B=12.5MiB。这里是存储增量；decode 本步读取已有 KV 的总量通常远大于此增量。
 
-## 3. Q7–Q9：页数、尾页浪费与分配容量
+## 3. Q7–Q9：从余数到分配容量
+
+先做一张边界表，避免直接抄公式：
+
+| 长度（page=16） | 满页外是否有余数 | 页数 | 槽位 | 浪费 |
+| :--- | :--- | :--- | :--- | :--- |
+| 0 | 无 | 0 | 0 | 0 |
+| 1 | 有 | 1 | 16 | 15 |
+| 16 | 无 | 1 | 16 | 0 |
+| 17 | 有 | 2 | 32 | 15 |
+
+Q7 返回页数，Q8 返回槽位数，Q9 返回字节。把每一步的单位写在变量旁边，可避免乘两次 page_size 或忘乘每槽字节。
 
 Q7 `num_pages(seq_len,page_size)` 返回向上取整页数，使用整数运算；seq_len=0 返回 0。Q8 `page_waste` 返回分配 slot 数减有效 token 数。Q9 `paged_kv_bytes` 将 Q7 的分配 slot 数代入 Q5；每条序列独立分页。
 
@@ -70,15 +94,30 @@ Q7 `num_pages(seq_len,page_size)` 返回向上取整页数，使用整数运算�
 
 边界自测：S=0、S=page、S=page+1；page=0 应抛异常。若 sequence 长度不同，分别向上取整后求和，不能先合并总长度再分配。
 
-## 4. Q10：前缀共享省了哪几份副本
+## 4. Q10：先数副本，再算节省
+
+请画出一份已经保留的前缀，再画出三个新请求。如果不复用，要额外复制三份；复用后这三份不再需要，原来的那份仍在。这个图决定公式中的 batch 是新消费者数，不是包含原所有者的总请求数。
 
 `prefix_cache_savings(...,prefix_len,batch=1,...)` 的 batch 特指**新消费者数**：已有一份相同前缀被保留，batch 条新请求避免再复制 batch 份。结果等于 Q5 中 S=prefix_len、B=batch 的有效容量。
 
 P=512，其他参数同上，一份=64MiB；3 个新消费者避免 192MiB 额外副本。如果“总共三个请求从三份压成一份”，省的是 128MiB。必须先确定基线。这里按 token 理想共享；整页共享时 P 应先向下取整到完整页。
 
+对照第 5 周 HW5：那里是当前 n 条请求内部从 n 份变成 1 份，节省 n−1 份。两个函数都能正确，前提是写清不同基线；不要用相同 batch 名字猜同一个物理场景。
+
 **Checkpoint B**：Q5–Q10 通过；能解释有效容量与分配容量。
 
-## 5. Q11：变长批次 — 独立迁移
+## 5. Q11：变长批次——把每条尾页保留下来
+
+先填写三行独立账本：
+
+| 长度 | page=16 页数 | 已分配槽 | 浪费槽 | 每槽 4 B 的字节 |
+| :--- | :--- | :--- | :--- | :--- |
+| 1 | 1 | 16 | 15 | 64 |
+| 16 | 1 | 16 | 0 | 64 |
+| 17 | 2 | 32 | 15 | 128 |
+| 合计 | 4 | 64 | 30 | 256 |
+
+错误合并法得到 3 页、48 槽、192 B，恰好多丢掉了一条独立尾页。结果看似节省内存，实际没有遵守布局契约。
 
 实现 `paged_batch_bytes(seq_lens,page_size,num_layers,num_kv_heads,head_dim,bytes_per_elem=2)`。输入是各请求的有效长度列表；每条请求独立分配页，不允许共享尾页。复用 Q9，返回所有请求合计的分配字节。保持 `seq_lens` 不变，空列表返回 0。即使没有请求，page_size 和模型参数仍须满足前述契约。
 
@@ -101,7 +140,18 @@ W1 full FLOPs 为 33554432、34359738368。s=4096 时基础 Q/K/V/O=16777216B，
 
 </details>
 
-## 7. 验收与选做
+## 7. 失败后沿哪条路径定位
+
+| 现象 | 先看哪层 | 复现方式 |
+| :--- | :--- | :--- |
+| attention bytes 少一大项 | 读写账本 | 分列 S/P 各读一次写一次 |
+| AI 与预期差一倍 | flags 与 dtype | 分别输出 FLOPs 和 bytes |
+| 增长比预期大 | 总量/增量混淆 | 原长 1000、新增 100 |
+| 页边界多一页 | 余数为 0 的处理 | 长度恰为 page |
+| 变长合计偏小 | 是否合并后取整 | `[1,16,17]` |
+| 共享少或多一份 | 原有副本基线 | 现存 1 份、3 个新消费者 |
+
+## 8. 验收与选做
 
 ```bash
 python3 course/tools/grade.py hw02

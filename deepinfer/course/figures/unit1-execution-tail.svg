@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="466" viewBox="0 0 620 466" role="img" aria-labelledby="title desc">
+<title id="title">五个元素与两个四线程组</title>
+<desc id="desc">第一组线程0至3对应元素0至3；第二组线程0对应元素4，线程1至3对应不存在的元素5至7，必须在读写前跳过。</desc>
+<rect width="620" height="466" rx="20" fill="#f3f6fb"/>
+<g font-family="sans-serif" fill="#18304b" font-size="22">
+<text x="28" y="40" font-size="26" font-weight="700">分工与边界：n = 5，block = 4</text>
+<text x="28" y="82">i = bid × block + tid</text>
+<rect x="28" y="108" width="564" height="128" rx="12" fill="#deecfb"/>
+<text x="44" y="140" font-weight="700">bid = 0：组起点 0</text>
+<text x="52" y="179">tid 0</text><text x="190" y="179">tid 1</text><text x="328" y="179">tid 2</text><text x="466" y="179">tid 3</text>
+<text x="52" y="215">i = 0</text><text x="190" y="215">i = 1</text><text x="328" y="215">i = 2</text><text x="466" y="215">i = 3</text>
+<rect x="28" y="252" width="564" height="128" rx="12" fill="#e5eaf0"/>
+<rect x="40" y="294" width="126" height="74" rx="8" fill="#bfe8d8"/>
+<text x="44" y="284" font-weight="700">bid = 1：组起点 4</text>
+<text x="52" y="322">tid 0</text><text x="190" y="322">tid 1</text><text x="328" y="322">tid 2</text><text x="466" y="322">tid 3</text>
+<text x="52" y="358">i = 4</text><text x="190" y="358">i = 5</text><text x="328" y="358">i = 6</text><text x="466" y="358">i = 7</text>
+<text x="40" y="416" fill="#146346">绿色：i &lt; n，执行读写</text>
+<text x="40" y="448" fill="#4c5c6f">灰色：不存在的输入，不是零值输入</text>
+</g></svg>

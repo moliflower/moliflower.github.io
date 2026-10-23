@@ -9,7 +9,7 @@
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=fe4449dc2f59">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
@@ -25,7 +25,7 @@
       <div class="eyebrow">Phase2 报告</div>
       <h1>Project2 Phase2 报告模板</h1>
       <div class="doc-meta">
-        <span>纯阅读约 1 分钟 · 动手另计</span>
+        <span>浏览文字约 2 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../projects/project2_scheduler/report_template.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -33,24 +33,28 @@
     </div>
 
     <div class="doc-layout">
-      <aside class="doc-toc">
-        <h3>本页目录</h3>
-        <a class="toc-level-2" href="#h-1">1. 先写预测</a><a class="toc-level-2" href="#h-2">2. 手算与实际快照</a><a class="toc-level-2" href="#h-3">3. 一次真实调试</a><a class="toc-level-2" href="#h-4">4. 实验</a><a class="toc-level-2" href="#h-5">5. 反例与局限</a><a class="toc-level-2" href="#h-6">6. 口头验收</a>
-      </aside>
+      <details class="doc-toc" id="doc-toc" open>
+        <summary>本页目录 · 6 节</summary>
+        <nav aria-label="本页章节">
+        <a class="toc-level-2" href="#h-1">1. 先预测，不先运行参考解</a><a class="toc-level-2" href="#h-2">2. 六个实现检查点</a><a class="toc-level-2" href="#h-3">3. 完整A/B/C轨迹和守恒</a><a class="toc-level-2" href="#h-4">4. 一次调试或反例设计</a><a class="toc-level-2" href="#h-5">5. 18组实验与单变量解释</a><a class="toc-level-2" href="#h-6">6. 架构边界与口头验收</a>
+        </nav>
+      </details>
       <article class="doc-content">
-        <p>姓名或自用标记： 日期、Python 版本、系统：</p>
-<h2 id="h-1">1. 先写预测</h2>
-<p>在看参考解之前，记录 max_active=1/2 与 chunk=1/2/4 对长短混合请求的影响。哪些是猜测，哪些由固定 tick 假设保证？</p>
-<h2 id="h-2">2. 手算与实际快照</h2>
-<p>粘贴 README 的 A/B/C 案例实际轨迹，核对每轮预算、首输出、结束和补位时间。解释总工作量为何是 prompt+output-1。</p>
-<h2 id="h-3">3. 一次真实调试</h2>
-<p>输入、预期、实际、最小复现、原因、修复、回归测试。若首次通过，也请构造并解释能击穿错误实现的反例，不编造调试经历。</p>
-<h2 id="h-4">4. 实验</h2>
-<p>运行命令、原始 18 行 CSV 的保存位置。选两组只改变一个参数的配置，对比 TTFT、输出吞吐和请求 goodput。明确所有时间单位为 tick；窗口含空闲；TPOT 单输出排除。</p>
-<h2 id="h-5">5. 反例与局限</h2>
-<p>单输出、同时到达、十亿 tick 的空闲、快照别名分别如何检验？为何 TPOT 恒为 1 不能证明真实 GPU 上 chunk size 没影响？尚未接入的 KV 容量、采样、抢占与设备执行会改变什么？</p>
-<h2 id="h-6">6. 口头验收</h2>
-<p>用自己的新输入讲解一轮；指出准入、策略、执行、指标各自负责什么。不要用网页完成率代替测试或解释。</p>
+        <p>姓名或自用标记： 日期、Python版本、系统： 自己的代码位置：</p>
+<h2 id="h-1">1. 先预测，不先运行参考解</h2>
+<p>填写两个只改一个变量的比较：固定负载、budget、max_active，只改chunk；或固定负载、budget、chunk，只改max_active。写出预计谁的首输出更早、依据与可能推翻预测的条件。把“由固定tick保证TPOT=1”和“预计TTFT改善”分开。</p>
+<h2 id="h-2">2. 六个实现检查点</h2>
+<table><thead><tr><th>台阶</th><th>自己的运行输入/命令</th><th>预期</th><th>实际</th><th>是否能解释</th></tr></thead><tbody><tr><td>A 空输入及参数验证</td><td>待填</td><td>合法为空；非法仍报错</td><td>待填</td><td>待填</td></tr><tr><td>B 单请求单输出</td><td>待填</td><td>首输出在1，立即完成</td><td>待填</td><td>待填</td></tr><tr><td>C 长prompt再长输出</td><td>待填</td><td>[2,3,4]，工作量5</td><td>待填</td><td>待填</td></tr><tr><td>D 等待者下轮补位</td><td>待填</td><td>A=[1]，B=[2]</td><td>待填</td><td>待填</td></tr><tr><td>E 同到达与十亿tick空闲</td><td>待填</td><td>只记录4个有效轮</td><td>待填</td><td>待填</td></tr><tr><td>F 历史快照隔离</td><td>待填</td><td>改第0张不污染以后</td><td>待填</td><td>待填</td></tr></tbody></table>
+<h2 id="h-3">3. 完整A/B/C轨迹和守恒</h2>
+<p>粘贴README基准的实际四轮轨迹，逐列核对准入、计划、输出、完成、active和waiting。解释为什么B在1→2完成，C却要等2→3才能执行。列出每轮预算消耗、总prompt工作、总decode工作、总输出数。用自己的话推导prompt+output−1，而不是只引用公式。</p>
+<h2 id="h-4">4. 一次调试或反例设计</h2>
+<p>原始输入： 预期与实际： 第一张不同的快照： 缩小后的最小反例： 原因、修复、回归测试：</p>
+<p>若首次通过，诚实写“未出现此类失败”，再设计一个能击穿错误实现的反例；不编造调试过程。至少覆盖单输出、FIFO、空闲跳跃、快照别名。</p>
+<h2 id="h-5">5. 18组实验与单变量解释</h2>
+<p>命令及自己的原始CSV保存位置： 结果中的单位： 观察窗口起止及是否包含空闲：</p>
+<p>选两行只改变一个参数，抄录原始TTFT、TPOT、吞吐和goodput。先写观察到什么，再写模型内的原因。补一条“不支持的结论”，例如不能由tick吞吐推出GPU加速比。解释单输出TPOT为何排除，而不是填0。</p>
+<h2 id="h-6">6. 架构边界与口头验收</h2>
+<p>用一条新输入逐轮解释准入→计划→执行→指标。画出未来KV预留、失败撤销、结束释放的位置，但明确现在尚未集成。说明为什么max_active不等于显存上限，为什么固定tick及预算覆盖decode会使TPOT恒为1。最后列出仍未实现的抢占、模型执行、校准成本和在线失败/未完成统计。网页完成率不替代测试与解释。</p>
       </article>
     </div>
 
@@ -59,7 +63,7 @@
     </nav>
   </main>
 
-  <script src="../storage.js"></script>
-  <script src="../doc.js"></script>
+  <script src="../storage.js?v=608d22c915a6"></script>
+  <script src="../doc.js?v=8c695cbfe8d6"></script>
 </body>
 </html>
