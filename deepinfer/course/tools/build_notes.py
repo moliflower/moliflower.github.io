@@ -412,9 +412,9 @@ def build_page(doc: dict, body: str, headings: list[tuple[int, str, str]]) -> st
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
-    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <a class="doc-back" href="../../../#/calendar">← 返回周历</a>
     <span class="doc-category">{html.escape(doc["category"])}</span>
-    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <a class="doc-back" href="../../../#/videos">视频</a>
     <span class="doc-brand">DeepInfer 101</span>
     <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
   </header>

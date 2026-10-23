@@ -9,6 +9,7 @@
 
   const C = window.COURSE;
   const storage = window.CourseStorage;
+  const courseBase = document.documentElement.getAttribute("data-course-base") || "";
   if (!C) throw new Error("data.js did not load");
 
   const $ = (sel, root = document) => root.querySelector(sel);
@@ -62,6 +63,14 @@
 
   function escapeAttr(value) {
     return escapeHtml(value).replaceAll("`", "&#96;");
+  }
+
+  function resolveCourseLinks(markup) {
+    if (!courseBase) return markup;
+    return markup.replace(/(href|src)="([^"]*)"/g, (match, attribute, url) => {
+      if (!url || /^(?:[a-z][a-z0-9+.-]*:|\/|#)/i.test(url)) return match;
+      return `${attribute}="${escapeAttr(courseBase)}${url}"`;
+    });
   }
 
   function getRoute() {
@@ -692,7 +701,7 @@ python course/tools/grade.py foundations --question q1 --hint 1
     });
 
     const content = $("#content");
-    if (content) content.innerHTML = page();
+    if (content) content.innerHTML = resolveCourseLinks(page());
     document.title = `${label} · DeepInfer 101`;
     wirePage();
     window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
