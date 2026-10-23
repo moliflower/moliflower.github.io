@@ -242,9 +242,9 @@
         <div class="card"><div class="card-kicker">项目 1 · 第 1–4 周</div><h3>Kernel Zoo</h3>
           <p>Vector add、reduction、softmax、RMSNorm、tiled matmul；正确性 + roofline + 报告。</p>
           <p><a href="notes/project1.html">打开项目 →</a></p></div>
-        <div class="card"><div class="card-kicker">项目 2 · Phase1 已发布</div><h3>Mini 推理引擎</h3>
-          <p>先完成 FIFO 准入、等待、释放与状态快照；逐 token 调度与模型执行后续发布。</p>
-          <p><a href="notes/project2.html">开始 Phase1 →</a></p></div>
+        <div class="card"><div class="card-kicker">项目 2 · Phase1/2 已发布</div><h3>Mini 推理引擎</h3>
+          <p>从 FIFO 生命周期到逐迭代调度、分块 prefill 与 18 组模拟实验；真实模型执行尚未接入。</p>
+          <p><a href="notes/project2.html">开始 Phase1 →</a> · <a href="notes/project2-scheduler.html">继续 Phase2 →</a></p></div>
         <div class="card"><div class="card-kicker">项目 3 · 待发布</div><h3>EPLB 模拟器</h3>
           <p>合成专家负载、greedy 重排、通信成本模型、imbalance 报告。</p>
           <p><a href="#/calendar">大纲 →</a></p></div>

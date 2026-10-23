@@ -38,7 +38,7 @@
         <a class="toc-level-2" href="#h-1">1. 把输入事件变成可观察的状态</a><a class="toc-level-2" href="#h-2">2. Q1：严格 FIFO 准入</a><a class="toc-level-2" href="#h-3">3. Q2：重放事件</a><a class="toc-level-2" href="#h-4">4. 完整追踪</a><a class="toc-level-2" href="#h-5">5. 测试、报告与出口</a>
       </aside>
       <article class="doc-content">
-        <p>本次仅发布 Phase1：有限容量下的 FIFO 准入、等待、结束和释放。约 3–4 小时。先修 Lab4、HW5；纯 Python，无模型权重或 GPU。后续阶段的逐 token 执行、continuous batching、chunked prefill、sampling 与 benchmark 尚未发布，不算本阶段通过条件。</p>
+        <p>本页是 Phase1：有限容量下的 FIFO 准入、等待、结束和释放。约 3–4 小时。先修 Lab4、HW5；纯 Python，无模型权重或 GPU。<a href="project2-scheduler.html">Phase2 逐迭代调度</a> 已单独发布，保持本阶段代码和通过条件不变。Sampling、真实设备 benchmark 与模型执行集成仍待后续发布。</p>
 <h2 id="h-1">1. 把输入事件变成可观察的状态</h2>
 <p>修改 <code>course/projects/project2/project2.py</code>。本阶段按已知请求长度预留整条请求的页数，不存真实 KV；Lab4 的物理 ID 与共享引用暂不接入。这样先验证请求生命周期，下阶段再逐 token 增长。</p>
 <p>始终维护：<code>sum(active.values()) + free_blocks == capacity</code>。active 是 ID→预留页数的字典，waiting 按提交顺序排列。请求不得同时出现在 active 和 waiting。</p>
@@ -60,12 +60,12 @@ python course/tools/grade.py project2 --question q1 --failfast
 python course/tools/grade.py project2 --question q2 --hint 1
 python course/tools/grade.py project2</code></pre>
 <p>复制 <a href="project2-report.html">报告模板</a> 写一页报告。交付代码、上表的实际快照、一次调试记录，以及一个自己设计的队首阻塞案例。阶段自评 50 分：Q1 10、Q2 20、守恒/快照解释 10、报告与反例 10，不并入 Unit1 分母。</p>
-<p>必须讲清：什么时候释放容量；为什么每条请求独立向上取整；为何历史快照要复制；为什么这里没有测到 TTFT/TPOT。后续发布从 L11/L12 与 Lab5 调度开始，不提前要求你完成未发布接口。</p>
+<p>必须讲清：什么时候释放容量；为什么每条请求独立向上取整；为何历史快照要复制；为什么这里没有测到 TTFT/TPOT。完成后按 <a href="lec11.html">L11</a> → <a href="lec12.html">L12</a> → <a href="lab05.html">Lab5</a> → <a href="project2-scheduler.html">Phase2</a> 继续；Phase2 暂不接入页池，不能把并发数当显存容量。</p>
       </article>
     </div>
 
     <nav class="doc-nav">
-      <a class="doc-nav-card" href="project1.html"><span>← 上一篇</span><strong>项目 1：Kernel Zoo</strong></a><span class="doc-nav-card disabled"><span>下一篇 →</span><strong>没有了</strong></span>
+      <a class="doc-nav-card" href="project1.html"><span>← 上一篇</span><strong>项目 1：Kernel Zoo</strong></a><a class="doc-nav-card" href="project2-scheduler.html"><span>下一篇 →</span><strong>Project2 Phase2：逐迭代调度</strong></a>
     </nav>
   </main>
 

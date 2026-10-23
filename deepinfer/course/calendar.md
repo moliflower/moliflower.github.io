@@ -65,7 +65,7 @@
 | Week | Lecture | Lab | Homework | Project | 本周产出 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **5** | [L9 共享块池](lectures/lec09.md) · [L10 前缀缓存](lectures/lec10.md) | [Lab4](labs/lab04/README.md) | [HW5](hw/hw05/README.md) | [Project2 Phase1](projects/project2/README.md) | 有限块池 + FIFO 请求轨迹 |
-| **6** | L11 Continuous batching · L12 Chunked prefill（待发布） | Lab 5: Scheduler（待发布） | HW 6: Scheduling（待发布） | P2 checkpoint 1 | 调度模拟器 |
+| **6** | [L11 Continuous batching](lectures/lec11.md) · [L12 Chunked prefill](lectures/lec12.md) | [Lab5](labs/lab05/README.md) | [HW6](hw/hw06/README.md) | [P2 Phase2](projects/project2_scheduler/README.md) | 调度模拟器 + 18 组实验 |
 | **7** | L13 Sampling · L14 Speculative decoding（待发布） | Lab 6: Spec decode（待发布） | HW 7: Sampling（待发布） | P2 checkpoint 2 | 采样 + 投机解码 |
 | **8** | L15 Engine architecture · L16 Async/CUDA Graph（待发布） | Lab 7: Engine trace（待发布） | HW 8: Engine（待发布） | **P2 due** | Mini Engine + benchmark |
 

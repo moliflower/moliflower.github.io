@@ -9,7 +9,7 @@
 CS61A 风格的 15 周课程：
 
 - Lecture + Lab + Homework + Project + Checkoff
-- 当前入口：Python 起步 → 调试预备 → 第一讲核心 → Lab0；Unit1 与 Unit2 第 5 周已发布
+- 当前入口：Python 起步 → 调试预备 → 第一讲核心 → Lab0；Unit1 与 Unit2 第 5–6 周已发布
 - 不需要 GPU：核心轨道是纯 Python
 - 本地 autograder：`python course/tools/grade.py`
 - 本地课程网站：[`course/site/index.html`](course/site/index.html)

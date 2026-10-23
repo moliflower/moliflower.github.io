@@ -12,8 +12,8 @@ window.COURSE = {
     term: "2026 秋 · 自学节奏",
     startDate: "2026-10-26",
     description:
-      "从第一行 Python 开始，经过调试、算子与实验逐步理解推理系统。Unit1 与 Unit2 第 5 周已发布，其余周次按批次完善。",
-    release: "起步 + Unit1 + Unit2 第 5 周已发布",
+      "从第一行 Python 开始，经过调试、算子与实验逐步理解推理系统。Unit1 与 Unit2 第 5–6 周已发布，其余周次按批次完善。",
+    release: "起步 + Unit1 + Unit2 第 5–6 周已发布",
     tagline: "先写对，再写快，再讲清楚。",
     repo: "https://github.com/deepseek-ai/DeepInfer",
   },
@@ -33,6 +33,12 @@ window.COURSE = {
   ],
 
   announcements: [
+    {
+      date: "2026-10-24",
+      title: "第 6 周发布：逐迭代调度与延迟指标",
+      body: "新增 L11/L12、Lab5、HW6、Project2 Phase2 与 18 组可复现实验。区分虚拟 tick 与真实 GPU 时延；保留第 5 周代码和独立评分。",
+      link: "notes/lec11.html",
+    },
     {
       date: "2026-10-23",
       title: "第 5 周发布：共享块池 → Mini Engine Phase1",
@@ -180,11 +186,11 @@ window.COURSE = {
       dates: "11月30日 – 12月6日",
       theme: "Batching 与调度",
       items: [
-        { type: "lecture", label: "讲义 11", title: "Continuous batching", link: null, key: null, soon: true },
-        { type: "lecture", label: "讲义 12", title: "Chunked prefill", link: null, key: null, soon: true },
-        { type: "lab", label: "实验 5", title: "调度器模拟", link: null, key: null, soon: true },
-        { type: "homework", label: "作业 6", title: "TTFT/TPOT 权衡", link: null, key: null, soon: true },
-        { type: "project", label: "项目 2", title: "Checkpoint 1", link: null, key: null, soon: true },
+        { type: "lecture", label: "讲义 11", title: "Continuous batching", link: "notes/lec11.html", key: "w6-l11" },
+        { type: "lecture", label: "讲义 12", title: "Chunked prefill 与延迟指标", link: "notes/lec12.html", key: "w6-l12" },
+        { type: "lab", label: "实验 5", title: "Decode 优先与分块预填充", link: "notes/lab05.html", key: "w6-lab5" },
+        { type: "homework", label: "作业 6", title: "TTFT、TPOT 与 SLO goodput", link: "notes/hw06.html", key: "w6-hw6" },
+        { type: "project", label: "项目 2", title: "Phase2：逐迭代调度与实验", link: "notes/project2-scheduler.html", key: "w6-p2phase2" },
       ],
       right: [
         { type: "reading", title: "Anyscale：continuous batching", link: "https://www.anyscale.com/blog/continuous-batching-llm-inference" },
@@ -338,7 +344,7 @@ window.COURSE = {
     {
       title: "你的入门起点",
       html: `<p>完全零基础先做<a href="notes/foundations.html">Python 起步</a>；会函数、循环、列表之后再做<a href="notes/prep.html">调试预备</a>。先修复小程序，再做第一讲与 Lab0，不要求先学会 C++ 或安装 CUDA。</p>
-        <p><strong>分层：</strong>核心必修是 Python 手算、实现、测试；CUDA/TileLang 与 profiling 等补过 C++ 后再做。Unit1 与 Unit2 第 5 周可运行；第 6–15 周待发布。</p>`,
+        <p><strong>分层：</strong>核心必修是 Python 手算、实现、测试；CUDA/TileLang 与 profiling 等补过 C++ 后再做。Unit1 与 Unit2 第 5–6 周可运行；第 7–15 周待发布。</p>`,
     },
     {
       title: "课程描述",
@@ -938,11 +944,26 @@ git commit -m "lab00: vector add + coalescing"</code></pre>
     ]
   },
   {
+    "id": "engine-scheduling",
+    "num": "Unit2 · 第 6 周",
+    "title": "逐迭代调度与延迟口径",
+    "intro": "Decode 优先、分块 prefill、首 token 时间和可重复的请求轨迹。",
+    "understanding": "把准入、策略、执行、指标分开；模型 tick 不是 GPU 毫秒。",
+    "keyPoints": ["先修：Phase1、L11/L12。", "产物：Lab5、HW6、Phase2 与 18 组实验。", "独立批次评分；尚未集成真实 KV 或模型执行。"],
+    "links": [
+      {"label": "L11 Continuous batching", "url": "notes/lec11.html"},
+      {"label": "L12 Chunked prefill", "url": "notes/lec12.html"},
+      {"label": "Lab5", "url": "notes/lab05.html"},
+      {"label": "HW6", "url": "notes/hw06.html"},
+      {"label": "Project2 Phase2", "url": "notes/project2-scheduler.html"}
+    ]
+  },
+  {
     "id": "future",
     "num": "后续",
-    "title": "调度、通信与负载均衡（待发布）",
-    "intro": "第 6–15 周是路线规划，尚没有完整教材、starter 与测试。",
-    "understanding": "完成第 5 周后可补 Linux/C++、数据结构、并发与网络。完整 Mini Engine 与 EPLB 项目仍待后续发布。",
+    "title": "采样、通信与负载均衡（待发布）",
+    "intro": "第 7–15 周是路线规划，尚没有完整教材、starter 与测试。",
+    "understanding": "完成第 6 周后可补 Linux/C++、数据结构、并发与网络。完整 Mini Engine 与 EPLB 项目仍待后续发布。",
     "keyPoints": [
       "未发布内容不计入当前成绩或完成率。"
     ],
