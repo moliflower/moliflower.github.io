@@ -18,6 +18,7 @@ This batch adds L11/L12, Lab5, HW6, and Project2 Phase2 (the Week 6 checkpoint).
 - Both entry points render all 11 routes; 45 generated notes have valid local targets and progress keys. Storage regression checks pass.
 - Desktop and 390-pixel mobile viewport previews were checked; the mobile document client width was 375 pixels with no document overflow. Phase2 returns to the short calendar URL and new tasks appear in the mobile practice center; no browser console errors were observed.
 - The full local Jekyll build is unavailable because the Docker daemon is not running. The deployment workflow performs the production build and now also runs all reference solutions, storage tests, and Week 6 integration checks before publication.
+- The first deployment attempt encountered an upstream runner change: `ubuntu-latest` selected Ubuntu 26.04, which has no Ruby 3.3.5 binary. The deploy job is now pinned to `ubuntu-24.04`, matching the previous successful production build without changing the site's Ruby or gem versions.
 
 ## Reproduce from the repository root
 
