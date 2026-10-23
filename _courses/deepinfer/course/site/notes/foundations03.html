@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>起步 3：用状态表示已经完成的工作 · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <span class="doc-category">Python 起步</span>
+    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">起步 3</div>
+      <h1>起步 3：用状态表示已经完成的工作</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 4 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../foundations/03-composition.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      <div class="doc-actions"><button id="doc-done" class="doc-done" type="button" data-key="foundations-q4">标记完成</button><span id="doc-done-hint" class="doc-hint"></span></div>
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">1. 先观察一段完整的累计程序</a><a class="toc-level-2" href="#h-2">2. 从一个总数迁移到全部边界</a><a class="toc-level-2" href="#h-3">3. 独立实现 Q4</a><a class="toc-level-2" href="#h-4">4. 测试要能推翻一个错误假设</a><a class="toc-level-2" href="#h-5">5. 离开起步单元前</a>
+      </aside>
+      <article class="doc-content">
+        <p><strong>先修：</strong>前三节，能写遍历列表的循环。<strong>目标：</strong>独立实现 Q4，解释每轮的累计值，写出一个反例测试。</p>
+<h2 id="h-1">1. 先观察一段完整的累计程序</h2>
+<pre><code class="language-python">total = 0
+for length in [2, 0, 3]:
+    total = total + length
+print(total)</code></pre>
+<p>循环结束时得到 5。<code>total</code> 表示到目前为止处理过的长度之和。每一轮之前都成立的这种描述，叫循环不变式。它不是说变量的数值不变，而是说变量所代表的含义一直成立。</p>
+<p>如果把 <code>total=0</code> 放进循环，每轮都会忘掉先前的累计值。如果放到函数外面并不断修改全局变量，下一次调用又可能带上上一次的结果。要让每次函数调用独立，状态应在函数内部、循环外部初始化。</p>
+<h2 id="h-2">2. 从一个总数迁移到全部边界</h2>
+<p>现在把三段数据接在一起，长度为 <code>[2, 0, 3]</code>。第一段占位置 0、1；第二段为空；第三段占位置 2、3、4。我们需要记录 <code>[0, 2, 2, 5]</code>：每段起点，加最后一段的终点。</p>
+<table><thead><tr><th>已处理段数</th><th>本段长度</th><th>累计长度</th><th>已记录边界</th></tr></thead><tbody><tr><td>0</td><td>尚未开始</td><td>0</td><td><code>[0]</code></td></tr><tr><td>1</td><td>2</td><td>2</td><td><code>[0, 2]</code></td></tr><tr><td>2</td><td>0</td><td>2</td><td><code>[0, 2, 2]</code></td></tr><tr><td>3</td><td>3</td><td>5</td><td><code>[0, 2, 2, 5]</code></td></tr></tbody></table>
+<p>第 <code>i</code> 段位于 <code>[offsets[i], offsets[i+1])</code>，方括号表示包含起点，圆括号表示不包含终点。两端相等表示空段，合法且不能丢失。段长度就是两个相邻边界的差。</p>
+<h2 id="h-3">3. 独立实现 Q4</h2>
+<p>这次不提供循环框架。先自己写一句不变式，然后决定初始化、循环更新、何时 <code>append</code>、何时 <code>return</code>。输入空列表时也有边界 0，所以输出是 <code>[0]</code>，不是 <code>[]</code>。</p>
+<pre><code class="language-bash">python course/tools/grade.py foundations --question q4 --unlock
+python course/tools/grade.py foundations --question q4 --failfast</code></pre>
+<p>长度为 <code>n</code> 的输入需要处理 <code>n</code> 项，输出 <code>n+1</code> 个边界；时间与输出空间都随 <code>n</code> 线性增长。这里的计数针对这段 Python 算法，不是 GPU 性能测量。</p>
+<h2 id="h-4">4. 测试要能推翻一个错误假设</h2>
+<p><code>assert actual == expected</code> 表示检查两个值相等；不相等时产生 <code>AssertionError</code>。在 <code>course/foundations/</code> 新建自己的 <code>check_offsets.py</code>，写入下面完整示例。<code>from ... import ...</code> 表示从同目录的 <code>foundations.py</code> 取出这个函数来调用：</p>
+<pre><code class="language-python">from foundations import prefix_offsets
+
+assert prefix_offsets([1, 2]) == [0, 1, 3]</code></pre>
+<p>从仓库根目录运行 <code>python course/foundations/check_offsets.py</code>。没有输出且正常结束表示这个断言通过；有 traceback 就从最后一行看起。</p>
+<p>先写期望，再运行代码。期望应来自手算或独立规则，不能直接把程序本次输出抄成期望。</p>
+<p>有人把最后的终点漏掉，得到 <code>[0, 1]</code>。有人遇到零长度就跳过，认为“不占空间就不需要记录”。为后者写一个最小反例，并解释除了最终总数以外，还要检查哪些东西。</p>
+<details class="study-hint"><summary>核对思路（尝试后再看）</summary><p>输入 <code>[0]</code> 应输出 <code>[0, 0]</code>。虽然总长度仍为 0，但它表示一段空数据，边界数量必须为 2。只检查最终总长度会漏掉这个错误。完整性质包括：第一项为 0，长度为输入长度加一，每个相邻差等于对应段长，最后一项等于所有段长之和。</p></details>
+<h2 id="h-5">5. 离开起步单元前</h2>
+<p>给自己 10 分钟，关闭参考解，换一个输入重新解释代码；再运行全单元测试。现在你已经具备做 <a href="prep.html">调试预备课</a> 的先修能力。那里会第一次出现二维列表；请把它理解为“每一项还是列表”，不必预先学完线性代数。</p>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <a class="doc-nav-card" href="foundations02.html"><span>← 上一篇</span><strong>起步 2：遍历列表，构造自己的输出</strong></a><span class="doc-nav-card disabled"><span>下一篇 →</span><strong>没有了</strong></span>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>

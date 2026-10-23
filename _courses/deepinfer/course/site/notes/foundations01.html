@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>起步 1：让边界条件决定分支 · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <span class="doc-category">Python 起步</span>
+    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">起步 1</div>
+      <h1>起步 1：让边界条件决定分支</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 3 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../foundations/01-control.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      <div class="doc-actions"><button id="doc-done" class="doc-done" type="button" data-key="foundations-q2">标记完成</button><span id="doc-done-hint" class="doc-hint"></span></div>
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">1. 条件产生 True 或 False</a><a class="toc-level-2" href="#h-2">2. 商与余数必须一起看</a><a class="toc-level-2" href="#h-3">3. 先填表，再做 Q2</a><a class="toc-level-2" href="#h-4">4. 怎么证明没有少分或多分？</a>
+      </aside>
+      <article class="doc-content">
+        <p><strong>先修：</strong>起步 0 的赋值、函数和返回值。<strong>目标：</strong>用条件和整数运算求最少分组数，通过 Q2。</p>
+<h2 id="h-1">1. 条件产生 True 或 False</h2>
+<p><code>7 &gt; 3</code> 得到 <code>True</code>，<code>7 == 3</code> 得到 <code>False</code>。<code>=</code> 赋值，<code>==</code> 比较，不能互换。下面是一个完整示例：</p>
+<pre><code class="language-python">def shipping_fee(items):
+    if items == 0:
+        return 0
+    else:
+        return 5</code></pre>
+<p>调用 <code>shipping_fee(0)</code> 返回 0，<code>shipping_fee(2)</code> 返回 5。<code>if</code> 后写条件，冒号后缩进的是条件成立时运行的代码；<code>else</code> 分支处理条件不成立的情况。执行 <code>return</code> 后就离开本次调用。</p>
+<p>先预测 <code>shipping_fee(-1)</code>。这个例子没有检查负数，所以仍然返回 5。程序只执行你写下的规则，不会理解“件数不应该为负”。课程练习提供了非法输入检查：<code>raise ValueError(...)</code> 表示输入不符合契约并结束正常执行。</p>
+<h2 id="h-2">2. 商与余数必须一起看</h2>
+<p>整数除法 <code>//</code> 给出向下取整的商，<code>%</code> 给出余数。本题的输入均非负，因此可以直接按小学除法理解：</p>
+<table><thead><tr><th>表达式</th><th>值</th><th>解释</th></tr></thead><tbody><tr><td><code>7 // 3</code></td><td>2</td><td>装满了两组</td></tr><tr><td><code>7 % 3</code></td><td>1</td><td>还剩一个</td></tr><tr><td><code>6 // 3</code></td><td>2</td><td>装满了两组</td></tr><tr><td><code>6 % 3</code></td><td>0</td><td>没有剩余</td></tr></tbody></table>
+<p>普通除法 <code>/</code> 会产生浮点结果。整数计数不必绕到浮点再转换，特别大的整数在转换时还可能失去精度。</p>
+<h2 id="h-3">3. 先填表，再做 Q2</h2>
+<p>每组能装 4 个元素。填出下表的“最少组数”，同时画出每组装了几个：</p>
+<table><thead><tr><th>元素数</th><th>满组数</th><th>剩余数</th><th>最少组数</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td>自己填写</td></tr><tr><td>1</td><td>0</td><td>1</td><td>自己填写</td></tr><tr><td>8</td><td>2</td><td>0</td><td>自己填写</td></tr><tr><td>9</td><td>2</td><td>1</td><td>自己填写</td></tr></tbody></table>
+<details class="study-hint"><summary>表格核对与常见错误</summary><p>组数依次为 0、1、2、3。一直写“商 + 1”会在 0 和 8 上多分一组；只写商会在 1 和 9 上少分一组。代码应根据余数是否为零选择分支。</p></details>
+<p>Q2 已经算好了 <code>full_groups</code> 与 <code>remainder</code>，你负责组织分支和返回值。不能用浮点除法或 <code>math.ceil</code>；练习的是如何从边界情况推导整数算法。</p>
+<pre><code class="language-bash">python course/tools/grade.py foundations --question q2 --unlock
+python course/tools/grade.py foundations --question q2 --failfast</code></pre>
+<h2 id="h-4">4. 怎么证明没有少分或多分？</h2>
+<p>设答案是 <code>g</code>，容量是 <code>b</code>，元素数是 <code>n</code>。它应满足 <code>g*b &gt;= n</code>：能装下所有元素。若 <code>g&gt;0</code>，还应满足 <code>(g-1)*b &lt; n</code>：少一组就装不下。两条一起才说明是“最少”。公开测试会检查这个性质，不仅检查几组固定答案。</p>
+<p>给错误程序“总是返回 <code>n</code> 组”找一个反例；它可能满足能装下，却不满足最少。这个思考会在 GPU 尾块和分页浪费中再次用到。下一节是 <a href="foundations02.html">列表与循环</a>。</p>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <a class="doc-nav-card" href="foundations00.html"><span>← 上一篇</span><strong>起步 0：让一个函数把结果交回来</strong></a><a class="doc-nav-card" href="foundations02.html"><span>下一篇 →</span><strong>起步 2：遍历列表，构造自己的输出</strong></a>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>

@@ -9,6 +9,7 @@ on:
       - "assets/**"
       - "_sass/**"
       - "_scripts/**"
+      - "_courses/**"
       - "**.bib"
       - "**.html"
       - "**.js"
@@ -38,6 +39,7 @@ on:
       - "assets/**"
       - "_sass/**"
       - "_scripts/**"
+      - "_courses/**"
       - "**.bib"
       - "**.html"
       - "**.js"
@@ -98,6 +100,15 @@ jobs:
         run: |
           npm install -g purgecss
           purgecss -c purgecss.config.js
+      - name: Copy standalone courses
+        run: |
+          python _courses/build_deepinfer.py
+          node _courses/tests/test_site.cjs _courses/deepinfer/course/site
+          mkdir -p _site/deepinfer
+          cp -a _courses/deepinfer/. _site/deepinfer/
+          test -s _site/deepinfer/index.html
+          test -s _site/deepinfer/course/site/index.html
+          test -s _site/deepinfer/deepinfer-101-course.zip
       - name: Deploy 🚀
         if: github.event_name != 'pull_request'
         uses: JamesIves/github-pages-deploy-action@v4

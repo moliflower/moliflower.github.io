@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>实验 3：KV Cache（连续 + Paged） · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <span class="doc-category">实验</span>
+    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">实验 3</div>
+      <h1>实验 3：KV Cache（连续 + Paged）</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 9 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../labs/lab03/README.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      <div class="doc-actions"><button id="doc-done" class="doc-done" type="button" data-key="w4-lab3">标记完成</button><span id="doc-done-hint" class="doc-hint"></span></div>
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">0. 文件与 Python 类速查</a><a class="toc-level-2" href="#h-2">1. Q1：连续缓存 append</a><a class="toc-level-2" href="#h-3">2. Q2：连续缓存 get</a><a class="toc-level-2" href="#h-4">3. 阅读给定基础设施：页表</a><a class="toc-level-2" href="#h-5">4. Q3：Paged append</a><a class="toc-level-2" href="#h-6">5. Q4：Paged gather（独立实现）</a><a class="toc-level-2" href="#h-7">6. 容量与真实实现的连接</a><a class="toc-level-2" href="#h-8">7. 验收与选做</a>
+      </aside>
+      <article class="doc-content">
+        <blockquote><p><strong>先修</strong>：预备 2 的副本语义、Lab2、<a href="lec07.html">L7 KV cache</a>；HW2 在本 Lab 之后。  <br><strong>投入</strong>：3–5 小时。必做 Q1–Q4；前缀共享为选做。  <br><strong>交付</strong>：<code>lab03.py</code>、逻辑→物理地址表、一次副本或跨页错误的调试记录。</p></blockquote>
+<h2 id="h-1">0. 文件与 Python 类速查</h2>
+<p><code>lab03.py</code> 已提供两个类的构造函数、长度、释放和统计方法；你实现四个 TODO。<code>test_lab03.py</code> 检查行为，参考文件为 <code>lab03_solution.py</code>。</p>
+<p>给定构造器要求 head_dim/block_size 为正整数；get 的 start/end 也必须是整数，均不接受bool，否则 <code>ValueError</code>。向量值保证是有限数值，不要求给 NaN/Inf 设计策略。</p>
+<p><code>cache=KVCache(2)</code> 创建一个对象并调用 <code>__init__</code>。<code>self.k</code> 是属于这个对象的 K 列表；<code>cache.append(k,v)</code> 将 cache 自动作为 self 传入。<code>len(cache)</code> 调用 <code>__len__</code>。两个 cache 实例应各有独立状态。</p>
+<pre><code class="language-python">class Counter:
+    def __init__(self):
+        self.value = 0
+    def add(self):
+        self.value += 1
+        return self.value
+
+a, b = Counter(), Counter()
+print(a.add(), a.add(), b.add())</code></pre>
+<p>先预测输出，然后运行这个完整示例。应为 <code>1 2 1</code>；self 不是所有对象共享的一份状态。</p>
+<p>每题流程：</p>
+<pre><code class="language-bash">python3 course/tools/grade.py lab03 --question q1 --unlock
+python3 course/tools/grade.py lab03 --question q1 --failfast
+python3 course/tools/grade.py lab03 --question q1 --hint 1</code></pre>
+<h2 id="h-2">1. Q1：连续缓存 append</h2>
+<p>实现 <code>KVCache.append(k,v) -&gt; position</code>。构造器给定 head_dim&gt;0，两个向量必须各有 head_dim 项；不满足抛 <code>ValueError</code>，且缓存状态不改变。保存 float 副本，返回追加前的长度。</p>
+<p>完整行为例子：</p>
+<pre><code class="language-text">cache = KVCache(2)
+append([1,2],[3,4]) → 0
+append([5,6],[7,8]) → 1
+len(cache) → 2</code></pre>
+<p><strong>状态不变式</strong>：<code>len(k_storage)==len(v_storage)</code>，每行长度都等于 head_dim。先检查再修改，以免错误输入留下半个 token。</p>
+<p><strong>指导性填空</strong>：先在纸上标出 <code>old_length = ____</code>、<code>检查两行长度</code>、<code>new_k/new_v = 浮点副本</code>、<code>写入两个storage</code>、<code>return ____</code>。函数的成功路径要保持长度同步；失败路径应在第一次写入之前结束。</p>
+<h2 id="h-3">2. Q2：连续缓存 get</h2>
+<p><code>get(start,end) -&gt; (K列表,V列表)</code>，区间 <code>[start,end)</code>。要求 <code>0&lt;=start&lt;=end&lt;=len(cache)</code>，否则 <code>ValueError</code>。空区间合法。外层和各行都返回副本。</p>
+<p>Q1 的例子中 <code>get(1,2)</code> 返回 <code>([[5,6]],[[7,8]])</code>。调用方把返回值第一格改为 99，再次 get 仍应得到 5。只复制外层不够，回顾预备 2。</p>
+<p><code>free</code> 已给出，调用后 <code>len==0</code>、<code>get(0,0)==([],[])</code>。Q1 的完整读写测试依赖 Q2，因此建议先写完这两个小方法，再运行两个题组。</p>
+<p><strong>Checkpoint A</strong>：连续布局测试通过；展示 append 输入副本和 get 输出副本各自防止什么错误。</p>
+<p><strong>修错练习</strong>：<code>return self.k[start:end], self.v[start:end]</code> 看起来已经做了切片，为什么调用方仍能修改缓存？用一个 token、一个维度构造最小反例，区分“外层列表副本”和“内层向量副本”，再修改实现。</p>
+<h2 id="h-4">3. 阅读给定基础设施：页表</h2>
+<p>Paged 版本的四个状态：</p>
+<table><thead><tr><th>属性</th><th>类型</th><th>作用</th></tr></thead><tbody><tr><td>blocks</td><td>字典</td><td>物理编号 → 页内容</td></tr><tr><td>block_table</td><td>列表</td><td>逻辑页号 → 物理编号</td></tr><tr><td>length</td><td>整数</td><td>有效 token 数</td></tr><tr><td>_next_block</td><td>整数</td><td>下次分配编号</td></tr></tbody></table>
+<p>本 Lab 分配器按递增编号分配，但 gather 必须查表，不能假设物理编号总等于逻辑编号。测试会重新映射物理编号。</p>
+<p>例如 block_size=2，table=<code>[9,2,7]</code>：</p>
+<table><thead><tr><th>token pos</th><th>logical=pos//2</th><th>offset=pos%2</th><th>physical=table[logical]</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td>9</td></tr><tr><td>1</td><td>0</td><td>1</td><td>9</td></tr><tr><td>2</td><td>1</td><td>0</td><td>2</td></tr><tr><td>3</td><td>1</td><td>1</td><td>2</td></tr><tr><td>4</td><td>2</td><td>0</td><td>7</td></tr></tbody></table>
+<h2 id="h-5">4. Q3：Paged append</h2>
+<p>实现 <code>PagedKVCache.append(k,v)</code>。本教学容器要求每次 k/v 等长，错配抛 <code>ValueError</code>；它没有构造时固定的 head_dim。输入为有限数值列表。</p>
+<p>步骤框架：</p>
+<pre><code class="language-text">检查当前 k/v 长度
+如果 length 位于新页起点:
+    新建物理页，将其编号追加到 block_table
+在最后一个物理页存入 k/v 的副本
+返回旧 length，并使 length 增加 1</code></pre>
+<p><strong>预测</strong>：block_size=4，先 append 四次，allocated_slots=4；第五次才分配第二页，allocated_slots=8，waste=3。最后一页未使用的 slot 不包含有效 token。</p>
+<p><code>free</code> 已提供：清 blocks、页表、length 与编号计数；释放后可从 position=0 重新使用。</p>
+<h2 id="h-6">5. Q4：Paged gather（独立实现）</h2>
+<p><code>get(start,end)</code> 的区间/副本契约与 Q2 相同。逐 token 计算逻辑页号和 offset，查 block_table，再访问 blocks。返回结果按逻辑 token 顺序排列。</p>
+<p>用上表 hand trace <code>get(1,4)</code>：读取物理页 9 的 offset1，然后物理页 2 的 offset0/1。共三个 token；不能一次切某个物理页代替跨页读取。</p>
+<details class="study-hint"><summary>排错提示</summary><p>若只在跨页时错，打印 pos、logical、physical、offset。若重编号测试错，检查是否直接用了 blocks[logical]。若修改返回值影响缓存，检查是否逐行复制。</p></details>
+<p><strong>Checkpoint B</strong>：Q3/Q4 和全量测试通过。通过的条件包含非连续物理页编号、尾页、空区间、释放后复用、复制语义。</p>
+<p><strong>独立迁移</strong>：把 page size 从4改为1和2，手算 <code>get(1,5)</code> 的访问路径，再运行全量测试。公开测试会对小缓存的所有合法 <code>[start,end)</code> 与独立列表结果比较，避免“只处理从0开始的读取”也能通过。</p>
+<h2 id="h-7">6. 容量与真实实现的连接</h2>
+<p><code>allocated_slots=len(block_table)*block_size</code>，<code>waste=allocated_slots-length</code>。10 token、page=4 分配 12 slot，浪费 2；page=16 浪费 6；page=128 浪费 118。</p>
+<p>Python 的列表长度表示有效内容，allocated_slots 表示概念上的页容量。它不直接测量 Python 对象内存或真实 GPU allocation。真实引擎可能使用跨层共享逻辑页表、分层物理张量等布局，需阅读具体 cache engine。</p>
+<h2 id="h-8">7. 验收与选做</h2>
+<pre><code class="language-bash">python3 course/tools/grade.py lab03</code></pre>
+<p>必答：为什么 get 的返回副本重要？逻辑和物理编号为什么分开？page size 增大会怎样改变尾部浪费和页表长度？随后做 HW2 的分页与容量题。</p>
+<p><strong>Optional 设计题</strong>：画出两条请求共享前两页后的引用计数。若共享末页仍有空位，一个请求 append 时何时需要 copy-on-write？只写设计和状态图，不把没有引用计数的共享代码当作已完成实现。</p>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <a class="doc-nav-card" href="lab02.html"><span>← 上一篇</span><strong>实验 2：从零实现 Attention</strong></a><a class="doc-nav-card" href="lab04.html"><span>下一篇 →</span><strong>Lab4：有限块池与共享所有权</strong></a>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>第 9 讲：分页映射与共享块池 · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <span class="doc-category">讲义</span>
+    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">讲义 9</div>
+      <h1>第 9 讲：分页映射与共享块池</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 4 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../lectures/lec09.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      <div class="doc-actions"><button id="doc-done" class="doc-done" type="button" data-key="w5-l9">标记完成</button><span id="doc-done-hint" class="doc-hint"></span></div>
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">1. Lab3 还没有解决什么</a><a class="toc-level-2" href="#h-2">2. 地址转换分两步</a><a class="toc-level-2" href="#h-3">3. 先证明可以成功，再改变状态</a><a class="toc-level-2" href="#h-4">4. 引用数表示还有多少所有者</a><a class="toc-level-2" href="#h-5">5. 动手与出口检查</a><a class="toc-level-2" href="#h-6">6. 对照真实系统</a>
+      </aside>
+      <article class="doc-content">
+        <p>先修：<a href="lec07.html">第 7 讲</a>、<a href="lab03.html">Lab3</a>、<a href="hw02.html">HW2</a>。本讲约 45–60 分钟，加 Lab4 约 2–3 小时。无需 GPU。</p>
+<p>学完应能回答：多条请求怎样使用同一个有限块池？一个请求结束时，为什么不能把它引用的所有块直接清零？</p>
+<h2 id="h-1">1. Lab3 还没有解决什么</h2>
+<p>Lab3 的 PagedKVCache 为一条序列不断创建字典项，说明了逻辑页到物理页的映射；它没有设备容量上限，也没有多个请求共享块的生命周期。现在增加一个限制：物理池只有 3 块，每块可存 4 个 token。</p>
+<p>A 的长度为 5，需要 2 块；B 的长度为 4，需要 1 块。两者正好占满。C 再来时必须等待、回收或采用其他策略，不能凭空分配第 4 块。本周只实现拒绝分配与等待；抢占和换出不是默认行为。</p>
+<h2 id="h-2">2. 地址转换分两步</h2>
+<p>设块大小为 B、逻辑 token 位置为 t：</p>
+<pre><code class="language-text">logical_block = t // B
+offset = t % B
+physical_block = block_table[logical_block]</code></pre>
+<p>用 <code>table=[9,2,7]</code>、B=4 手算：</p>
+<table><thead><tr><th>t</th><th>逻辑块</th><th>物理块</th><th>块内偏移</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>9</td><td>0</td></tr><tr><td>3</td><td>0</td><td>9</td><td>3</td></tr><tr><td>4</td><td>1</td><td>2</td><td>0</td></tr><tr><td>11</td><td>2</td><td>7</td><td>3</td></tr></tbody></table>
+<p>物理块编号不用连续。这里的 <code>(physical_block, offset)</code> 还不是设备 byte 地址；真实布局还需层、K/V、head 和元素大小等信息。<code>locate</code> 只检查已分配槽位，不知道序列真实长度，所以请求层还必须检查 <code>t &lt; sequence_length</code>。</p>
+<h2 id="h-3">3. 先证明可以成功，再改变状态</h2>
+<p>块池用 <code>refs=[0,0,0]</code> 表示三个空闲块。申请 2 块之后得到 <code>[0,1]</code>，refs 为 <code>[1,1,0]</code>。接着申请 2 块应抛 MemoryError，refs 必须仍为 <code>[1,1,0]</code>。</p>
+<p>错误写法是一边扫描一边标记：先占用块 2，再发现缺块，抛异常。调用者没有收到可释放的块 ID，池却泄漏了一块。</p>
+<p>正确的操作分成两段：检查并收集候选；确认数量足够后统一修改。这里的“原子”只指单线程函数在失败时不留下部分修改，不代表实现了并发锁。</p>
+<h2 id="h-4">4. 引用数表示还有多少所有者</h2>
+<p>假设 A 拥有 <code>[0,1]</code>，B 复用完整前缀块 0，同时拥有自己的尾块 2：</p>
+<table><thead><tr><th>操作</th><th>refs</th><th>空闲块数</th></tr></thead><tbody><tr><td>A 申请两块</td><td><code>[1,1,0]</code></td><td>1</td></tr><tr><td>B retain 块 0，并申请块 2</td><td><code>[2,1,1]</code></td><td>0</td></tr><tr><td>A 结束，release <code>[0,1]</code></td><td><code>[1,0,1]</code></td><td>1</td></tr><tr><td>B 结束，release <code>[0,2]</code></td><td><code>[0,0,0]</code></td><td>3</td></tr></tbody></table>
+<p>对每一块维护不变式：<code>refs[block] == 仍引用该块的所有者数量</code>。只有 refs=0 才可重新分配。Lab4 不存 KV 数值，也不缓存已结束请求；第 10 讲会区分“无人引用”与“仍有可复用内容”。</p>
+<p>本课仅共享已经写满且不再修改的前缀块。若两个请求共享未写满的尾块后各自追加不同 token，就必须先复制或采用其他隔离机制。不能只加引用数再同时写同一块。</p>
+<h2 id="h-5">5. 动手与出口检查</h2>
+<p>进入 <a href="lab04.html">Lab4</a>，完成 allocate → retain → release → locate。每次状态变化后写下 refs 和空闲数。</p>
+<ol><li>为什么容量守恒还不足以证明引用数正确？举一个错误地释放共享块的例子。</li><li><code>table=[5,1]</code>、B=4、t=5，映射到哪里？</li><li>将 <code>[有效 ID, 无效 ID]</code> 传入 release，为什么连有效 ID 也必须保持不变？</li></ol>
+<details class="study-hint"><summary>完成后再核对</summary><p>容量守恒只约束总量，不能保证另一个请求仍持有的数据没被覆盖。映射为 <code>(1,1)</code>。整批验证后再写状态，才能让调用者安全重试。</p></details>
+<h2 id="h-6">6. 对照真实系统</h2>
+<p>PagedAttention 将 KV 按块管理，通过块表访问非连续存储，并支持共享。以上练习只模拟块生命周期，不实现 attention kernel。阅读 <a href="https://arxiv.org/abs/2309.06180">PagedAttention 原论文</a> 的内存管理部分，再在仓库 <code>csrc/engine/block_manager.hpp</code> 中寻找分配与回收的边界。只记录一个与自己的模型相同的约束和一个未模拟的机制。</p>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <a class="doc-nav-card" href="lec08.html"><span>← 上一篇</span><strong>第 8 讲：量化（FP8 / FP4）</strong></a><a class="doc-nav-card" href="lec10.html"><span>下一篇 →</span><strong>第 10 讲：前缀命中、共享与淘汰</strong></a>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>

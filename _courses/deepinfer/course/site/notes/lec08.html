@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>第 8 讲：量化（FP8 / FP4） · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <span class="doc-category">讲义</span>
+    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">讲义 8</div>
+      <h1>第 8 讲：量化（FP8 / FP4）</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 17 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../lectures/lec08.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      <div class="doc-actions"><button id="doc-done" class="doc-done" type="button" data-key="w4-l8">标记完成</button><span id="doc-done-hint" class="doc-hint"></span></div>
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">0. 本讲要解决的问题</a><a class="toc-level-2" href="#h-2">1. 数值格式</a><a class="toc-level-3" href="#h-3">1.1 浮点数的组成</a><a class="toc-level-3" href="#h-4">1.2 为什么 BF16 比 FP16 范围大</a><a class="toc-level-3" href="#h-5">1.3 MX 格式</a><a class="toc-level-2" href="#h-6">2. 量化公式</a><a class="toc-level-3" href="#h-7">2.1 均匀整数对称量化（INT，供 HW1 实现）</a><a class="toc-level-3" href="#h-8">2.2 非对称量化</a><a class="toc-level-3" href="#h-9">2.3 粒度</a><a class="toc-level-2" href="#h-10">3. 量化误差</a><a class="toc-level-3" href="#h-11">3.1 最大绝对误差</a><a class="toc-level-3" href="#h-12">3.2 Outlier 的影响</a><a class="toc-level-3" href="#h-13">3.3 误差上界（per-group）</a><a class="toc-level-3" href="#h-14">3.4 量化误差 vs 模型精度</a><a class="toc-level-2" href="#h-15">4. FP8/FP4 GEMM 的 scale</a><a class="toc-level-3" href="#h-16">4.1 Per-tensor scale</a><a class="toc-level-3" href="#h-17">4.2 Per-group scale</a><a class="toc-level-3" href="#h-18">4.3 累加精度</a><a class="toc-level-2" href="#h-19">5. KV Cache 量化</a><a class="toc-level-3" href="#h-20">5.1 收益</a><a class="toc-level-3" href="#h-21">5.2 精度风险</a><a class="toc-level-3" href="#h-22">5.3 评估方法</a><a class="toc-level-2" href="#h-23">6. 代码：per-group 量化</a><a class="toc-level-3" href="#h-24">FP8 cast 的注意点</a><a class="toc-level-2" href="#h-25">7. 仓库对照</a><a class="toc-level-2" href="#h-26">8. 练习</a><a class="toc-level-3" href="#h-27">基础</a><a class="toc-level-3" href="#h-28">进阶</a><a class="toc-level-3" href="#h-29">挑战</a><a class="toc-level-2" href="#h-30">9. 面试追问</a><a class="toc-level-2" href="#h-31">10. 参考文献</a><a class="toc-level-2" href="#h-32">11. 下一步</a>
+      </aside>
+      <article class="doc-content">
+        <blockquote><p><strong>课前</strong>：35 分钟  <br><strong>课后</strong>：作业 1 Q6–Q8 + 算一次 KV 量化收益  <br><strong>一句话</strong>：低精度能减少存储与搬运，也可能提高硬件算力；是否加速取决于瓶颈、硬件支持和转换成本，scale 粒度则影响误差与元数据开销。</p></blockquote>
+<hr>
+<h2 id="h-1">0. 本讲要解决的问题</h2>
+<p><strong>先修</strong>：二进制位、绝对值、列表切片、整数除法；理解 <code>round</code> 的最近偶数舍入。必做先区分 FP 编码与 INT 均匀网格，再完成 HW1 Q6–Q8。FP8 intrinsic 和 GEMM 指令为选读。</p>
+<ol><li>FP32/FP16/BF16/FP8/FP4 的位布局、动态范围、精度各是什么？</li><li>对称量化/非对称量化、per-tensor/per-token/per-group 的公式和误差？</li><li>为什么 outlier 会毁掉 per-tensor？per-group 怎么缓解？</li><li>FP8/FP4 GEMM 的 scale 怎么乘？ue8m0 是什么？</li><li>KV cache 量化能省多少？精度代价怎么评估？</li></ol>
+<hr>
+<h2 id="h-2">1. 数值格式</h2>
+<h3 id="h-3">1.1 浮点数的组成</h3>
+<p>规格化的非零二进制浮点数（零、次正规数与特殊值另有编码）：</p>
+<pre><code>value = (-1)^sign * 1.mantissa * 2^(exponent - bias)</code></pre>
+<ul><li>指数位决定<strong>动态范围</strong>；</li><li>尾数位决定<strong>精度</strong>；</li><li>符号位 1 bit。</li></ul>
+<table><thead><tr><th>格式</th><th>总位宽</th><th>sign</th><th>exponent</th><th>mantissa</th><th>动态范围（约）</th><th>精度（约）</th></tr></thead><tbody><tr><td>FP32</td><td>32</td><td>1</td><td>8</td><td>23</td><td>1e-38 – 3e38</td><td>1e-7</td></tr><tr><td>FP16</td><td>16</td><td>1</td><td>5</td><td>10</td><td>6e-5 – 6e4</td><td>1e-3</td></tr><tr><td>BF16</td><td>16</td><td>1</td><td>8</td><td>7</td><td>1e-38 – 3e38</td><td>1e-2</td></tr><tr><td>FP8 E4M3（最大值448的变体）</td><td>8</td><td>1</td><td>4</td><td>3</td><td>~1.56e-2 – 448</td><td>~0.1</td></tr><tr><td>FP8 E5M2</td><td>8</td><td>1</td><td>5</td><td>2</td><td>~6e-5 – 57344</td><td>~0.25</td></tr><tr><td>FP4 E2M1</td><td>4</td><td>1</td><td>2</td><td>1</td><td>1 – 6</td><td>~0.5</td></tr></tbody></table>
+<blockquote><p>此表范围下限统一列最小规格化正数；若支持次正规数，还能表示更小的值，例如 E4M3 可到2⁻⁹、E2M1可到0.5。FP8 两种编码及特殊值的区别见 <a href="https://arxiv.org/abs/2209.05433">FP8 Formats for Deep Learning</a>；HW1 不要求实现这些浮点格式。</p></blockquote>
+<h3 id="h-4">1.2 为什么 BF16 比 FP16 范围大</h3>
+<p>BF16 的指数位和 FP32 一样（8 bit），尾数只有 7 bit；FP16 指数 5 bit、尾数 10 bit。 所以 BF16 的溢出风险较低，但相同量级附近间距较大。它在许多训练设置中无需 FP16 常用的 loss scaling；不代表任何计算都不会溢出。</p>
+<h3 id="h-5">1.3 MX 格式</h3>
+<p>MXFP8/MXFP4：</p>
+<pre><code>每 32 个元素共享一个 ue8m0 scale</code></pre>
+<p><code>ue8m0</code>：8-bit 无符号指数，只有指数位，没有尾数/符号；普通有限编码表示 <code>2^(e-127)</code>，保留编码需依格式规范处理。 好处：scale 本身很小（1B/32 元素），且乘 scale 可以用位移/指数运算。</p>
+<hr>
+<h2 id="h-6">2. 量化公式</h2>
+<h3 id="h-7">2.1 均匀整数对称量化（INT，供 HW1 实现）</h3>
+<p>以下 q 是有符号整数编码，使用均匀网格。FP8/FP4 的编码则有指数和尾数，间距随指数改变；本节的 <code>round(x/scale)</code> 不能当作 FP8 cast。FP 格式概念与整数练习分别掌握。</p>
+<pre><code>qmax = 2^(bits-1) - 1
+scale = amax / qmax
+q = clamp(round(x / scale), -qmax, qmax)
+x_hat = q * scale</code></pre>
+<ul><li><code>amax = max(|x|)</code>；全零组需要单独约定正 scale，例如 HW1 使用1，编码全部为0；</li><li><code>round</code> 可以是 round-to-nearest-even；</li><li>对称量化的零点为 0，适合权重/KV（分布近似对称）。</li></ul>
+<h3 id="h-8">2.2 非对称量化</h3>
+<pre><code>scale = (max - min) / (2^bits - 1)
+zero_point = round(-min / scale)
+q = clamp(round(x / scale) + zero_point, 0, 2^bits - 1)
+x_hat = (q - zero_point) * scale</code></pre>
+<p>适合非对称分布（如 ReLU 后的 activation）。</p>
+<p>上述简式要求 min/max 覆盖零且不同，才能使 zero_point 位于编码区间。一般实现需先令 min=min(0,min(x))、max=max(0,max(x))，并约定常量/全零输入；本课不把这个边界未完善的片段作为 HW1 的必做接口。</p>
+<h3 id="h-9">2.3 粒度</h3>
+<table><thead><tr><th>粒度</th><th>scale 数量</th><th>优点</th><th>缺点</th></tr></thead><tbody><tr><td>per-tensor</td><td>1</td><td>简单</td><td>outlier 毁掉整个 tensor</td></tr><tr><td>per-token</td><td>B*S</td><td>对 activation 稳</td><td>scale 数量多</td></tr><tr><td>per-channel</td><td>C</td><td>对权重稳</td><td>需要对应布局</td></tr><tr><td>per-group (16/32/128)</td><td>N/G</td><td>兼顾精度/开销</td><td>scale 存储/读取开销</td></tr></tbody></table>
+<p>DeepSeek 的 Q&amp;A：</p>
+<ul><li>主 KV：per-16 e4m3；</li><li>indexer KV：per-32 ue8m0 MXFP4；</li><li>MoE 路由专家权重：per-32 ue8m0 MXFP4。</li></ul>
+<hr>
+<h2 id="h-10">3. 量化误差</h2>
+<h3 id="h-11">3.1 最大绝对误差</h3>
+<p>均匀整数网格、round-to-nearest，且 x 位于可表示区间内、没有 clipping 时：</p>
+<pre><code>| x - x_hat | &lt;= scale / 2</code></pre>
+<p>相对误差：</p>
+<pre><code>| x - x_hat | / |x| &lt;= scale / (2|x|)</code></pre>
+<p>靠近 0 的元素相对误差大；靠近 amax 的元素相对误差小。</p>
+<h3 id="h-12">3.2 Outlier 的影响</h3>
+<p>假设一个 tensor 里 99% 的元素在 <code>[-1,1]</code>，一个 outlier 是 100：</p>
+<pre><code>amax = 100
+scale = 100/127 ≈ 0.787
+1.0 -&gt; q=1 -&gt; x_hat≈0.787，误差 0.213（21%）</code></pre>
+<p>per-group 把 outlier 隔离在一个 group 里，其他 group 的 scale 仍然小，误差显著降低。</p>
+<h3 id="h-13">3.3 误差上界（per-group）</h3>
+<p>对 group <code>g</code>：</p>
+<pre><code>| x - x_hat | &lt;= amax_g / (2 * qmax)</code></pre>
+<p>细分一个原组时，各子组的 amax 不会增大，因此这项最坏误差上界不会增大；单个数值的实际舍入误差不保证单调降低。scale 数量/存储会增加。</p>
+<h3 id="h-14">3.4 量化误差 vs 模型精度</h3>
+<ul><li>权重量化：误差会累积到 logits；</li><li>KV 量化：影响 attention 的 softmax，长上下文更敏感；</li><li>activation 量化：受 outlier 影响最大；</li><li>需要 end-to-end 评估（PPL、任务指标），不能只看单算子误差。</li></ul>
+<hr>
+<h2 id="h-15">4. FP8/FP4 GEMM 的 scale</h2>
+<h3 id="h-16">4.1 Per-tensor scale</h3>
+<pre><code>C = (A * sA) @ (B * sB) = (A @ B) * (sA * sB)</code></pre>
+<p>所以 GEMM 可以用整数/FP8 输入，最后乘 <code>sA*sB</code>。</p>
+<h3 id="h-17">4.2 Per-group scale</h3>
+<p>对 K 维分组：</p>
+<pre><code>A[m, k] = A_q[m, k] * sA[m, k//G]
+B[k, n] = B_q[k, n] * sB[k//G, n]
+C[m, n] = Σ_k A_q * B_q * sA * sB</code></pre>
+<p>如果 <code>sA</code> 沿 K 变化，不能简单提到 GEMM 外面；需要在累加时按 group 乘 scale，或者用“scale 预乘到 A/B”再 GEMM。</p>
+<p>DeepGEMM 的做法：</p>
+<ul><li>把 scale 转换成特定 layout（如 TMA-aligned col-major）；</li><li>在 epilogue 或 mainloop 中按 group 乘；</li><li>用 tensor core 的 FP8/FP4 指令；</li><li>对 FP4 使用 packed 格式（两个 4-bit 一个 byte）。</li></ul>
+<h3 id="h-18">4.3 累加精度</h3>
+<ul><li>FP8/FP4 输入，FP32 累加；</li><li>如果累加也用 FP16，误差会很大；</li><li>对长 K（如 7168），FP32 累加是必须的。</li></ul>
+<hr>
+<h2 id="h-19">5. KV Cache 量化</h2>
+<h3 id="h-20">5.1 收益</h3>
+<p>bf16 -&gt; FP8：</p>
+<pre><code>数据 payload bytes 减半（scale/对齐另计）</code></pre>
+<p>bf16 -&gt; FP4：</p>
+<pre><code>KV bytes 减到 1/4（加 scale 开销）</code></pre>
+<p>例：<code>L=32, H_kv=8, D=128, S=4096, B=1</code>：</p>
+<ul><li>bf16：512 MiB；</li><li>FP8：256 MiB；</li><li>FP4：128 MiB（+ scale）。</li></ul>
+<p><strong>含元数据的手算</strong>：MXFP4 的32个数占16B payload，加1B scale，共17B；BF16 同组为64B。压缩比是 <code>64/17≈3.76</code>，不是4。若尾组也分配满32个槽或 scale 有对齐，实际比例还会变小。</p>
+<h3 id="h-21">5.2 精度风险</h3>
+<ul><li>KV 的 outlier 比权重更难处理；</li><li>attention 的 softmax 对 K 的误差敏感；</li><li>长上下文时，误差会累积；</li><li>需要 per-16/per-32 的 scale，甚至混合精度（关键层 bf16）。</li></ul>
+<h3 id="h-22">5.3 评估方法</h3>
+<ul><li>单算子：cosine similarity、max abs error；</li><li>端到端：PPL、任务准确率、长上下文 retrieval；</li><li>消融：只量化 K、只量化 V、不同 group size。</li></ul>
+<hr>
+<h2 id="h-23">6. 代码：per-group 量化</h2>
+<p>下面是可在标准库 Python 运行的<strong>均匀 INT</strong>小例子，说明 group 遍历；并非 FP8 cast。约定有限数值、group_size为正整数、bits为2–8整数；简例只覆盖这些有效输入，完整参数校验与反量化长度检查按 HW1 规格实现。</p>
+<pre><code class="language-python">def quantize_per_group(x, group_size=32, bits=8):
+    qmax = 2 ** (bits - 1) - 1
+    q = []
+    scales = []
+    for g in range(0, len(x), group_size):
+        chunk = x[g:g+group_size]
+        amax = max(abs(v) for v in chunk)
+        scale = amax / qmax if amax else 1.0
+        scales.append(scale)
+        q.extend(max(-qmax, min(qmax, round(v / scale))) for v in chunk)
+    return q, scales
+
+def dequantize_per_group(q, scales, group_size=32):
+    out = []
+    for i, v in enumerate(q):
+        out.append(v * scales[i // group_size])
+    return out</code></pre>
+<p>误差：</p>
+<pre><code class="language-python">x = [-1.0, 0.0, 1.0, 100.0]
+q, scales = quantize_per_group(x, group_size=2)
+x_hat = dequantize_per_group(q, scales, group_size=2)
+assert len(x) == len(x_hat)
+err = max((abs(a - b) for a, b in zip(x, x_hat)), default=0.0)
+print(q, scales, x_hat, err)</code></pre>
+<p>预测第一组 q=<code>[-127,0]</code>、scale=1/127，第二组 q=<code>[1,127]</code>、scale=100/127；重建第三个数约0.7874，最大误差约0.2126。改变 group_size 时量化与反量化必须用相同分组。</p>
+<h3 id="h-24">FP8 cast 的注意点</h3>
+<ul><li>E4M3 的 max 是 448；超过要 clamp；</li><li>次正规数/NaN/Inf 的编码；</li><li><code>round</code> 的模式（nearest-even）；</li><li>scale 的 layout（row-major/col-major/packed）；</li><li>使用 <code>__nv_cvt_float_to_fp8</code> 时显式选择格式与饱和策略，并对照 <a href="https://docs.nvidia.com/cuda/cuda-math-api/cuda_math_api/group__CUDA__MATH__FP8__MISC.html">CUDA FP8 转换文档</a> 的最近偶数舍入契约；FP4 对应 <a href="https://docs.nvidia.com/cuda/cuda-math-api/cuda_math_api/group__CUDA__MATH__FP4__MISC.html">CUDA FP4 转换文档</a>。</li></ul>
+<hr>
+<h2 id="h-25">7. 仓库对照</h2>
+<ul><li><code>deepinfer/model_executor/layers/tilelang_ops/common.py</code>：FP4/FP8 常数、<code>customized_finfo_amax</code>。</li><li><code>.../tilelang_ops/cuda/quant.py</code>：<code>ue8m0_exp_scale</code>、scale 计算。</li><li><code>.../tilelang_ops/cuda/norm.py</code>：<code>do_fp8_cast</code> 分支，norm + quant 融合。</li><li><code>.../tilelang_ops/cuda/fused_transform.py</code>：norm + rope + cast + KV store。</li><li><code>doc/inference_deployment_qa.md</code>：Low-precision computation。</li></ul>
+<hr>
+<h2 id="h-26">8. 练习</h2>
+<h3 id="h-27">基础</h3>
+<p><strong>修错题</strong>：所有输入为0时直接写 <code>scale=amax/qmax</code>，再执行 <code>round(x/scale)</code> 会怎样？将零组编码为零、scale设为1，为什么仍能完全重建？</p>
+<p>&lt;details&gt;&lt;summary&gt;核对&lt;/summary&gt;</p>
+<p>scale为0导致除零；约定scale=1后，q仍全0，反量化0×1仍为0。该约定保证实现合法而不改变结果。随后独立测试尾组（长度不是G倍数）、全零组与含outlier组，对齐 HW1 的空输入和长度契约。</p>
+<p>&lt;/details&gt;</p>
+<ol><li>对 <code>x=[-1,0,1]</code>，8-bit 对称量化，求 scale、q、dequant、误差。</li><li>对 <code>x=[-1,0,1,100]</code>，per-tensor vs per-group（G=2）的误差各是多少？</li><li>计算 bf16/FP8/FP4 的 KV bytes（给定 L/H/D/S/B）。</li><li>解释 ue8m0 的表示范围；为什么它适合做 block scale？</li></ol>
+<h3 id="h-28">进阶</h3>
+<ol start="5"><li>实现 per-tensor/per-token/per-group 量化，测随机正态和长尾分布的误差。</li><li>实现 FP8 E4M3 的 cast（可以先用 Python 模拟），和 PyTorch 的 FP8 对比。</li><li>在 GEMM 中加 per-tensor scale，验证 <code>(A*sA)@(B*sB)</code> 和 <code>(A@B)*sA*sB</code> 在浮点容差内相等；sA/sB 是标量，不能写成矩阵乘 <code>A@sA</code>。</li><li>用 <code>ncu</code> 看 FP8 GEMM 的 tensor core 利用率和带宽，和 BF16 对比。</li></ol>
+<h3 id="h-29">挑战</h3>
+<ol start="9"><li>实现 per-group FP8 GEMM 的 scale 乘法，比较“预乘 scale”和“epilogue 乘”的误差/性能。</li><li>模拟 KV 量化：只量化 K/V，测 attention 输出误差和 PPL 变化。</li></ol>
+<hr>
+<h2 id="h-30">9. 面试追问</h2>
+<ol><li>FP8 E4M3 和 E5M2 有什么区别？分别适合什么？</li><li>为什么 per-tensor 对 outlier 敏感？per-group 怎么缓解？</li><li>对称量化的最大绝对误差是多少？相对误差呢？</li><li>FP8/FP4 GEMM 的 scale 怎么乘？为什么不能简单提到 GEMM 外面？</li><li>KV cache 量化能省多少？精度风险在哪？</li><li>如果量化后 PPL 变差，你会先查什么？</li></ol>
+<hr>
+<h2 id="h-31">10. 参考文献</h2>
+<ul><li>NVIDIA, *FP8 Formats for Deep Learning*；Hopper/Blackwell 文档。</li><li>DeepSeek-V3：FP8 训练/推理。</li><li>Micikevicius et al., *FP8 Formats for Deep Learning*。</li><li>DeepInfer Q&amp;A：Low-precision computation。</li></ul>
+<hr>
+<h2 id="h-32">11. 下一步</h2>
+<ul><li>完成 <a href="hw01.html">作业 1</a> 的 Q6–Q8；</li><li>读 <a href="project1.html">项目 1</a> 的 roofline 部分；</li><li>进入 Unit 2：PagedAttention、continuous batching、sampling。</li></ul>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <a class="doc-nav-card" href="lec07.html"><span>← 上一篇</span><strong>第 7 讲：KV Cache 基础</strong></a><a class="doc-nav-card" href="lec09.html"><span>下一篇 →</span><strong>第 9 讲：分页映射与共享块池</strong></a>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>

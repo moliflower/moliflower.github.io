@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Project1 报告模板 · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <span class="doc-category">报告模板</span>
+    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">项目报告</div>
+      <h1>Project1 报告模板</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 4 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../projects/project1/report_template.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">1. 问题、环境与复现方式</a><a class="toc-level-2" href="#h-2">2. 正确性与复用</a><a class="toc-level-2" href="#h-3">3. 请求量推导</a><a class="toc-level-2" href="#h-4">4. 实验与 Roofline</a><a class="toc-level-2" href="#h-5">5. Debugging notebook 与 Checkoff</a><a class="toc-level-2" href="#h-6">6. 自评与可选 GPU 结果</a>
+      </aside>
+      <article class="doc-content">
+        <blockquote><p>复制为 <code>report.md</code> 后填写。保留失败或反常结果；不要把参考解的实验当作自己的实现。</p></blockquote>
+<h2 id="h-1">1. 问题、环境与复现方式</h2>
+<ul><li>我想验证的问题 / 可被否证的预测：</li><li>使用的实现（自己的 / 参考对照）、Git commit 或 CSV 中 source_sha256：</li><li>Python、操作系统、CPU（计时来自此环境）：</li><li>完整命令、seed、warmups、repeats、原始 CSV 路径：</li><li>计时区间包括什么、排除什么；当时电源/后台负载情况：</li><li>Roofline 对象（默认虚构加速器 / 真实 GPU）：</li><li>模型带宽（GB/s）、峰值（TFLOP/s）、dtype、SIMT/Tensor Core、稠密/稀疏：</li><li>规格来源链接和查询日期（使用虚构参数时注明无需查规格）：</li></ul>
+<h2 id="h-2">2. 正确性与复用</h2>
+<ul><li>复用的本人 Lab 函数、为本项目做的修改：</li><li>完整测试命令与结果；浮点比较的容差和理由：</li><li>Q2 长度 5 的每轮结果；一个浮点加法改变顺序的反例：</li><li>Q9 一个矩形例子中的局部 accumulator 在每轮 k0 后是什么：</li><li>为什么输入不会被修改、输出行不会共享：</li></ul>
+<h2 id="h-3">3. 请求量推导</h2>
+<p>说明 naive 与 tiled 的读/写次数，推导 ceil 的来源，再手算一个尾块案例。区分请求字节、最小存储容量、真实设备流量。</p>
+<table><thead><tr><th>n</th><th>tile</th><th>naive bytes</th><th>tiled bytes</th><th>ratio</th><th>计数器是否符合（只跑小 n）</th></tr></thead><tbody><tr><td>3</td><td>2</td><td></td><td></td><td></td><td></td></tr><tr><td>3</td><td>16</td><td></td><td></td><td></td><td></td></tr><tr><td>17</td><td>8</td><td></td><td></td><td></td><td></td></tr></tbody></table>
+<p>以下仅算模型，不运行 Python 大矩阵；MB = 1e6 bytes。</p>
+<table><thead><tr><th>n</th><th>tile</th><th>naive MB</th><th>tiled MB</th><th>ratio</th></tr></thead><tbody><tr><td>1024</td><td>16</td><td></td><td></td><td></td></tr><tr><td>4096</td><td>32</td><td></td><td></td><td></td></tr><tr><td>8192</td><td>64</td><td></td><td></td><td></td></tr></tbody></table>
+<h2 id="h-4">4. 实验与 Roofline</h2>
+<p>引用 CSV 的具体行，至少比较 tile=1、存在尾块的 tile 和 tile&gt;n。保留原始 CSV，不只截取最快结果。</p>
+<table><thead><tr><th>n</th><th>tile</th><th>最大绝对误差</th><th>请求字节</th><th>请求量比</th><th>Python 中位数 ms</th><th>Python p90 ms</th></tr></thead><tbody><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table>
+<p>先写明每种算法读写几遍、是否缓存/融合及 FLOPs 约定。softmax 单列 exp 次数，说明等价 FLOPs 模型的局限。</p>
+<table><thead><tr><th>Kernel</th><th>shape / dtype</th><th>模型 bytes</th><th>FLOPs（及额外操作）</th><th>AI（FLOP/byte）</th><th>模型 bound</th><th>时间下界 µs</th></tr></thead><tbody><tr><td>vector_add</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>softmax</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>matmul</td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table>
+<ul><li>哪条数据支持最初预测？哪条不支持？</li><li>请求量减少与 Python 时间的关系是什么？有哪些混杂因素？</li><li>为什么 Python 时间和虚构加速器下界不能相除得出 GPU 效率？</li><li>这一模型未包含哪些硬件因素？下一步用什么实验区分解释？</li></ul>
+<h2 id="h-5">5. Debugging notebook 与 Checkoff</h2>
+<p>最小失败输入 → 期望值 → 实际值/异常 → 根因 → 修复 → 回归命令。</p>
+<p>逐条回答 README 的 5 个 checkoff 问题，每条至少引用一个自己的例子或实验数据。没有真实 GPU 数据时写清楚还需要测什么。</p>
+<h2 id="h-6">6. 自评与可选 GPU 结果</h2>
+<p>按 README 内部 100 分 rubric 自评，逐项指向证据。没有完成的部分留空并写清原因。</p>
+<p>若做 GPU 延伸：列设备、dtype、shape、比较 baseline、数值容差、编译/传输/同步/计时边界、warmup/repeats、中位数/p90、误差；最后说明模型与实测差距。未做则填写“未做，不影响核心成绩”。</p>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <span class="doc-nav-card disabled"><span>← 上一篇</span><strong>没有了</strong></span><a class="doc-nav-card" href="hw01-report.html"><span>下一篇 →</span><strong>HW1 推导与证据模板</strong></a>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>

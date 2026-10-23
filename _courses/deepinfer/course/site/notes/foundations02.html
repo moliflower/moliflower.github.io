@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>起步 2：遍历列表，构造自己的输出 · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <span class="doc-category">Python 起步</span>
+    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">起步 2</div>
+      <h1>起步 2：遍历列表，构造自己的输出</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 3 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../foundations/02-sequences.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      <div class="doc-actions"><button id="doc-done" class="doc-done" type="button" data-key="foundations-q3">标记完成</button><span id="doc-done-hint" class="doc-hint"></span></div>
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">1. 一组有顺序的数据</a><a class="toc-level-2" href="#h-2">2. for 每次取出一个元素</a><a class="toc-level-2" href="#h-3">3. 两个名字可以指向同一个列表</a><a class="toc-level-2" href="#h-4">4. Q3：把上限规则放进循环</a><a class="toc-level-2" href="#h-5">5. 解释与调试</a>
+      </aside>
+      <article class="doc-content">
+        <p><strong>先修：</strong>函数与条件。<strong>目标：</strong>追踪一次循环，理解输入与输出的关系，通过 Q3。</p>
+<h2 id="h-1">1. 一组有顺序的数据</h2>
+<p><code>lengths = [2, 8, 0]</code> 创建一个有三项的列表。<code>len(lengths)</code> 是 3。索引从 0 开始，所以 <code>lengths[0]</code> 是 2，<code>lengths[2]</code> 是 0；<code>lengths[3]</code> 超出范围，会产生 <code>IndexError</code>。</p>
+<p>空列表 <code>[]</code> 的长度为 0，没有第 0 项。不要因为某次输入非空，就假设所有输入都有第 0 项。</p>
+<h2 id="h-2">2. for 每次取出一个元素</h2>
+<p>完整示例：把每个值增加一，放入新列表。</p>
+<pre><code class="language-python">values = [2, 0, 3]
+result = []
+for value in values:
+    result.append(value + 1)
+print(result)</code></pre>
+<table><thead><tr><th>循环轮次</th><th><code>value</code></th><th>append 后 <code>result</code></th></tr></thead><tbody><tr><td>1</td><td>2</td><td><code>[3]</code></td></tr><tr><td>2</td><td>0</td><td><code>[3, 1]</code></td></tr><tr><td>3</td><td>3</td><td><code>[3, 1, 4]</code></td></tr></tbody></table>
+<p><code>append</code> 在原列表末尾增加一项。不要写 <code>result = result.append(...)</code>：<code>append</code> 修改列表但返回 <code>None</code>，这会把 <code>result</code> 重新绑定到 <code>None</code>。</p>
+<p>遇到空输入，循环体执行零次，<code>result</code> 保持 <code>[]</code>。另一个常见错误是把 <code>return result</code> 放在循环里面，这会在第一轮就结束函数。想处理全部元素，返回应当放在循环结束之后。</p>
+<h2 id="h-3">3. 两个名字可以指向同一个列表</h2>
+<pre><code class="language-python">original = [2, 8]
+alias = original
+alias[0] = 99
+print(original)</code></pre>
+<p>预测后运行：<code>original</code> 也变为 <code>[99, 8]</code>。赋值没有复制这个列表。Q3 要求保留输入，所以应当用新的 <code>result=[]</code> 逐项构造结果。稍后的调试预备课会进一步解释二维列表为什么要逐行复制。</p>
+<h2 id="h-4">4. Q3：把上限规则放进循环</h2>
+<p><code>clamp_lengths([2, 8, 0], 5)</code> 返回 <code>[2, 5, 0]</code>。可以把它想成每个请求最多保留 5 个元素；现在只处理整数长度，不需要理解模型。</p>
+<p>每次循环只做一项决定：当前长度超过上限时放哪个值？没有超过时放哪个值？等于上限时应保持多少？不要排序或删除元素；输出顺序和长度与输入一致。</p>
+<pre><code class="language-bash">python course/tools/grade.py foundations --question q3 --failfast</code></pre>
+<h2 id="h-5">5. 解释与调试</h2>
+<p>若只得到 <code>[2]</code>，先检查 <code>return</code> 的缩进；若报 <code>'NoneType' object has no attribute 'append'</code>，检查是否接住了 <code>append</code> 的返回值；若输入也变了，检查是否把输入直接当成输出。</p>
+<p>出口任务：先写出 <code>[0, 3, 7]</code> 在上限 3 下的结果，再解释为什么“对结果再次应用同样上限”不会改变它。这叫幂等性质，意思就是重复做不会继续改变结果。下一节把循环、列表与状态组合起来。</p>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <a class="doc-nav-card" href="foundations01.html"><span>← 上一篇</span><strong>起步 1：让边界条件决定分支</strong></a><a class="doc-nav-card" href="foundations03.html"><span>下一篇 →</span><strong>起步 3：用状态表示已经完成的工作</strong></a>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>

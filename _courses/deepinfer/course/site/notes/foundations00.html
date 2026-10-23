@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>起步 0：让一个函数把结果交回来 · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <span class="doc-category">Python 起步</span>
+    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">起步 0</div>
+      <h1>起步 0：让一个函数把结果交回来</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 3 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../foundations/00-expressions.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      <div class="doc-actions"><button id="doc-done" class="doc-done" type="button" data-key="foundations-q1">标记完成</button><span id="doc-done-hint" class="doc-hint"></span></div>
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">1. 值、表达式、名字</a><a class="toc-level-2" href="#h-2">2. 函数是可复用的计算步骤</a><a class="toc-level-2" href="#h-3">3. 从例子迁移到 Q1</a><a class="toc-level-2" href="#h-4">4. 理解检查</a>
+      </aside>
+      <article class="doc-content">
+        <p><strong>目标：</strong>能追踪赋值，调用一个函数，并通过 Q1。先会整数加法和乘法即可。</p>
+<h2 id="h-1">1. 值、表达式、名字</h2>
+<p><code>3</code> 是一个整数值。<code>3 * 2</code> 是表达式，Python 求值得到 <code>6</code>。<code>count = 3</code> 把名字 <code>count</code> 绑定到值 <code>3</code>。随后写 <code>count * 2</code>，Python 先查到 <code>count</code> 的值，再做乘法。</p>
+<pre><code class="language-python">count = 3
+other = count
+count = count + 1
+print(count, other)</code></pre>
+<p>先预测最后一行，再放进自己的临时 <code>.py</code> 文件运行。第三行先计算等号右侧，再更新左侧；<code>other</code> 保存的是先前的整数值，不会跟着 <code>count</code> 自动变化。</p>
+<details class="study-hint"><summary>预测核对</summary><p>输出 <code>4 3</code>。运行第三行前，两个名字都表示 3；运行后 <code>count</code> 表示 4，<code>other</code> 仍表示 3。整数的这个例子不能直接推广为“所有赋值都会复制数据”，列表会在起步 2 讨论。</p></details>
+<h2 id="h-2">2. 函数是可复用的计算步骤</h2>
+<pre><code class="language-python">def add_example(left, right):
+    total = left + right
+    return total
+
+answer = add_example(2, 5)
+print(answer)</code></pre>
+<p><code>def</code> 定义一个函数。圆括号里的 <code>left</code>、<code>right</code> 是参数名字。冒号后面缩进四个空格的行属于函数体。定义时只记住这些步骤，调用 <code>add_example(2, 5)</code> 时才执行。</p>
+<table><thead><tr><th>时刻</th><th>本次调用里的状态</th><th>含义</th></tr></thead><tbody><tr><td>刚进入函数</td><td><code>left=2, right=5</code></td><td>实参绑定到参数</td></tr><tr><td>加法后</td><td><code>total=7</code></td><td>得到局部结果</td></tr><tr><td><code>return total</code></td><td>返回 <code>7</code></td><td>当前调用结束</td></tr><tr><td>回到外面</td><td><code>answer=7</code></td><td>调用表达式的值交给调用者</td></tr></tbody></table>
+<p><code>return</code> 让调用者得到一个值；<code>print</code> 把内容显示到终端。只写 <code>print(total)</code> 而没有 <code>return</code>，调用者拿到的会是 <code>None</code>，即“没有返回具体结果”。这是初学者最常见的测试失败之一。</p>
+<h2 id="h-3">3. 从例子迁移到 Q1</h2>
+<p>假设每个元素占 2 字节，5 个元素就是 <code>2+2+2+2+2=10</code> 字节。一般写成“元素个数 × 每元素字节数”。这里统计数据本身的存储量，不是 Python 列表对象的实际内存占用。</p>
+<p>打开 <code>foundations.py</code>。三引号包住的是说明文字；<code>#</code> 后面是注释，都用于帮助人阅读。<code>raise NotImplementedError(...)</code> 是有意留下的占位；在 Q1 中把这个占位换成自己的 <code>return</code>，保留已经写好的参数检查。</p>
+<pre><code class="language-bash">python course/tools/grade.py foundations --question q1 --failfast</code></pre>
+<p>动手前先写三个期望：<code>(5, 2)</code>、<code>(0, 4)</code>、<code>(3, 8)</code>。解释最后结果的单位为什么是字节。再运行测试；测试的是返回值，终端看见 <code>10</code> 并不等于函数返回了 <code>10</code>。</p>
+<h2 id="h-4">4. 理解检查</h2>
+<p>有人写了 <code>return count + element_bytes</code>，输入 <code>(2, 2)</code> 恰好通过。给一个能区分加法和乘法的输入，并写出两种结果。然后进入 <a href="foundations01.html">起步 1</a>。</p>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <a class="doc-nav-card" href="foundations.html"><span>← 上一篇</span><strong>Python 起步：从第一行代码到可测试的函数</strong></a><a class="doc-nav-card" href="foundations01.html"><span>下一篇 →</span><strong>起步 1：让边界条件决定分支</strong></a>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>预备 1：用最小复现修复最大值 · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <span class="doc-category">预备</span>
+    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">预备 1</div>
+      <h1>预备 1：用最小复现修复最大值</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 3 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../prep/01-debug.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      <div class="doc-actions"><button id="doc-done" class="doc-done" type="button" data-key="prep-q1">标记完成</button><span id="doc-done-hint" class="doc-hint"></span></div>
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">1. 先写规格</a><a class="toc-level-2" href="#h-2">2. 先跟踪错误，不急着改</a><a class="toc-level-2" href="#h-3">3. 用不变式决定怎样修</a><a class="toc-level-2" href="#h-4">4. 动手和逐层提示</a><a class="toc-level-2" href="#h-5">5. 给自己的修复找反例</a>
+      </aside>
+      <article class="doc-content">
+        <blockquote><p><strong>目标</strong>：从错误结果定位到一个具体的错误假设。  <br><strong>修改</strong>：<code>prep.py</code> 中的 <code>maximum</code>。  <br><strong>预计投入</strong>：30–60 分钟。</p></blockquote>
+<h2 id="h-1">1. 先写规格</h2>
+<p><code>maximum(values)</code> 对非空数值列表返回最大元素，不修改输入；空列表抛 <code>ValueError</code>。本题不用 <code>max()</code>，因为我们要观察循环中的状态。</p>
+<pre><code class="language-text">输入 [2, 7, 3]   → 7
+输入 [-5, -2, -9] → -2
+输入 [-8]         → -8
+输入 []           → ValueError</code></pre>
+<p><code>raise ValueError("列表不能为空")</code> 的意思是拒绝没有定义答案的输入。本题不约定空列表的最大值为 0。</p>
+<h2 id="h-2">2. 先跟踪错误，不急着改</h2>
+<p>starter 的核心是：</p>
+<pre><code class="language-python">best = 0
+for value in values:
+    if value &gt; best:
+        best = value</code></pre>
+<p>用 <code>[-5, -2, -9]</code> 跟踪：</p>
+<table><thead><tr><th>本轮 value</th><th>比较前 best</th><th>value 大于 best？</th><th>比较后 best</th></tr></thead><tbody><tr><td>-5</td><td>0</td><td>否</td><td>0</td></tr><tr><td>-2</td><td>0</td><td>否</td><td>0</td></tr><tr><td>-9</td><td>0</td><td>否</td><td>0</td></tr></tbody></table>
+<p>程序没报异常，却返回了不在输入中的 0。这是逻辑错误。继续把输入缩成 <code>[-8]</code>，错误仍然存在；这就是一个更小的复现。</p>
+<h2 id="h-3">3. 用不变式决定怎样修</h2>
+<p>我们希望每轮结束后都成立：</p>
+<blockquote><p><code>best</code> 是“已经看过的元素”中的最大值。</p></blockquote>
+<p>因此开始比较前，<code>best</code> 应有一个来自已看元素的合法值。不要改成 <code>-100000</code>：输入可能更小；也不要只判断某个测试列表。</p>
+<p>先在 <code>maximum</code> 中处理空输入，再决定非空时的初值。你可以从第二个元素继续循环，也可以重新比较第一个元素；两种都可以得到正确答案。</p>
+<h2 id="h-4">4. 动手和逐层提示</h2>
+<p>只改 <code>maximum</code>。每次改完运行：</p>
+<pre><code class="language-bash">python course/tools/grade.py prep --question q1 --failfast</code></pre>
+<details class="study-hint"><summary>提示 1：应该改变哪个假设？</summary><p>原函数假定最大值至少为 0，但题目没有这个条件。</p></details>
+<details class="study-hint"><summary>提示 2：如何得到一个合法初值？</summary><p>非空列表里，第一个元素一定存在；先看过它，手中就有一个“已经看过部分”的最大值。</p></details>
+<details class="study-hint"><summary>提示 3：局部伪代码</summary><pre><code class="language-text">如果列表为空：拒绝输入
+best = 第一个元素
+遍历其余元素：比 best 大时更新
+返回 best</code></pre></details>
+<h2 id="h-5">5. 给自己的修复找反例</h2>
+<p>测试通过后，再自己预测并检查 <code>[-1000000, -1000001]</code>、<code>[4, 4, 4]</code>、<code>[0, -1]</code>。你可以临时加打印，也可以在实验目录用 Python 交互窗口调用函数；提交前移除临时打印即可。</p>
+<p>记录：错误假设是什么？哪个最小输入推翻了它？修复为什么适用于没见过的输入？</p>
+<p>下一步：<a href="prep02.html">预备 2：列表和矩阵</a>。</p>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <a class="doc-nav-card" href="prep00.html"><span>← 上一篇</span><strong>预备 0：运行程序，读懂第一条反馈</strong></a><a class="doc-nav-card" href="prep02.html"><span>下一篇 →</span><strong>预备 2：把矩阵手算连接到代码</strong></a>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>实验 2：从零实现 Attention · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <span class="doc-category">实验</span>
+    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">实验 2</div>
+      <h1>实验 2：从零实现 Attention</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 9 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../labs/lab02/README.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      <div class="doc-actions"><button id="doc-done" class="doc-done" type="button" data-key="w3-lab2">标记完成</button><span id="doc-done-hint" class="doc-hint"></span></div>
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">0. 文件和命令</a><a class="toc-level-2" href="#h-2">1. Review：shape 先于代码</a><a class="toc-level-2" href="#h-3">2. Q1：矩阵乘</a><a class="toc-level-2" href="#h-4">3. Q2：转置</a><a class="toc-level-2" href="#h-5">4. Q3：逐行稳定 Softmax</a><a class="toc-level-2" href="#h-6">5. Q4：Causal mask</a><a class="toc-level-2" href="#h-7">6. Q5：组合单头 Attention</a><a class="toc-level-2" href="#h-8">7. Q6：Multi-head（独立组合）</a><a class="toc-level-2" href="#h-9">8. Q7：有效配对的 FLOPs</a><a class="toc-level-2" href="#h-10">9. Q8：三阶段读写模型</a><a class="toc-level-2" href="#h-11">10. 出口检查</a>
+      </aside>
+      <article class="doc-content">
+        <blockquote><p><strong>阅读</strong>：<a href="lec03.html">L3 数值算子</a>、<a href="lec05.html">L5 Attention</a>；先完成预备矩阵练习与 Lab1。  <br><strong>投入</strong>：4–6 小时。必做 Q1–Q8，分三个 checkpoint。  <br><strong>交付</strong>：<code>lab02.py</code>、shape 表、一次调试记录、checkoff 回答。</p></blockquote>
+<h2 id="h-1">0. 文件和命令</h2>
+<p>学生框架 <code>lab02.py</code> 给定八个接口；<code>test_lab02.py</code> 为公开测试；参考文件在 <code>lab02_solution.py</code>。标准库即可，不需要 GPU。测试前先预测：</p>
+<pre><code class="language-bash">python3 course/tools/grade.py lab02 --question q1 --unlock
+python3 course/tools/grade.py lab02 --question q1 --failfast
+python3 course/tools/grade.py lab02 --question q1 --hint 1</code></pre>
+<p>将 q1 换成 q2–q8 可逐题运行。只修改学生文件；保留测试和函数签名。新函数可以组合前题，但不要复制多份相同循环。</p>
+<h2 id="h-2">1. Review：shape 先于代码</h2>
+<p>本 Lab 中 Q 是 <code>(sq,d)</code>，K/V 都是 <code>(sk,d)</code>，d&gt;0。非空矩阵保证为矩形；一般 ragged tensor 验证不属于此 Lab。数值有限、算术中间值可表示，只有 Q3 另允许 mask 的 -inf。<code>matmul/transpose</code> 的空输入按框架返回 <code>[]</code>，不模拟通用零维 shape 系统。所有结果是新列表，输入不变。维度/计数参数必须是整数且不能用bool代替。</p>
+<table><thead><tr><th>阶段</th><th>输入</th><th>输出</th></tr></thead><tbody><tr><td>transpose</td><td>K(sk,d)</td><td>Kᵀ(d,sk)</td></tr><tr><td>matmul</td><td>Q(sq,d), Kᵀ(d,sk)</td><td>S(sq,sk)</td></tr><tr><td>scale/mask/softmax</td><td>S(sq,sk)</td><td>P(sq,sk)</td></tr><tr><td>matmul</td><td>P(sq,sk), V(sk,d)</td><td>O(sq,d)</td></tr></tbody></table>
+<p>完整小例子：Q=<code>[[0],[0]]</code>、K=<code>[[1],[2]]</code>、V=<code>[[2],[6]]</code>。所有点积是 0。非 causal 的两行概率都是 <code>[0.5,0.5]</code>，输出 <code>[[4],[4]]</code>；causal 第一行概率为 <code>[1,0]</code>，输出变为 <code>[[2],[4]]</code>。</p>
+<p><strong>预测</strong>：只将未来 V[1] 改为 <code>[100]</code>，causal 的 O[0] 是否改变？先写原因，再运行。</p>
+<h2 id="h-3">2. Q1：矩阵乘</h2>
+<p><code>matmul(a,b)</code>：A(m,k)@B(k,n) 返回新矩阵 C(m,n)；内维不匹配抛 <code>ValueError</code>。三层循环中 i 控制输出行、j 控制输出列、p 控制点积。每格的 total 重新清零，各输出行独立。</p>
+<p>自测 <code>[[1,2,3]] @ [[1],[0],[-1]] → [[-2]]</code>。先预测 <code>(1,3)@(3,1)</code>，再写循环。可迁移自己的预备单元实现。</p>
+<h2 id="h-4">3. Q2：转置</h2>
+<p><code>transpose(a)</code>：m×n 返回 n×m 的新列表。自测 <code>[[1,2,3],[4,5,6]] → [[1,4],[2,5],[3,6]]</code>。结果修改不得改变输入。</p>
+<details class="study-hint"><summary>提示：两个循环的方向</summary><p>输出第 j 行来自输入第 j 列；外层遍历输入列，内层遍历输入行。转置后元素数量不变。</p></details>
+<h2 id="h-5">4. Q3：逐行稳定 Softmax</h2>
+<p><code>softmax_rows(x)</code> 每一行单独减 max、取指数、归一化。每行至少有一个有限值，其他项允许 -inf；空行、全 -inf 行、NaN 或 +inf 抛 <code>ValueError</code>。外层空列表返回 <code>[]</code>，mask 的 -inf 项输出概率为0。</p>
+<p>自测 <code>[[0,0],[0,ln(2)]] → [[1/2,1/2],[1/3,2/3]]</code>。如果两行共同除以一个总和，形状虽对，概率含义已经错了。</p>
+<h2 id="h-6">5. Q4：Causal mask</h2>
+<p><code>causal_mask(scores)</code> 接受方阵并返回新方阵，<code>j&lt;=i</code> 保留，其余设为 <code>-math.inf</code>。非方阵抛 <code>ValueError</code>，<code>[]</code> 返回 <code>[]</code>。不得改原 scores。</p>
+<p>三行允许列分别为 <code>[0]</code>、<code>[0,1]</code>、<code>[0,1,2]</code>。mask 应在 softmax 之前；否则直接清零后，每行和通常小于 1。</p>
+<p><strong>Checkpoint A</strong>：Q1–Q4 通过；手工填写第一节的 shape 表，并给一个错转置的反例。</p>
+<h2 id="h-7">6. Q5：组合单头 Attention</h2>
+<p><code>attention(q,k,v,causal=True)</code>：先对空 Q 或空 K 返回 <code>[]</code>；否则要求 d&gt;0、三者同 head_dim、V 非空且 K/V 同长度；causal 时 sq=sk，违反任一要求抛 <code>ValueError</code>。矩形输入只在 noncausal 模式合法；decode 的绝对位置偏移留待后续。</p>
+<p>框架的职责顺序：</p>
+<pre><code class="language-text">检查 shape
+scores = 组合 Q 与转置 K
+scores 每项除以 sqrt(d)
+按 causal 选择是否使用 mask
+probs = 逐行归一化
+返回 probs 与 V 的矩阵乘</code></pre>
+<p>测试不只检查 shape：还检查未来 V 改动不能影响过去的输出。调试时依次看 S、mask 后 S、P、O，最早出错的阶段才是修复目标。</p>
+<h2 id="h-8">7. Q6：Multi-head（独立组合）</h2>
+<p><code>multi_head_attention(q,k,v,num_heads)</code>：先检查 num_heads 为正整数、三者 seq 相同，再对三者都为空返回 <code>[]</code>。非空输入须同 d_model&gt;0 且能被 num_heads 整除；违反要求抛 <code>ValueError</code>。本题每头默认 causal，不包含投影 Wq/Wk/Wv/Wo。</p>
+<p>每行 <code>[a,b,c,d]</code> 拆成两个 head 时，是 <code>[a,b]</code> 与 <code>[c,d]</code>，并不是交错的 <code>[a,c]</code> 与 <code>[b,d]</code>。每头缩放用自己的 <code>sqrt(d_head)</code>。</p>
+<p><strong>能区分错误实现的例子</strong>：Q=<code>[[0,0],[1,1]]</code>，K=<code>[[0,0],[1,2]]</code>，V=<code>[[2,10],[6,30]]</code>，heads=2。第一行输出 <code>[2,10]</code>；第二行分别为 <code>(2+6e)/(1+e)</code> 与 <code>(10+30e²)/(1+e²)</code>。直接返回 V、用 d_model 缩放、混合两个 head 都会失败。</p>
+<p><strong>Checkpoint B</strong>：Q5/Q6 通过；画出 split→单头→concat 的数据布局。</p>
+<p><strong>修错练习</strong>：有人将 Q5 中每行输出写为 <code>probs[i][0]*v[0][j]</code>，于是只有一个 token 的测试全部通过。用第一节两 token 的例子找出漏掉的求和项，再设计一个与示例不同的输入。将修复后测试写入自己的调试记录，解释它排除了哪个错误实现。</p>
+<h2 id="h-9">8. Q7：有效配对的 FLOPs</h2>
+<p><code>attention_flops(b,h,sq,sk,d,causal=True)</code>，所有维度须为非负整数，否则 <code>ValueError</code>；causal 要求 sq=sk。每个配对的 QK 和 PV 两个点积按 4d FLOPs 计，忽略 softmax、缩放和投影。</p>
+<ul><li>full：配对数 sq×sk。</li><li>causal：配对数 <code>s(s+1)/2</code>，包含对角线。</li></ul>
+<p>例如 b=h=1,s=3,d=2，full=72 FLOPs，causal=48 FLOPs。先算满矩阵再 mask 的 Python 实现执行的是满矩阵工作；此函数输出的是可跳过上三角时的有效工作模型。</p>
+<h2 id="h-10">9. Q8：三阶段读写模型</h2>
+<p><code>attention_bytes(...,bytes_per_elem=2,materialized=True)</code>：维度及 bytes_per_elem 必须是非负整数，否则 <code>ValueError</code>；所有张量按相同元素字节数计算。零字节仅是允许的数学零工作模型，不对应真实dtype。</p>
+<table><thead><tr><th>数据</th><th>请求次数</th><th>元素数量</th></tr></thead><tbody><tr><td>Q/K/V 读、O 写</td><td>各一次</td><td>b*h*(2sq+2sk)*d</td></tr><tr><td>S 写、S 读、P 写、P 读</td><td>共四次</td><td>4*b*h*sq*sk</td></tr></tbody></table>
+<p>True 返回两行之和乘 bytes_per_elem；False 仅保留第一行，代表输入各读一次的理想下界。FlashAttention 的实际 K/V 重读由 tile 大小和遍历决定，不能由这个布尔值测出。</p>
+<p>例如 b=1,h=8,sq=sk=128,d=64,2B：True=1572864B，False=524288B。一个 S 的容量是 262144B；S/P 的四次读写请求是它的四倍。</p>
+<p><strong>Checkpoint C</strong>：Q7/Q8 通过；用两个列名分别写“容量”和“请求流量”。</p>
+<h2 id="h-11">10. 出口检查</h2>
+<pre><code class="language-bash">python3 course/tools/grade.py lab02</code></pre>
+<p>回答：为什么除 sqrt(d)？mask 后第 0 行为什么不会分母为零？有效 causal FLOPs 为什么不是严格一半？<code>materialized=False</code> 为什么不等于 profiler 的 HBM bytes？</p>
+<p><strong>Optional</strong>：读 FlashAttention <a href="https://arxiv.org/abs/2205.14135">论文</a>，用教材中的 <code>(m,l,o)</code> 合并规则手算两个 tile。后续 GPU 实现以前述 Python 结果为 oracle。</p>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <a class="doc-nav-card" href="lab01.html"><span>← 上一篇</span><strong>实验 1：Reduction、Softmax 与 RMSNorm</strong></a><a class="doc-nav-card" href="lab03.html"><span>下一篇 →</span><strong>实验 3：KV Cache（连续 + Paged）</strong></a>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>
