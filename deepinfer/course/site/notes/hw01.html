@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>作业 1：Roofline、KV Cache 与量化 · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <span class="doc-category">作业</span>
+    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">作业 1</div>
+      <h1>作业 1：Roofline、KV Cache 与量化</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 11 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../hw/hw01/README.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      <div class="doc-actions"><button id="doc-done" class="doc-done" type="button" data-key="w1-hw1">标记完成</button><span id="doc-done-hint" class="doc-hint"></span></div>
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">0. 工作方式</a><a class="toc-level-2" href="#h-2">1. Required：接口与分题规格</a><a class="toc-level-3" href="#h-3">Q1：arithmetic_intensity</a><a class="toc-level-3" href="#h-4">Q2：roofline_time</a><a class="toc-level-3" href="#h-5">Q3：kv_cache_bytes</a><a class="toc-level-3" href="#h-6">Q4：mla_kv_cache_bytes</a><a class="toc-level-3" href="#h-7">Q5：attention_flops</a><a class="toc-level-3" href="#h-8">Q6：quantize_per_tensor</a><a class="toc-level-3" href="#h-9">Q7：dequantize_per_tensor</a><a class="toc-level-3" href="#h-10">Q8：quant_error</a><a class="toc-level-3" href="#h-11">Q9：max_kv_tokens — 独立迁移</a><a class="toc-level-2" href="#h-12">2. Required：书面迁移题</a><a class="toc-level-2" href="#h-13">3. Checkpoint、验收与选做</a>
+      </aside>
+      <article class="doc-content">
+        <blockquote><p><strong>先修</strong>：Lab0/1/2、<a href="lec04.html">L4 Roofline</a>、<a href="lec05.html">L5 Attention</a>、<a href="lec07.html">L7 KV cache</a>、<a href="lec08.html">L8 量化</a>。安排在第 4 周以后。  <br><strong>投入</strong>：5–7 小时，可拆为两次。必做 Q1–Q9 与三道书面题。  <br><strong>交付</strong>：<code>hw01.py</code>、基于 <a href="hw01-report.html">REPORT_TEMPLATE.md</a> 的个人推导笔记。</p></blockquote>
+<h2 id="h-1">0. 工作方式</h2>
+<p>Homework 的代码框架给定接口和契约，要求独立组织步骤。<code>test_hw01.py</code> 是公开测试；<code>hw01_solution.py</code> 在尝试和记录卡点后对照。标准库即可，不修改测试。</p>
+<pre><code class="language-bash">python3 course/tools/grade.py hw01 --list
+python3 course/tools/grade.py hw01 --question q1 --unlock
+python3 course/tools/grade.py hw01 --question q1 --failfast
+python3 course/tools/grade.py hw01 --question q1 --hint 1</code></pre>
+<p>每题替换 q1 即可；三级提示按需获取。使用 <a href="../../WORKSHEET.md">记录模板</a>，每个答案至少含“符号定义 → 推导 → 代入 → 单位 → 模型条件”。</p>
+<p>Windows PowerShell 可以将上述 <code>python3</code> 换为 <code>py -3</code>。整份测试会逐题显示通过数；<code>未完成</code> 表示测试未全部执行或有跳过，不能当作通过。程序超过 30 秒会提示检查循环；需要时用 <code>--timeout 60</code>。公开测试覆盖接口，不替代书面解释。</p>
+<p>开始前，不看答案完成三个自检：能把 1GB 和 1GiB 分别写成字节；能解释函数的 <code>return</code> 与 <code>print</code>；能在 traceback 中定位自己的代码行。若后两项不熟悉，回到 foundations/prep。</p>
+<table><thead><tr><th>题号</th><th>修改函数</th><th>编码依赖</th><th>独立测试</th></tr></thead><tbody><tr><td>Q1</td><td>arithmetic_intensity</td><td>无</td><td><code>--question q1</code></td></tr><tr><td>Q2</td><td>roofline_time</td><td>无</td><td><code>--question q2</code></td></tr><tr><td>Q3</td><td>kv_cache_bytes</td><td>无</td><td><code>--question q3</code></td></tr><tr><td>Q4</td><td>mla_kv_cache_bytes</td><td>无</td><td><code>--question q4</code></td></tr><tr><td>Q5</td><td>attention_flops</td><td>无</td><td><code>--question q5</code></td></tr><tr><td>Q6</td><td>quantize_per_tensor</td><td>无</td><td><code>--question q6</code></td></tr><tr><td>Q7</td><td>dequantize_per_tensor</td><td>无；测试直接给整数码</td><td><code>--question q7</code></td></tr><tr><td>Q8</td><td>quant_error</td><td>Q6、Q7</td><td><code>--question q8</code></td></tr><tr><td>Q9</td><td>max_kv_tokens</td><td>Q3</td><td><code>--question q9</code></td></tr></tbody></table>
+<p>表中参数接在 <code>python3 course/tools/grade.py hw01</code> 后。Q1–Q7 是建立工具；Q8 将工具组合，Q9 将正向容量模型反过来解决预算。先独立尝试，再记录所用提示和参考材料。</p>
+<h2 id="h-2">1. Required：接口与分题规格</h2>
+<p>数量参数为非负整数，字节/FLOPs 为非负数；负值抛 <code>ValueError</code>。带宽/算力必须正；Q1 字节数也必须正。数值输入保证有限，除 Q6 的 bits 外不要求做类型检查。Q9 的每 token 模型尺寸必须严格为正，防止分母为零；其他计数函数接受零值。所有函数保持输入不变。</p>
+<h3 id="h-3">Q1：arithmetic_intensity</h3>
+<p>返回 FLOPs/Bytes 的 float；bytes_moved&lt;=0 或 flops&lt;0 抛 <code>ValueError</code>。自测 <code>arithmetic_intensity(120,40)==3</code>。解释为什么两个同 shape 的 GEMM 可以有不同 AI：分母取决于数据复用方案。</p>
+<h3 id="h-4">Q2：roofline_time</h3>
+<p>返回 <code>(秒数,"memory"或"compute")</code>。GB/s 用 1e9，TFLOP/s 用 1e12，取搬运与计算时间的最大值；相等返回 memory。非正硬件值抛 <code>ValueError</code>。</p>
+<p>例子：1GB、1TFLOP、100GB/s、10TFLOP/s，两个时间是 0.01s 和 0.1s，返回 <code>(0.1,"compute")</code>。本题是理想下界，不把 CPU 实测秒数代入 GPU 峰值利用率。</p>
+<h3 id="h-5">Q3：kv_cache_bytes</h3>
+<p>参数顺序见 starter；返回标准 MHA/GQA 的 KV 有效载荷字节数：<code>2*L*Hkv*D*S*B*w</code>。前面的 2 来自 K/V。用 KV heads 而非 query heads。</p>
+<p>L=32,Hkv=8,D=128,S=1024,B=2,w=2 时为 268435456B=256MiB。先从“一个 token、一个层”推导，禁止只在笔记抄最终公式。容量不含页尾、scale、对齐或权重。</p>
+<h3 id="h-6">Q4：mla_kv_cache_bytes</h3>
+<p>返回 <code>L*(rank+rope_dim)*S*B*w</code>。K/V 共享 latent；本模型将 latent 和 RoPE 都按相同 w 存储。如果实际精度不同，应分两项计算。</p>
+<p>L=32,rank=512,rope=64,S=1024,B=2,w=1，结果为 37748736B=36MiB。与 Q3 比较时先统一 dtype，才能区分结构压缩和低精度各自的贡献。</p>
+<h3 id="h-7">Q5：attention_flops</h3>
+<p>按两个 matmul 的有效工作计 FLOPs。full 有 s² 个配对，causal 有 <code>s(s+1)/2</code> 个；每个配对每头每 batch 计 4d FLOPs。忽略投影、softmax 和 mask 运算。</p>
+<p>b=1,h=8,s=128,d=64：full 为 33554432，causal 为 16908288。大 s 时接近一半，s=1 时两者相同。直接 dense matmul 再 mask 不会自动节省这些 FLOPs。</p>
+<h3 id="h-8">Q6：quantize_per_tensor</h3>
+<p>输入有限数值列表和整数 bits∈[2,16]，非整数、bool 或超界 bits 抛 <code>ValueError</code>，空输入也需检查。返回 <code>(新整数列表q,正float scale)</code>。采用对称均匀整数网格：<code>qmax=2**(bits-1)-1</code>、qmin=-qmax。空或全零输入 scale=1；其他输入 scale=amax/qmax。</p>
+<p>使用 Python <code>round</code> 的 ties-to-even，再 clamp。例子 <code>[-1,0,1]</code>、bits=3 得 <code>([-3,0,3],1/3)</code>。此题是 INT 量化，不是 FP8/FP4 编码器。</p>
+<h3 id="h-9">Q7：dequantize_per_tensor</h3>
+<p>返回新 float 列表，每项 <code>q_i*scale</code>。输入为 Q6 产生的整数码和正 scale。自测 <code>[0,1,-2]</code>、scale=0.25，得到 <code>[0,0.25,-0.5]</code>。</p>
+<h3 id="h-10">Q8：quant_error</h3>
+<p>依赖 Q6/Q7，返回 round-trip 最大绝对误差，空列表返回 0.0，但仍检查 bits。不要用相对误差替代。对当前 amax 选择的未截断均匀网格，误差不超过 scale/2（加很小浮点容差）。仅检查这个上界不够：总返回 0 的错误实现也满足上界。额外自测 <code>[0,0.2,1]</code>、bits=3 的误差应为 2/15。</p>
+<h3 id="h-11">Q9：max_kv_tokens — 独立迁移</h3>
+<p>输入专门用于 KV 的 <code>budget_bytes</code> 和模型参数，返回能容纳的<strong>最大总 token 数</strong>。这些 token 可分散在多条序列中；本题暂不含分页、共享、权重和 workspace。复用 Q3，不新写一份 KV 公式。参数顺序以 starter 为准。</p>
+<p>例子：预算 512MiB，L=32,Hkv=8,D=128,w=2 时能放 4096 token；预算少 1B 时只能放 4095。要求使用整数运算，大于 2⁵³ 的预算也要准确。预算非负，模型维度及每元素字节数必须正，否则抛 <code>ValueError</code>。</p>
+<p>完成条件：若返回 t，在笔记中同时验证“t 个 token 装得下”和“t+1 个 token 装不下”；仅证明前一个条件不能证明答案最大。进一步解释为什么 4096 token 不能直接称为“4096 并发请求”。</p>
+<h2 id="h-12">2. Required：书面迁移题</h2>
+<p><strong>W1（性能模型）</strong>：F=100GFLOP、B=2GB、P=10TFLOP/s、BW=100GB/s。给出 AI、拐点、两条时间下界和 bound。若只将 B 减半，时间下界变化多少？说明“带宽流量减半”为什么不总是“时间减半”。</p>
+<p><strong>W2（显存预算）</strong>：给定 512MiB 专门用于 KV，L=32,Hkv=8,D=128,w=2。先求每 token 字节数，再求所有序列合计的 token 容量。若每序列长 1024，能放几条？写清此预算已排除权重与运行时内存。</p>
+<p><strong>W3（量化反例）</strong>：分别对 <code>[0.1,0.2,0.3]</code> 和 <code>[0.1,0.2,100]</code> 做 8-bit per-tensor 量化。列 scale、整数码、误差。证明无 clipping 时 scale/2 界；解释固定 scale 后输入超范围时为什么失效。</p>
+<details class="study-hint"><summary>书面题自查数值（先完成推导）</summary><p>W1：AI=50，拐点=100，memory=0.02s，compute=0.01s；B 减半后下界为 0.01s。W2：每 token 131072B=128KiB；512MiB 能容纳 4096 token，即四条 1024 长序列。W3 的 scale 分别是 0.3/127 与 100/127；后一组两个小值都舍入到 0。</p></details>
+<h2 id="h-13">3. Checkpoint、验收与选做</h2>
+<p>Checkpoint A：Q1–Q5、Q9 与 W1/W2；Checkpoint B：Q6–Q8 与 W3。最后运行：</p>
+<pre><code class="language-bash">python3 course/tools/grade.py hw01</code></pre>
+<p>checkoff：不看笔记解释 KV 两个系数 2 的来源（K/V 与 bf16 字节数）；解释整数舍入界和 FP 浮点间距的区别；用 s=1 检查 causal 公式。</p>
+<p>验收采用四项证据：代码满足全部公开契约；W1 的每项带单位；W2/Q9 有最大性的两个不等式；W3 用反例说明误差界的适用条件。测试通过但无法解释一项时，将它记录为待复习。不要把参考解复制后的通过记录当成独立完成。</p>
+<p><strong>Optional</strong>：给量化加 per-group scale。对相同数据比较最大误差与 scale 元数据字节数；明确 group 尾部怎么处理。可参考第八讲和仓库 <code>doc/inference_deployment_qa.md</code> 的格式说明。</p>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <span class="doc-nav-card disabled"><span>← 上一篇</span><strong>没有了</strong></span><a class="doc-nav-card" href="hw02.html"><span>下一篇 →</span><strong>作业 2：Attention 与 KV Cache 数学</strong></a>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>

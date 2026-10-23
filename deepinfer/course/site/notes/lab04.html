@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lab4：有限块池与共享所有权 · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <span class="doc-category">实验</span>
+    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">实验 4</div>
+      <h1>Lab4：有限块池与共享所有权</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 4 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../labs/lab04/README.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      <div class="doc-actions"><button id="doc-done" class="doc-done" type="button" data-key="w5-lab4">标记完成</button><span id="doc-done-hint" class="doc-hint"></span></div>
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">1. 先跑一条可解释的失败</a><a class="toc-level-2" href="#h-2">2. API 与契约</a><a class="toc-level-2" href="#h-3">3. 先手算，再实现</a><a class="toc-level-2" href="#h-4">4. 调试任务与验收</a>
+      </aside>
+      <article class="doc-content">
+        <p>先修：Lab3 → <a href="lec09.html">第 9 讲</a>。约 2–3 小时，可分两次完成。只用 Python 标准库，修改 <code>course/labs/lab04/lab04.py</code>。这是块生命周期模型，没有 KV 数值、并发或 GPU。</p>
+<h2 id="h-1">1. 先跑一条可解释的失败</h2>
+<p>从仓库根目录执行：</p>
+<pre><code class="language-bash">python course/tools/grade.py lab04 --question q1 --unlock
+python course/tools/grade.py lab04 --question q1 --failfast
+python course/tools/grade.py lab04 --question q1 --hint 1</code></pre>
+<p>初始 NotImplementedError 表示题目尚未实现。Windows 可把 <code>python course/tools/grade.py</code> 替换成 <code>.\course\run.ps1</code>。</p>
+<h2 id="h-2">2. API 与契约</h2>
+<p>构造器已提供：<code>BlockPool(capacity)</code> 创建 refs 列表，长度为非负整数 capacity。<code>available()</code> 返回 refs=0 的数量。所有整数都排除 bool。</p>
+<table><thead><tr><th>题号</th><th>接口</th><th>必须满足的行为</th></tr></thead><tbody><tr><td>Q1</td><td><code>allocate(count)</code></td><td>非负整数；按最小 ID 取空闲块，将引用数设为 1，返回新的 ID 列表；0 返回 []；不足抛 MemoryError；非法 count 抛 ValueError</td></tr><tr><td>Q2</td><td><code>retain(block_ids)</code></td><td>输入为不重复整数 ID 的列表，每块必须在范围内且 refs&gt;0；整批验证后每块 +1，返回 None</td></tr><tr><td>Q3</td><td><code>release(block_ids)</code></td><td>与 Q2 同样验证；每块 -1；归零即可再分配，返回 None</td></tr><tr><td>Q4</td><td><code>locate(table,t,B)</code></td><td>table 是非负整数 ID 列表，B 为正整数，t 为整数；要求 0≤t&lt;len(table)*B；返回 <code>(table[t//B],t%B)</code></td></tr></tbody></table>
+<p>Q2/Q3 空列表有效。重复、空闲、负数、越界、bool ID 均抛 ValueError。<strong>任何失败都不能部分改变 refs</strong>。不能修改输入列表；返回的 ID 列表不得与内部状态共享。调用者不直接修改 refs；它公开只是为了手算与观察。</p>
+<p>Q4 不要求 table 的 ID 连续或唯一；它不掌握池容量与真实序列长度，也不验证页中是否已经写入 token。空表没有可访问位置。</p>
+<h2 id="h-3">3. 先手算，再实现</h2>
+<pre><code class="language-text">pool = BlockPool(3)
+A = pool.allocate(2)      -&gt; [0,1], refs=[1,1,0]
+pool.retain([0])          -&gt; refs=[2,1,0]
+B_tail = pool.allocate(1) -&gt; [2], refs=[2,1,1]
+pool.release(A)           -&gt; refs=[1,0,1]
+pool.allocate(1)          -&gt; [1], refs=[1,1,1]</code></pre>
+<p>最后一步复用的是物理块 1，而不是增长出新的块 3。写代码时把验证和变更分开；Q2/Q3 可以共享一个验证函数。</p>
+<h2 id="h-4">4. 调试任务与验收</h2>
+<p>构造 refs=<code>[1,0]</code>，尝试 release <code>[0,1]</code>。如果失败后得到 <code>[0,0]</code>，记录：期望、实际、哪一次写操作发生得太早，以及如何回归验证。</p>
+<pre><code class="language-bash">python course/tools/grade.py lab04</code></pre>
+<p>测试包含 150 步固定种子所有权轨迹，并核对每一块的引用数。通过以后仍需写出：共享块为何不会在第一个请求结束时释放；MemoryError 如何与 ValueError 区分；locate 为何不能取代序列长度检查。</p>
+<p>自评四题各 5 分：测试 3 分、手算/解释 2 分，共 20 分，属于 Unit2 试运行验收，不并入 Unit1。下一步：<a href="lec10.html">第 10 讲</a> 与 <a href="hw05.html">HW5</a>。</p>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <a class="doc-nav-card" href="lab03.html"><span>← 上一篇</span><strong>实验 3：KV Cache（连续 + Paged）</strong></a><span class="doc-nav-card disabled"><span>下一篇 →</span><strong>没有了</strong></span>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>

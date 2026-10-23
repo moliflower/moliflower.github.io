@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>第 1 讲：从 Python 建立 GPU 执行模型 · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <span class="doc-category">讲义</span>
+    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">讲义 1</div>
+      <h1>第 1 讲：从 Python 建立 GPU 执行模型</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 10 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../lectures/lec01.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      <div class="doc-actions"><button id="doc-done" class="doc-done" type="button" data-key="w1-l1">标记完成</button><span id="doc-done-hint" class="doc-hint"></span></div>
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">1. 今天只解决一个问题</a><a class="toc-level-2" href="#h-2">2. 从一个循环到多组编号</a><a class="toc-level-2" href="#h-3">3. 推导索引，而不是背索引</a><a class="toc-level-2" href="#h-4">4. 为什么不能让最后一组随便访问</a><a class="toc-level-2" href="#h-5">5. 列表索引怎样变成内存地址</a><a class="toc-level-2" href="#h-6">6. 结果相同，访存分组可以不同</a><a class="toc-level-2" href="#h-7">7. 三种计数，先分清单位</a><a class="toc-level-2" href="#h-8">8. 推导 vector add 的计数</a><a class="toc-level-2" href="#h-9">9. 一个有条件的时间下界</a><a class="toc-level-2" href="#h-10">10. 现在做什么，哪些先跳过</a>
+      </aside>
+      <article class="doc-content">
+        <blockquote><p><strong>核心必修</strong>：Python 函数、循环、列表；不要求 C++、指针、CUDA 或 GPU。  <br><strong>先修检查</strong>：能修复简单索引错误，能看懂测试中的输入与期望；不熟悉就先做 <a href="prep.html">预备单元</a>。  <br><strong>建议投入</strong>：分两次，各 30–45 分钟，边读边手算；随后做 Lab0。</p></blockquote>
+<h2 id="h-1">1. 今天只解决一个问题</h2>
+<p>输入两个等长列表，让很多“编号工人”共同完成：</p>
+<pre><code class="language-text">a = [1, 2, 3, 4, 5]
+b = [10, 20, 30, 40, 50]
+c = [11, 22, 33, 44, 55]</code></pre>
+<p>你在预备单元已经会写逐项加法。这一讲不增加新的数学，而是改变“谁负责哪个元素”。完成后你应该能：</p>
+<ul><li>根据组号和组内编号，算出负责的元素位置。</li><li>解释为什么最后一组需要跳过某些编号。</li><li>跟踪一次读、读、写的地址。</li><li>区分请求字节数、触及的 line 数和 sector 数。</li></ul>
+<p>Tensor Core、occupancy、指针和 CUDA 语法都不是本讲验收条件。</p>
+<h2 id="h-2">2. 从一个循环到多组编号</h2>
+<p>先看你熟悉的写法：</p>
+<pre><code class="language-python">c = []
+for i in range(len(a)):
+    c.append(a[i] + b[i])</code></pre>
+<p>这里一个循环依次处理所有 <code>i</code>。GPU 的想法是让多个线程分别处理不同的 <code>i</code>。课程先用 Python 依次调用各线程的函数，以便观察地址；它并没有真的并行，也不能用它的运行秒数推断 GPU 性能。</p>
+<p>四个术语先记用途，不背硬件规格：</p>
+<table><thead><tr><th>名称</th><th>本讲怎样理解</th><th>代码里的编号</th></tr></thead><tbody><tr><td>thread</td><td>负责一个元素的执行者</td><td>tid，组内编号</td></tr><tr><td>block</td><td>一组 thread</td><td>bid，组号</td></tr><tr><td>grid</td><td>本次启动的所有 block</td><td>grid，组的数量</td></tr><tr><td>warp</td><td>NVIDIA 上用于理解指令发射的一组 32 个 lane</td><td>本讲用来分组计访存</td></tr></tbody></table>
+<p>演示中的每组只有 4 个线程，是为了方便手算；真实 NVIDIA warp 的大小仍然是 32。小 block 会使用不完整的 warp。</p>
+<h2 id="h-3">3. 推导索引，而不是背索引</h2>
+<p>假设每组 4 个线程。第 0 组负责 0–3，第 1 组负责 4–7，第 2 组负责 8–11。</p>
+<pre><code class="language-text">组起点 = bid * block_dim
+元素位置 i = 组起点 + tid</code></pre>
+<p><code>block_dim</code> 是每组的线程数，<code>grid_dim</code> 是组数。不要把它们当成同一个量。</p>
+<table><thead><tr><th>bid</th><th>tid</th><th>block_dim</th><th>i</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>4</td><td>0</td></tr><tr><td>0</td><td>3</td><td>4</td><td>3</td></tr><tr><td>1</td><td>0</td><td>4</td><td>4</td></tr><tr><td>1</td><td>2</td><td>4</td><td>6</td></tr></tbody></table>
+<p><strong>停下来预测</strong>：<code>bid=2, tid=1, block_dim=4</code> 应得到几？如果写成 <code>bid+tid</code>，哪些线程会重复处理同一个位置？</p>
+<details class="study-hint"><summary>手算后检查</summary><p>正确位置是 <code>2*4+1=9</code>。若写成 <code>bid+tid</code>，<code>(bid=0,tid=1)</code> 和 <code>(bid=1,tid=0)</code> 都得到 1；位置重复，另外一些位置则没人处理。</p></details>
+<h2 id="h-4">4. 为什么不能让最后一组随便访问</h2>
+<p><code>n=5, block_dim=4</code>，需要两组。向上取整不是为了制造额外数据，而是为了提供足够的执行者。</p>
+<pre><code class="language-text">grid = ceil(n / block_dim) = ceil(5/4) = 2</code></pre>
+<table><thead><tr><th>bid</th><th>tid</th><th>i</th><th>是否小于 n</th><th>动作</th></tr></thead><tbody><tr><td>0</td><td>0..3</td><td>0..3</td><td>是</td><td>处理</td></tr><tr><td>1</td><td>0</td><td>4</td><td>是</td><td>处理</td></tr><tr><td>1</td><td>1</td><td>5</td><td>否</td><td>跳过</td></tr><tr><td>1</td><td>2</td><td>6</td><td>否</td><td>跳过</td></tr><tr><td>1</td><td>3</td><td>7</td><td>否</td><td>跳过</td></tr></tbody></table>
+<p>尾部条件是 <code>i &lt; n</code>，不是 <code>i &lt;= n</code>。长度 5 的合法索引为 0–4。</p>
+<p>下面的代码片段展示算法，完整可运行示例在 <code>walkthrough.py</code>：</p>
+<pre><code class="language-python">i = bid * block_dim + tid
+if i &lt; n:
+    c[i] = a[i] + b[i]</code></pre>
+<p>运行示例，不需要先实现学生题：</p>
+<pre><code class="language-bash">python course/labs/lab00/walkthrough.py
+python course/tools/grade.py lab00 --question q0</code></pre>
+<p>对照输出中的 <code>bid tid i action</code>。如果与预测不同，先解释其中一行，不要立即改整个程序。</p>
+<h2 id="h-5">5. 列表索引怎样变成内存地址</h2>
+<p>为数地址，tracer 把三个数组放进一条一维存储空间。这里地址的单位为 <strong>word</strong>，一个 word 规定为 4 字节：</p>
+<pre><code class="language-text">n=5
+a 在 0..4
+b 在 5..9
+c 在 10..14</code></pre>
+<p>处理 <code>i=2</code> 时：</p>
+<pre><code class="language-text">读 a：地址 0+2=2，得到 3
+读 b：地址 5+2=7，得到 30
+写 c：地址 10+2=12，写入 33</code></pre>
+<p>为了记录访问，示例不直接操作 Python 列表，而是调用下面两个方法：</p>
+<pre><code class="language-python">left = device.load(a_addr + i)
+right = device.load(b_addr + i)
+device.store(c_addr + i, left + right)</code></pre>
+<p>把 <code>device.load</code> 理解成“读值并记一笔”，<code>device.store</code> 理解成“写值并记一笔”。现在不用阅读 <code>GPU</code> 类内部，也不用学习 C++ 指针。</p>
+<h2 id="h-6">6. 结果相同，访存分组可以不同</h2>
+<p>连续分配使用 <code>i=bid*block_dim+tid</code>；另一种分配使用：</p>
+<pre><code class="language-text">i = tid * grid_dim + bid</code></pre>
+<p>例如 <code>n=12, block_dim=4, grid_dim=3</code>：</p>
+<table><thead><tr><th>bid</th><th>连续分配：tid=0..3</th><th>跨步分配：tid=0..3</th></tr></thead><tbody><tr><td>0</td><td>0,1,2,3</td><td>0,3,6,9</td></tr><tr><td>1</td><td>4,5,6,7</td><td>1,4,7,10</td></tr><tr><td>2</td><td>8,9,10,11</td><td>2,5,8,11</td></tr></tbody></table>
+<p>两种方案都覆盖 0–11，结果都可以正确。但同一组线程访问的地址距离不同。GPU 会把同一条内存指令、同一 warp 中落在同一 sector 的访问合并；地址分散通常需要更多 sector。</p>
+<p><strong>不要先记“跨步一定慢几倍”</strong>。当 grid=1 时两种分配相同；输入很小时访问也可能仍在少数 sector 内。后面用固定规模做可复现比较。</p>
+<h2 id="h-7">7. 三种计数，先分清单位</h2>
+<p>我们只讨论每 lane 读取一个 4 字节值的情况：</p>
+<pre><code class="language-text">word 地址 → byte 地址：word * 4
+128B line 编号：word // 32
+32B sector 编号：word // 8</code></pre>
+<p>同一 warp 的一次读取，数不同编号的个数：</p>
+<table><thead><tr><th>32 个 lane 读取的 word 地址</th><th>有用字节</th><th>line 数</th><th>sector 数</th></tr></thead><tbody><tr><td>0..31</td><td>128</td><td>1</td><td>4</td></tr><tr><td>16..47</td><td>128</td><td>2</td><td>4</td></tr><tr><td>1..32</td><td>128</td><td>2</td><td>5</td></tr><tr><td>0,8,16,...,248</td><td>128</td><td>8</td><td>32</td></tr></tbody></table>
+<p>第二行为什么不是 8 个 sector？16–47 对应 sector 2、3、4、5，恰好四个。跨两条 line 并不意味着必须传输两条完整 line。</p>
+<p>Lab0 保留 <code>global_transactions</code> 这个旧字段名，但它准确的含义是“按 warp 指令累计触及的 128B line 数”。另外提供 <code>global_sectors</code>。这两个都不是 profiler 测得的实际 DRAM 读写量；模型不模拟缓存、写策略和时间。</p>
+<h2 id="h-8">8. 推导 vector add 的计数</h2>
+<p>每元素两次读、一次写，每值 4 字节：</p>
+<pre><code class="language-text">requested_bytes = n * (2+1) * 4 = 12n
+FLOPs = n 次加法</code></pre>
+<p><code>n=1024, block=128</code>，有 8 个 block，每 block 4 个 warp，总共 32 个 warp。a/b/c 起点都按 128B 对齐：</p>
+<pre><code class="language-text">连续：32 warps * 3 次访存 * 1 line = 96 lines
+跨步：32 warps * 3 次访存 * 8 lines = 768 lines</code></pre>
+<p>两种的有用字节都是 <code>12*1024=12288</code>，但请求触及的 line 数不同。不能把这张表的比值直接叫实测 GPU 加速比。</p>
+<h2 id="h-9">9. 一个有条件的时间下界</h2>
+<p>设有效工作来自显存，先忽略缓存、启动和同步开销。硬件每秒最多搬 <code>BW</code> 字节、算 <code>P</code> 次浮点操作：</p>
+<pre><code class="language-text">memory_time = bytes / BW
+compute_time = FLOPs / P
+理想时间下界 = max(memory_time, compute_time)</code></pre>
+<p>假设搬 1GB、算 10GFLOP，BW=100GB/s，P=10TFLOP/s：</p>
+<pre><code class="language-text">memory_time = 1e9 / 100e9 = 0.01 秒
+compute_time = 10e9 / 10e12 = 0.001 秒
+下界为 0.01 秒；在这个模型下称为 memory-bound</code></pre>
+<p>两者不能直接相加来得到 Roofline 下界；而且下界不是性能保证。很小的任务可能受 kernel 启动延迟限制。这部分对应 Lab0 Q4，完成索引练习后再做即可。</p>
+<h2 id="h-10">10. 现在做什么，哪些先跳过</h2>
+<p>进入 <a href="lab00.html">Lab0</a>，按 Q0–Q6 做。每题只引入一项变化，先预测再运行。验收问题：</p>
+<ol><li><code>n=10, block=4</code> 时，最后一组哪些 tid 应跳过？</li><li>能否解释一个元素的两次读、一次写的地址？</li><li>为什么 word 16 开始的 32 个连续值触及两条 line，但只有四个 sector？</li></ol>
+<details class="study-hint"><summary>自查要点</summary><p>最后一组 bid=2，tid=0、1 处理 i=8、9；tid=2、3 跳过。读写基址分别为 0、n、2n。line 和 sector 的划分粒度不同，必须分别计算。</p></details>
+<p>完成本讲核心后，可读 <a href="lec02.html">第 2 讲</a> 的访存推导。它的 occupancy、profiling 与 CUDA 示例先选读。<a href="lec01_gpu.html">第一讲进阶</a> 保留硬件吞吐、CUDA、float4 等材料，等补过 C++ 后再看，不计入当前完成条件。</p>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <span class="doc-nav-card disabled"><span>← 上一篇</span><strong>没有了</strong></span><a class="doc-nav-card" href="lec02.html"><span>下一篇 →</span><strong>第 2 讲：合并访问、共享内存与 Occupancy</strong></a>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>

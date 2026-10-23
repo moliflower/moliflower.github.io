@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>预备单元：把看得懂变成能定位错误 · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <span class="doc-category">预备</span>
+    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">预备单元</div>
+      <h1>预备单元：把看得懂变成能定位错误</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 4 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../prep/README.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      <div class="doc-actions"><button id="doc-done" class="doc-done" type="button" data-key="prep-guide">标记完成</button><span id="doc-done-hint" class="doc-hint"></span></div>
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">1. 本单元的产物</a><a class="toc-level-2" href="#h-2">2. 按顺序学习</a><a class="toc-level-2" href="#h-3">3. 卡住时怎样得到帮助</a><a class="toc-level-2" href="#h-4">4. 记录一次修复</a><a class="toc-level-2" href="#h-5">5. 出口检查</a><a class="toc-level-2" href="#h-6">6. C++ 在哪里开始？</a>
+      </aside>
+      <article class="doc-content">
+        <blockquote><p><strong>适合你</strong>：能写简单 Python 函数，遇到错误不容易排查；C++ 基础少。  <br><strong>需要</strong>：Python 3.10+；不需要 C++、CUDA、GPU 或第三方包。  <br><strong>节奏</strong>：四次短练习，可分几天完成；不计入正式 15 周。</p></blockquote>
+<p>如果还没有写过 Python，先完成 <a href="foundations.html">Python 起步</a> 的四节课和 Q0–Q4。能解释 <code>return</code>、<code>if</code>、<code>for</code>，并独立构造新列表后再进入这里；本单元开始练调试，不再把这些语法当成新概念。</p>
+<h2 id="h-1">1. 本单元的产物</h2>
+<p>你将修复 <code>prep.py</code> 中三个位置的错误、一个测试辅助函数，并独立写一个向量加法。文件里的错误是故意留下的，不是安装失败。</p>
+<p>完成后，你应能说清楚一次调试的五件事：输入、期望、实际、最小复现、修复依据。不会要求你记住 traceback 的每一行。</p>
+<h2 id="h-2">2. 按顺序学习</h2>
+<table><thead><tr><th>课</th><th>先学什么</th><th>动手任务</th><th>检查命令的题号</th></tr></thead><tbody><tr><td><a href="prep00.html">预备 0：运行和报错</a></td><td>路径、运行文件、追踪变量</td><td>运行已经完成的示例</td><td>q0</td></tr><tr><td><a href="prep01.html">预备 1：定位逻辑错误</a></td><td>最小复现、循环不变式</td><td>修复最大值函数</td><td>q1</td></tr><tr><td><a href="prep02.html">预备 2：列表和矩阵</a></td><td>副本、二维索引、累计值</td><td>修复复制与矩阵乘法</td><td>q2</td></tr><tr><td><a href="prep03.html">预备 3：让测试帮助你</a></td><td>断言、误差、边界、自测</td><td>修复比较函数，独立写向量加法</td><td>q3</td></tr></tbody></table>
+<p>所有下面这样的命令都在 <strong>DeepInfer 仓库根目录</strong>运行，即能看到 <code>course</code> 文件夹的位置。若你的环境只提供 <code>python3</code>，将命令中的 <code>python</code> 替换为 <code>python3</code>。</p>
+<pre><code class="language-bash">python course/prep/demo.py
+python course/tools/grade.py prep --question q0</code></pre>
+<p>第一条最后显示 <code>result = 5</code>；第二条显示 <code>PASS</code>。先获得一个确定能运行的起点，再处理故意留下的错误。</p>
+<h2 id="h-3">3. 卡住时怎样得到帮助</h2>
+<pre><code class="language-bash">python course/tools/grade.py prep --question q1 --failfast
+python course/tools/grade.py prep --question q1 --hint 1
+python course/tools/grade.py prep --question q1 --hint 2
+python course/tools/grade.py prep --question q1 --hint 3</code></pre>
+<p>每次只显示所选的一层提示。先尝试自己的解释，再逐层打开；不要求一次独立完成。<code>--failfast</code> 让当前题在第一次失败时停止，避免被后面的错误淹没。</p>
+<p>只编辑 <code>prep.py</code>。<code>demo.py</code> 是现成示例，<code>test_prep.py</code> 是公开规格，<code>prep_solution.py</code> 是对照用的完整解法。参考解法测试会在临时副本中运行，不覆盖你的文件。</p>
+<h2 id="h-4">4. 记录一次修复</h2>
+<p>在自己的笔记中写下下面五行即可；不强制使用 Git，不需要新建固定路径的文件。</p>
+<pre><code class="language-text">输入：
+期望：
+实际：
+我定位到的原因：
+修复后新增的测试：</code></pre>
+<h2 id="h-5">5. 出口检查</h2>
+<pre><code class="language-bash">python course/tools/grade.py prep</code></pre>
+<ul><li>能修好全负数的最大值，而不是给某个测试特判。</li><li>能解释复制矩阵时为什么要复制每一行。</li><li>能手算矩阵的一格，并在代码中找到对应的累计过程。</li><li>能让测试既接受微小浮点误差，也拒绝明显错误。</li></ul>
+<p>有一项讲不清，就回看对应一课，状态记为“需要复习”，已完成的部分仍然有效。准备好后，进入 <a href="lec01.html">第 1 讲</a>，再做 <a href="lab00.html">Lab0</a>。</p>
+<h2 id="h-6">6. C++ 在哪里开始？</h2>
+<p>这条入门路径先用 Python 建立算法和调试能力。之后的 C++ 桥接按“函数与编译 → vector → 引用 → 指针与连续内存”展开，再进入 GPU。桥接单元尚未发布；现在不用为了本单元去安装 CUDA 或补完整套 C++。</p>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <span class="doc-nav-card disabled"><span>← 上一篇</span><strong>没有了</strong></span><a class="doc-nav-card" href="prep00.html"><span>下一篇 →</span><strong>预备 0：运行程序，读懂第一条反馈</strong></a>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>

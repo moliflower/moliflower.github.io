@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>预备 0：运行程序，读懂第一条反馈 · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <span class="doc-category">预备</span>
+    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">预备 0</div>
+      <h1>预备 0：运行程序，读懂第一条反馈</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 3 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../prep/00-run.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      <div class="doc-actions"><button id="doc-done" class="doc-done" type="button" data-key="prep-q0">标记完成</button><span id="doc-done-hint" class="doc-hint"></span></div>
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">1. 确认自己在哪里</a><a class="toc-level-2" href="#h-2">2. 先预测，再运行</a><a class="toc-level-2" href="#h-3">3. 看 traceback 的顺序</a><a class="toc-level-2" href="#h-4">4. 第一个完成检查</a><a class="toc-level-2" href="#h-5">5. 自己解释</a>
+      </aside>
+      <article class="doc-content">
+        <blockquote><p><strong>目标</strong>：运行一个正确示例，追踪三轮循环，知道报错从哪里开始看。  <br><strong>预计投入</strong>：20–40 分钟，含动手；不是只读一遍。</p></blockquote>
+<h2 id="h-1">1. 确认自己在哪里</h2>
+<p>用编辑器打开整个 <code>DeepInfer</code> 文件夹，再打开终端。终端所在目录应当能看到 <code>course</code>。Windows PowerShell 可运行 <code>Get-Location</code> 查看当前位置；WSL/Linux 可运行 <code>pwd</code>。</p>
+<p>检查 Python：</p>
+<pre><code class="language-bash">python --version</code></pre>
+<p>需要 3.10 或更新版本。如果命令不存在而你在 WSL，用 <code>python3 --version</code>；后面的命令也统一使用 <code>python3</code>。不要因为命令名不同就重装整个仓库的依赖。</p>
+<h2 id="h-2">2. 先预测，再运行</h2>
+<p>打开 <code>demo.py</code>，先看这段已完成的算法：</p>
+<pre><code class="language-python">total = 0
+for value in [2, -1, 4]:
+    total += value</code></pre>
+<p>在纸上填写每轮结束后的 <code>total</code>。随后从仓库根目录运行：</p>
+<pre><code class="language-bash">python course/prep/demo.py</code></pre>
+<p>期望输出：</p>
+<pre><code class="language-text">index value before after
+0 2 0 2
+1 -1 2 1
+2 4 1 5
+result = 5</code></pre>
+<p><code>before</code> 是本轮加法前的累计值，<code>after</code> 是加法后的值。调试不是打印越多越好，而是打印能验证自己判断的变量。</p>
+<h2 id="h-3">3. 看 traceback 的顺序</h2>
+<p>接下来运行一个尚未修复的题目：</p>
+<pre><code class="language-bash">python course/tools/grade.py prep --question q1 --failfast</code></pre>
+<p>这次会失败。关键内容类似：</p>
+<pre><code class="language-text">FAIL: test_empty (...TestMaximum.test_empty)
+...
+AssertionError: ValueError not raised</code></pre>
+<p>具体测试的先后以输出为准。按这个顺序读：</p>
+<ol><li><strong>最下面的异常类型和说明</strong>：这里表示规格要求抛异常，但函数没有抛。</li><li><strong>失败测试名</strong>：<code>test_empty</code> 提示你先看空列表。</li><li><strong>对应测试中的输入和期望</strong>：打开 <code>test_prep.py</code>，只看这个方法。</li><li><strong>自己的函数</strong>：去 <code>prep.py</code> 找 <code>maximum</code>，不要修改测试来变绿。</li></ol>
+<table><thead><tr><th>反馈</th><th>含义</th><th>第一件事</th></tr></thead><tbody><tr><td>SyntaxError</td><td>语法还没能被 Python 解析</td><td>看提示行及前一行的括号、冒号、缩进</td></tr><tr><td>IndexError</td><td>某次索引超出范围</td><td>对照列表长度和具体索引</td></tr><tr><td>AssertionError</td><td>实际结果不符合测试要求</td><td>把输入、实际、期望写到一起</td></tr><tr><td>NotImplementedError</td><td>课程有意留出的待实现处</td><td>看该题说明，不需要重装环境</td></tr></tbody></table>
+<p>失败测试是定位信息，不是学习能力评分。</p>
+<h2 id="h-4">4. 第一个完成检查</h2>
+<pre><code class="language-bash">python course/tools/grade.py prep --question q0</code></pre>
+<p>Q0 只检查已经完成的 demo，应该通过。这里暂时不运行整个预备单元，因为后面的题仍然有意保留错误。</p>
+<h2 id="h-5">5. 自己解释</h2>
+<p>不看输出，解释输入 <code>[2, -1, 4]</code> 的第二轮为什么 <code>before=2, after=1</code>。再预测空列表时结果与 trace 是什么。</p>
+<details class="study-hint"><summary>检查预测后再看</summary><p>第二轮把 -1 加到之前的 2 上。空列表不进入循环，返回累计值 0 和空记录列表；这是这个求和示例的约定。最大值的空输入约定不同，下一课会单独规定。</p></details>
+<p>下一步：<a href="prep01.html">预备 1：定位逻辑错误</a>。</p>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <a class="doc-nav-card" href="prep.html"><span>← 上一篇</span><strong>预备单元：把看得懂变成能定位错误</strong></a><a class="doc-nav-card" href="prep01.html"><span>下一篇 →</span><strong>预备 1：用最小复现修复最大值</strong></a>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>

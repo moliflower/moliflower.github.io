@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>第 3 讲：Reduction、Softmax 与 RMSNorm · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <span class="doc-category">讲义</span>
+    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">讲义 3</div>
+      <h1>第 3 讲：Reduction、Softmax 与 RMSNorm</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 19 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../lectures/lec03.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      <div class="doc-actions"><button id="doc-done" class="doc-done" type="button" data-key="w2-l3">标记完成</button><span id="doc-done-hint" class="doc-hint"></span></div>
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">0. 本讲要解决的问题</a><a class="toc-level-2" href="#h-2">1. Reduction：工作量、深度与数值</a><a class="toc-level-3" href="#h-3">1.1 三个指标</a><a class="toc-level-3" href="#h-4">1.2 Warp shuffle reduction</a><a class="toc-level-3" href="#h-5">1.3 Block reduction</a><a class="toc-level-3" href="#h-6">1.4 多 block：两遍 vs atomics</a><a class="toc-level-3" href="#h-7">1.5 浮点非结合性</a><a class="toc-level-2" href="#h-8">2. Softmax：从定义到 online 更新</a><a class="toc-level-3" href="#h-9">2.1 定义与不变性</a><a class="toc-level-3" href="#h-10">2.2 Online 更新公式</a><a class="toc-level-3" href="#h-11">2.3 1/2/3-pass 的 traffic</a><a class="toc-level-3" href="#h-12">2.4 代码：数值稳定的 softmax</a><a class="toc-level-3" href="#h-13">2.5 边界</a><a class="toc-level-2" href="#h-14">3. RMSNorm 与 LayerNorm</a><a class="toc-level-3" href="#h-15">3.1 定义</a><a class="toc-level-3" href="#h-16">3.2 数值细节</a><a class="toc-level-3" href="#h-17">3.3 融合的收益</a><a class="toc-level-3" href="#h-18">3.4 仓库对照</a><a class="toc-level-2" href="#h-19">4. 性能分析</a><a class="toc-level-3" href="#h-20">4.1 Reduction 是 memory-bound</a><a class="toc-level-3" href="#h-21">4.2 Softmax 的 pass 数</a><a class="toc-level-3" href="#h-22">4.3 RMSNorm 的 occupancy</a><a class="toc-level-2" href="#h-23">5. 练习</a><a class="toc-level-3" href="#h-24">基础</a><a class="toc-level-3" href="#h-25">进阶</a><a class="toc-level-3" href="#h-26">挑战</a><a class="toc-level-2" href="#h-27">6. 面试追问</a><a class="toc-level-2" href="#h-28">7. 参考文献</a><a class="toc-level-2" href="#h-29">8. 下一步</a>
+      </aside>
+      <article class="doc-content">
+        <blockquote><p><strong>课前</strong>：35 分钟  <br><strong>课后</strong>：实验 1  <br><strong>一句话</strong>：这三个算子看起来只有几行，但它们决定了你搬多少 HBM、用多少寄存器、以及数值会不会炸。</p></blockquote>
+<hr>
+<h2 id="h-1">0. 本讲要解决的问题</h2>
+<p><strong>先修</strong>：Python 函数、循环、列表；<code>exp</code> 是指数、<code>sqrt</code> 是平方根；第 1 讲的 float32=4B。主线是第 1.1、1.5、2.1–2.3、3.1 与 Lab1。CUDA/shuffle 是桥接后选读，无 GPU 也能完成必做题。</p>
+<ol><li>一个 reduction 的<strong>工作量</strong>和<strong>深度</strong>是多少？为什么 GPU 要用树形？</li><li>多 block reduction 为什么要两遍？代价是什么？</li><li>softmax 的 1/2/3-pass 各搬多少字节？online softmax 的更新公式怎么推？</li><li>RMSNorm 与 LayerNorm 的数学差异是什么？融合后省了哪些 traffic？</li><li>浮点非结合性如何影响结果？什么时候必须用 deterministic reduction？</li></ol>
+<hr>
+<h2 id="h-2">1. Reduction：工作量、深度与数值</h2>
+<h3 id="h-3">1.1 三个指标</h3>
+<p>对一个长度为 <code>n</code> 的数组求和：</p>
+<table><thead><tr><th>算法</th><th>工作量（加法次数）</th><th>深度（依赖链）</th><th>额外空间</th></tr></thead><tbody><tr><td>串行</td><td>n-1</td><td>n-1</td><td>O(1)</td></tr><tr><td>相邻二叉树</td><td>n-1</td><td>ceil(log2 n)</td><td>O(n)，允许原地覆盖时无需另一整份数组</td></tr><tr><td>warp shuffle</td><td>有效归约树 n-1；实际各 lane 可能执行冗余加法</td><td>满 warp 为 5 轮</td><td>每 lane O(1) 寄存器</td></tr><tr><td>多 block 两遍</td><td>(n-grid)+(grid-1)=n-1</td><td>ceil(log2(n/grid))+ceil(log2 grid)，假设均分</td><td>O(grid) partials</td></tr></tbody></table>
+<p>本表 n&gt;0，grid 为非空分组数；n=0 的返回值由接口约定。工作量决定总操作，深度决定最长依赖链，性能还受可用并行度与访存影响。</p>
+<p><strong>手算</strong>：<code>[1,2,3,4,5] → [3,7,5] → [10,5] → [15]</code>。三轮分别做 2、1、1 次加法，共 4=n-1。分两组 <code>[1,2,3]</code> 与 <code>[4,5]</code> 时第一遍做 2+1 次，第二遍 1 次，仍共 4 次，不能再额外加一次 grid-1。</p>
+<h3 id="h-4">1.2 Warp shuffle reduction</h3>
+<p>以下 CUDA 片段只在一个完整 warp 的 32 个 lane 全部参与、mask=<code>0xffffffff</code> 时使用。<code>i&gt;=n</code> 的线程可以传 0，但不能提前退出。block 示例要求 blockDim.x 是 32 的倍数且不超过 1024；部分 warp 需另写合法的 active mask 算法。</p>
+<pre><code class="language-cuda">__device__ float warp_reduce_sum(float val) {
+    for (int offset = 16; offset &gt; 0; offset &gt;&gt;= 1) {
+        val += __shfl_down_sync(0xffffffff, val, offset);
+    }
+    return val; // lane 0 得到整个 warp 的和
+}</code></pre>
+<p>5 步后，lane 0 拥有 32 个 lane 的和。其他 lane 的值不保证正确（取决于实现），所以通常只在 lane 0 使用结果。</p>
+<h3 id="h-5">1.3 Block reduction</h3>
+<pre><code class="language-cuda">__global__ void block_reduce(const float* x, float* out, int n) {
+    __shared__ float smem[32];
+    int tid = threadIdx.x;
+    int i = blockIdx.x * blockDim.x + tid;
+    float val = (i &lt; n) ? x[i] : 0.0f;
+
+    val = warp_reduce_sum(val);
+    if ((tid &amp; 31) == 0) smem[tid &gt;&gt; 5] = val;
+    __syncthreads();
+
+    if (tid &lt; 32) {
+        val = (tid &lt; (blockDim.x + 31) / 32) ? smem[tid] : 0.0f;
+        val = warp_reduce_sum(val);
+        if (tid == 0) out[blockIdx.x] = val;
+    }
+}</code></pre>
+<p>要点：</p>
+<ul><li>第一层：每个 warp 内部 shuffle；</li><li>第二层：每个 warp 的 lane 0 写 shared；</li><li>第三层：第一个 warp 再 reduce 这些 partial；</li><li><code>__syncthreads()</code> 保证 shared 可见；</li><li>边界：<code>i &gt;= n</code> 的 lane 补 0，不能读越界。</li></ul>
+<h3 id="h-6">1.4 多 block：两遍 vs atomics</h3>
+<p>两遍：</p>
+<pre><code>kernel 1: 每个 block 写 partials[bid]
+kernel 2: 一个 block reduce partials</code></pre>
+<p>traffic：</p>
+<pre><code>read x: n * 4
+write partials: grid * 4
+read partials: grid * 4
+write final: 4</code></pre>
+<p>atomics：</p>
+<pre><code class="language-cuda">atomicAdd(out, val);</code></pre>
+<ul><li>优点：一个 kernel；</li><li>缺点：原子冲突、结果顺序不确定、不可复现；</li><li>对 float，<code>atomicAdd</code> 的顺序会影响结果。</li></ul>
+<h3 id="h-7">1.5 浮点非结合性</h3>
+<p>浮点加法不满足结合律：</p>
+<pre><code>(a + b) + c != a + (b + c)</code></pre>
+<p>例子（float32）：</p>
+<pre><code>1e8 + 1.0 - 1e8  -&gt; 0.0（1.0 被吞掉）</code></pre>
+<p>因此：</p>
+<ul><li>串行、树形、warp shuffle、atomic 的结果可能不同；</li><li>如果要求 deterministic（batch invariant、可复现），必须固定 reduction 顺序，或使用更高精度（FP64/Kahan）并固定树形；</li><li>误差上界：树形 reduction 的误差约为 <code>O(log n * eps * sum|x|)</code>，串行约为 <code>O(n * eps * sum|x|)</code>。树形通常更准。</li></ul>
+<hr>
+<h2 id="h-8">2. Softmax：从定义到 online 更新</h2>
+<h3 id="h-9">2.1 定义与不变性</h3>
+<pre><code>softmax(x)_i = exp(x_i) / Σ_j exp(x_j)</code></pre>
+<p>对任意常数 <code>c</code>：</p>
+<pre><code>softmax(x + c) = softmax(x)</code></pre>
+<p>证明：分子分母同乘 <code>exp(c)</code>，约掉。因此可以减最大值 <code>m = max(x)</code>：</p>
+<pre><code>y_i = exp(x_i - m) / Σ_j exp(x_j - m)</code></pre>
+<p>这样最大指数是 <code>exp(0)=1</code>，不会溢出。</p>
+<h3 id="h-10">2.2 Online 更新公式</h3>
+<p>设已经处理了前 <code>k</code> 个元素，维护：</p>
+<pre><code>m_k = max(x_1..x_k)
+s_k = Σ_{j&lt;=k} exp(x_j - m_k)</code></pre>
+<p>加入 <code>x_{k+1}</code>：</p>
+<pre><code>m' = max(m_k, x_{k+1})
+s' = s_k * exp(m_k - m') + exp(x_{k+1} - m')</code></pre>
+<p>因为旧的 <code>s_k</code> 是以 <code>m_k</code> 为基准的，换成新基准 <code>m'</code> 要乘 <code>exp(m_k - m')</code>。</p>
+<p>最终：</p>
+<pre><code>y_i = exp(x_i - m_n) / s_n</code></pre>
+<p>注意：这个公式只维护 <code>(m, s)</code>，输出仍然需要第二遍（或把输出累加器一起 rescale）。FlashAttention 把 <code>O</code> 也做同样的 rescale：</p>
+<pre><code>o' = o * exp(m - m') + exp(x - m') * V</code></pre>
+<p>这里 o 是<strong>未归一化加权和</strong>，最终还要返回 <code>o/s</code>；如果把 o 误认为已经归一化输出，更新式会错。手算 logits <code>[0,ln(2)]</code>、V=<code>[2,6]</code>：第一步 <code>(m,s,o)=(0,1,2)</code>；第二步 <code>(ln(2),1.5,7)</code>；最终输出 <code>7/1.5=14/3</code>。</p>
+<h3 id="h-11">2.3 1/2/3-pass 的 traffic</h3>
+<p>对长度 <code>n</code>、float32：</p>
+<table><thead><tr><th>实现</th><th>读 x</th><th>写 y</th><th>额外</th><th>总字节</th></tr></thead><tbody><tr><td>3-pass</td><td>3</td><td>1</td><td>max、sum</td><td>16n</td></tr><tr><td>2-pass</td><td>2</td><td>1</td><td>max+sum 融合</td><td>12n</td></tr><tr><td>1-pass（x 在 on-chip）</td><td>1</td><td>1</td><td>需要存 x</td><td>8n</td></tr></tbody></table>
+<p>如果 <code>n=4096</code>：</p>
+<ul><li>3-pass：65536B = 64KiB；</li><li>2-pass：49152B = 48KiB；</li><li>1-pass：32768B = 32KiB。</li></ul>
+<p>在假设 2×10¹² B/s 下，每少读一遍省 16384B，对应 8.192ns/行的带宽模型差值。它不含 launch、归约、exp 与缓存；不能把这个差值当成实际 kernel 加速。</p>
+<h3 id="h-12">2.4 代码：数值稳定的 softmax</h3>
+<p>以下是算法片段，不可直接编译：<code>block_reduce_max/sum</code> 需实现为<strong>向所有线程广播</strong>的归约，并正确同步，不能直接用只给 lane0 结果的前节函数替代。</p>
+<pre><code class="language-cuda">__global__ void softmax_row(const float* x, float* y, int n) {
+    int row = blockIdx.x;
+    const float* xr = x + row * n;
+    float* yr = y + row * n;
+
+    float m = -INFINITY;
+    for (int i = threadIdx.x; i &lt; n; i += blockDim.x) m = fmaxf(m, xr[i]);
+    m = block_reduce_max(m);
+
+    float s = 0.0f;
+    for (int i = threadIdx.x; i &lt; n; i += blockDim.x) s += expf(xr[i] - m);
+    s = block_reduce_sum(s);
+
+    for (int i = threadIdx.x; i &lt; n; i += blockDim.x) yr[i] = expf(xr[i] - m) / s;
+}</code></pre>
+<p>优化：</p>
+<ul><li>如果 <code>n &lt;= 1024</code>，一行一个 block；每行数据可以留在寄存器/shared，减少 global 往返；</li><li>用 <code>__expf</code>（fast math）会损失精度，采样场景要评估；</li><li>对 vocab=128K，一行很大，必须分块/多 pass；</li><li>采样时通常只需要 top-k/top-p，可以避免 full softmax（见 <code>fused_sample.py</code>）。</li></ul>
+<h3 id="h-13">2.5 边界</h3>
+<ul><li>所有元素 <code>-inf</code>：分母为 0，通常的概率定义无效；选择报错或明确的 mask 语义，不能无理由设成均匀分布。</li><li>存在 <code>+inf</code>：<code>inf-inf</code> 产生 NaN；需要约定如何处理一个或多个 +inf。本课 Lab1 限有限输入；Lab2 允许 -inf mask，但对 NaN、+inf、全 -inf 行报错。</li><li>全 0：<code>m=0</code>，<code>s=n</code>，均匀分布。</li><li>空输入：未定义；框架通常返回空。</li></ul>
+<hr>
+<h2 id="h-14">3. RMSNorm 与 LayerNorm</h2>
+<h3 id="h-15">3.1 定义</h3>
+<p>LayerNorm：</p>
+<pre><code>μ = mean(x)
+σ² = mean((x - μ)²)
+y_i = (x_i - μ) / sqrt(σ² + ε) * w_i + b_i</code></pre>
+<p>RMSNorm：</p>
+<pre><code>r = sqrt(mean(x_i²) + ε)
+y_i = x_i / r * w_i</code></pre>
+<p>差异：</p>
+<ul><li>LayerNorm 需要 mean 和 variance 两个 reduction；</li><li>RMSNorm 只需要 mean-square 一个 reduction，没有 bias；</li><li>忽略 ε 时，RMSNorm 对正比例缩放不变：<code>RMSNorm(a*x)=RMSNorm(x)</code>（a&gt;0）。固定 ε 时仅近似成立；对整体平移通常不具备不变性。是否减均值影响的是平移，不是正比例缩放。</li></ul>
+<h3 id="h-16">3.2 数值细节</h3>
+<ul><li>用 FP32 累加 <code>x_i²</code>，即使输入是 BF16/FP16；</li><li><code>rsqrt</code> 可以比 <code>1/sqrt</code> 快，但精度略低；</li><li><code>ε</code> 的位置：<code>sqrt(mean + ε)</code> vs <code>sqrt(mean) + ε</code>，不同框架可能不同，读代码要确认；</li><li>如果 <code>mean(x²)</code> 很小，<code>ε</code> 防止除零；如果很大，<code>ε</code> 可忽略；</li><li>对 <code>x</code> 做 residual add 时，注意 <code>x + residual</code> 的溢出/精度。</li></ul>
+<h3 id="h-17">3.3 融合的收益</h3>
+<p>一个 decoder layer 里常见：</p>
+<pre><code>residual add -&gt; RMSNorm -&gt; QKV projection</code></pre>
+<p>分开写：</p>
+<ol><li>residual add：读 x、读 residual、写 x（12n bytes）；</li><li>RMSNorm：读 x、写 y（8n）；</li><li>QKV：读 y。</li></ol>
+<p>融合后：</p>
+<ol><li>读 x、读 residual，算 sum；</li><li>在寄存器/shared 里算 RMSNorm；</li><li>直接写 FP8 量化后的 y，或直接喂给 GEMM。</li></ol>
+<p>少一次 HBM 往返，就是融合的收益。DeepInfer 的 <code>fused_transform.py</code> 把 norm + RoPE + Hadamard + cast + KV store 融在一起，是同一思路的极致版。</p>
+<h3 id="h-18">3.4 仓库对照</h3>
+<ul><li><code>deepinfer/model_executor/layers/tilelang_ops/cuda/norm.py</code>：<code>norm_tl</code> 的参数 <code>has_residual</code>、<code>do_fp8_cast</code>、<code>return_origin_out</code>、<code>shared_sf_block_m</code>；看它如何在一次读入中完成多种变换。</li><li><code>.../tilelang_ops/fused_transform.py</code>：<code>fused_norm_rope_hadamard_cast_store_kvcache</code> 的参数列表，理解融合了哪些步骤。</li><li><code>.../layers/layernorm.py</code>、<code>.../layers/rotary_embedding.py</code>：上层封装。</li><li><code>.../layers/sampler.py</code>：softmax 在采样中的位置；<code>fused_sample.py</code> 如何避免 full softmax。</li></ul>
+<hr>
+<h2 id="h-19">4. 性能分析</h2>
+<h3 id="h-20">4.1 Reduction 是 memory-bound</h3>
+<p>对一个 <code>n</code> 元素的 reduction：</p>
+<pre><code>Bytes = n * 4（读）+ 少量写
+FLOPs = n
+AI = 1/4 = 0.25 FLOP/Byte</code></pre>
+<p>远低于拐点，memory-bound。优化点：</p>
+<ul><li>减少读次数（一次读入，寄存器/shared 内完成）；</li><li>合并多个 reduction；直接用 <code>E[x²]-E[x]²</code> 会在均值大、方差小时发生消减，稳定单遍方差可用 Welford，不能仅因 pass 少就替换数值算法；</li><li>对多行做 batched reduction，提高并行度；</li><li>避免 atomic 热点。</li></ul>
+<h3 id="h-21">4.2 Softmax 的 pass 数</h3>
+<p>如 2.3 所述，3-pass -&gt; 2-pass -&gt; 1-pass 的收益来自少读 x。对长 vocab，1-pass 需要把 x 放在 shared/寄存器；如果放不下，2-pass 是折中。</p>
+<h3 id="h-22">4.3 RMSNorm 的 occupancy</h3>
+<p>一个 block 处理一行，<code>blockDim=256/512</code>；如果 hidden=4096，每个 thread 处理 8–16 个元素，寄存器压力小；如果 hidden=8192，每个 thread 处理 16–32 个，注意 register spill。</p>
+<hr>
+<h2 id="h-23">5. 练习</h2>
+<h3 id="h-24">基础</h3>
+<p><strong>修错题</strong>：更新 online state 时先写 <code>m=m_new</code>，随后执行 <code>s=s*exp(m-m_new)+exp(v-m_new)</code>。输入 <code>[0,ln(2)]</code> 得到的 s 为什么会是 2？</p>
+<p>&lt;details&gt;&lt;summary&gt;核对&lt;/summary&gt;</p>
+<p>旧 m 被覆盖，使旧 s 的缩放因子错误地变成 1。应使用旧 m 更新 s，然后再赋值 m。正确 s=1.5。本题对应 Lab1 Q2，之后独立完成 Q5 LayerNorm，不以背出更新式代替不变式解释。</p>
+<p>&lt;/details&gt;</p>
+<ol><li>证明 <code>softmax(x+c)=softmax(x)</code>。</li><li>推导 online softmax 的 <code>s'</code> 更新公式。</li><li>计算 4096 维 float32 的 3-pass/2-pass/1-pass traffic 和 2TB/s 下的时间差。</li><li>写一个 warp reduce sum，验证 32 个随机数的和与 CPU 结果在 1e-5 内。</li></ol>
+<h3 id="h-25">进阶</h3>
+<ol start="5"><li>实现 block reduce + grid two-pass，测 <code>n=1e6/1e7/1e8</code> 的带宽。</li><li>实现 row-wise softmax（一行一个 block），对比 3-pass 和 2-pass 的耗时。</li><li>实现 RMSNorm + residual + FP8 cast 的融合 kernel（可用 TileLang），对比分开写的 traffic。</li><li>构造一个浮点非结合性例子，展示串行和树形结果不同；说明如何保证 deterministic。</li></ol>
+<h3 id="h-26">挑战</h3>
+<ol start="9"><li>实现 Kahan/Neumaier 补偿求和，比较误差和吞吐。</li><li>实现 n 很大时的两遍 online softmax，解释完整概率输出为什么仍需要重读 x 或保存足够信息；再比较只输出加权和的 <code>(m,s,o)</code> 算法。</li></ol>
+<hr>
+<h2 id="h-27">6. 面试追问</h2>
+<ol><li>reduction 的工作量和深度分别是什么？为什么 GPU 用树形？</li><li>多 block reduction 为什么需要两遍？atomics 有什么问题？</li><li>softmax 为什么要减 max？online softmax 的 rescale 怎么推？</li><li>LayerNorm 和 RMSNorm 的数学差异？为什么 RMSNorm 更快？</li><li>浮点非结合性对推理有什么影响？什么是 batch invariant？</li><li>一个 4096 维 softmax，3-pass 和 2-pass 差多少字节？在 2TB/s 下差多少时间？</li></ol>
+<hr>
+<h2 id="h-28">7. 参考文献</h2>
+<ul><li>NVIDIA, *Online normalizer calculation for softmax*（Milakov &amp; Gimelshein）。</li><li>LayerNorm: Ba et al., 2016；RMSNorm: Zhang &amp; Sennrich, 2019。</li><li>FlashAttention, §3：online softmax 与 IO complexity。</li><li>PMPP, chapter 10（reduction）。</li></ul>
+<hr>
+<h2 id="h-29">8. 下一步</h2>
+<ul><li>做 <a href="lab01.html">实验 1</a>；</li><li>做 <a href="hw01.html">作业 1</a> 的量化与 KV 部分；</li><li>读 <a href="lec04.html">第 4 讲</a> 的 GEMM 与 tiling。</li></ul>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <a class="doc-nav-card" href="lec02.html"><span>← 上一篇</span><strong>第 2 讲：合并访问、共享内存与 Occupancy</strong></a><a class="doc-nav-card" href="lec04.html"><span>下一篇 →</span><strong>第 4 讲：Tiling、GEMM 与 Roofline</strong></a>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>

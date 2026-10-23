@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Project2 Phase1 报告模板 · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <span class="doc-category">报告模板</span>
+    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">项目 2 报告</div>
+      <h1>Project2 Phase1 报告模板</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 1 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../projects/project2/report_template.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">实验条件</a><a class="toc-level-2" href="#h-2">状态证据</a><a class="toc-level-2" href="#h-3">调试记录</a><a class="toc-level-2" href="#h-4">队首阻塞反例</a><a class="toc-level-2" href="#h-5">局限</a>
+      </aside>
+      <article class="doc-content">
+        <h2 id="h-1">实验条件</h2>
+<p>Python 版本、capacity、block_size、原始事件列表、运行命令。</p>
+<h2 id="h-2">状态证据</h2>
+<p>逐事件记录 active、waiting、free_blocks，并核对容量守恒。</p>
+<h2 id="h-3">调试记录</h2>
+<p>最小失败输入 → 期望/实际 → 原因 → 修复 → 回归命令。</p>
+<h2 id="h-4">队首阻塞反例</h2>
+<p>给出一个小请求必须等待的案例。讨论允许越过队首可能带来的收益与公平性问题，不实现新策略。</p>
+<h2 id="h-5">局限</h2>
+<p>说明固定长度预留与真实逐 token 增长的差别；说明为什么不能从这些事件推导 GPU 吞吐、TTFT 或 TPOT。</p>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <a class="doc-nav-card" href="hw02-report.html"><span>← 上一篇</span><strong>HW2 推导与证据模板</strong></a><span class="doc-nav-card disabled"><span>下一篇 →</span><strong>没有了</strong></span>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>

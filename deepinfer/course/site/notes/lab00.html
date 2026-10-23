@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>实验 0：GPU 心智模型 · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <span class="doc-category">实验</span>
+    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">实验 0</div>
+      <h1>实验 0：GPU 心智模型</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 11 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../labs/lab00/README.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      <div class="doc-actions"><button id="doc-done" class="doc-done" type="button" data-key="w1-lab0">标记完成</button><span id="doc-done-hint" class="doc-hint"></span></div>
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">1. 路线与文件</a><a class="toc-level-2" href="#h-2">2. Q0：一个确定能运行的起点</a><a class="toc-level-2" href="#h-3">3. Q1：只填一个索引公式</a><a class="toc-level-2" href="#h-4">4. Q2：换分配顺序，不换输出顺序</a><a class="toc-level-2" href="#h-5">5. Q3：先预测统计，再提取字段</a><a class="toc-level-2" href="#h-6">6. 统计字段怎样读</a><a class="toc-level-2" href="#h-7">7. Q4：实现带单位的 Roofline 下界</a><a class="toc-level-2" href="#h-8">8. Q5：独立实现相近的新算子</a><a class="toc-level-2" href="#h-9">9. Q6：修复尾部错误</a><a class="toc-level-2" href="#h-10">10. 出口与下一步</a>
+      </aside>
+      <article class="doc-content">
+        <blockquote><p><strong>核心必修</strong>：纯 Python；不需要 C++、CUDA、GPU。  <br><strong>前置</strong>：<a href="prep.html">预备单元</a>、<a href="lec01.html">第 1 讲</a>。  <br><strong>节奏</strong>：建议分两三次完成，每次只做一两题，按理解推进而不是赶时间。  <br><strong>修改</strong>：<code>lab00.py</code>；测试、tracer、示例不需要改。</p></blockquote>
+<h2 id="h-1">1. 路线与文件</h2>
+<table><thead><tr><th>步骤</th><th>任务</th><th>本次新增的能力</th></tr></thead><tbody><tr><td>Q0</td><td>运行完成的例子</td><td>读编号表，不从空白开始</td></tr><tr><td>Q1</td><td>填连续索引</td><td>把分组关系写成公式</td></tr><tr><td>Q2</td><td>填跨步索引</td><td>改分配顺序但不改结果</td></tr><tr><td>Q3</td><td>组合前两题</td><td>从统计结果提取信息</td></tr><tr><td>Q4</td><td>写时间下界模型</td><td>对齐字节、FLOPs 与时间单位</td></tr><tr><td>Q5</td><td>独立写 vector_scale</td><td>迁移到相近但未提供骨架的任务</td></tr><tr><td>Q6</td><td>修复尾部越界</td><td>用最小复现解释一个 bug</td></tr></tbody></table>
+<p><code>walkthrough.py</code> 是完整示例，<code>simt.py</code> 是访问追踪工具，<code>lab00_solution.py</code> 是完整解法。<strong>先会用 tracer，不要求读懂它的内部实现。</strong></p>
+<p>所有 <code>python course/...</code> 命令从 DeepInfer 根目录运行；使用 WSL 且命令名为 <code>python3</code> 时统一替换即可。</p>
+<h2 id="h-2">2. Q0：一个确定能运行的起点</h2>
+<pre><code class="language-bash">python course/labs/lab00/walkthrough.py
+python course/tools/grade.py lab00 --question q0</code></pre>
+<p>结果应为 <code>c=[11,22,33,44,55]</code>。最后一个执行者 <code>bid=1,tid=3,i=7</code> 被标为“跳过”。这一步不依赖任何待实现函数，应该直接通过。</p>
+<p>先自己解释 <code>(bid=1,tid=0)</code> 为什么处理第五个元素；再进入 Q1。</p>
+<h2 id="h-3">3. Q1：只填一个索引公式</h2>
+<p>在 <code>lab00.py</code> 找到 <code>coalesced_index(tid,bid,block_dim)</code>，替换它的 <code>raise NotImplementedError</code>。其余 <code>vector_add</code> 骨架已经给出。</p>
+<p>先填表：</p>
+<table><thead><tr><th>bid</th><th>tid</th><th>block_dim</th><th>元素位置 i</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>4</td><td>自己填</td></tr><tr><td>0</td><td>3</td><td>4</td><td>自己填</td></tr><tr><td>1</td><td>0</td><td>4</td><td>自己填</td></tr><tr><td>1</td><td>2</td><td>4</td><td>自己填</td></tr></tbody></table>
+<p>计算完再写公式。骨架会检查 <code>i&lt;n</code>，并通过 <code>device.load/store</code> 读写。<code>make_vector_gpu(a,b)</code> 返回的五个值是：设备对象、a 的起点、b 的起点、c 的起点、长度 n。</p>
+<pre><code class="language-bash">python course/tools/grade.py lab00 --question q1 --failfast</code></pre>
+<details class="study-hint"><summary>提示 1：从每组起点想</summary><p>第 bid 组前面已有 bid 个完整组，每组 block_dim 个元素。</p></details>
+<details class="study-hint"><summary>提示 2：完整公式</summary><p><code>bid*block_dim+tid</code>。这里的乘数是每组人数，不是组数。</p></details>
+<p>测试含 <code>n=1000</code> 的尾部、空输入、负数、输入不被修改。若只修公式仍报越界，先确认没有改动已经提供的 <code>if i&lt;n</code>。</p>
+<h2 id="h-4">4. Q2：换分配顺序，不换输出顺序</h2>
+<p>实现 <code>strided_index(tid,bid,grid_dim)</code>。先用 <code>grid=3,block=4</code> 列出每组负责的元素：</p>
+<pre><code class="language-text">bid=0: 0,3,6,9
+bid=1: 1,4,7,10
+bid=2: 2,5,8,11</code></pre>
+<p>输出的 <code>c[i]</code> 仍然对应第 i 个输入；不要把结果按执行顺序追加到列表。</p>
+<pre><code class="language-bash">python course/tools/grade.py lab00 --question q2 --failfast</code></pre>
+<details class="study-hint"><summary>提示 1：相邻 tid 距离多少？</summary><p>固定 bid 后，tid 每增加 1，元素位置增加 grid_dim。</p></details>
+<details class="study-hint"><summary>提示 2：公式</summary><p><code>tid*grid_dim+bid</code>。对于 <code>n=10,block=4,grid=3</code>，仍要跳过大于等于 10 的索引；现成骨架已经处理。</p></details>
+<h2 id="h-5">5. Q3：先预测统计，再提取字段</h2>
+<p>实现 <code>compare_transactions(n,block)</code>，返回 <code>(连续line数,跨步line数)</code>。复用 Q1/Q2；统计字典的 <code>global_transactions</code> 字段保留旧名，指的是 <strong>128B line 触及次数</strong>。</p>
+<p>对 <code>n=1024,block=128</code>：</p>
+<pre><code class="language-text">grid=8
+warps 总数=8*(128/32)=32
+每 warp 两次 load，一次 store
+连续：32*3*1=96 lines
+跨步：32*3*8=768 lines</code></pre>
+<pre><code class="language-bash">python course/tools/grade.py lab00 --question q3</code></pre>
+<p>8 倍是本模型在这个输入下的计数比，不是“GPU 一定快 8 倍”。当 grid=1 时，两种索引相同。</p>
+<h2 id="h-6">6. 统计字段怎样读</h2>
+<table><thead><tr><th>字段</th><th>含义</th><th>不能把它当成什么</th></tr></thead><tbody><tr><td>global_loads / stores</td><td>各线程显式读写的元素次数</td><td>缓存 miss 次数</td></tr><tr><td>bytes_moved</td><td>请求字节：4*(loads+stores)</td><td>实测 HBM traffic</td></tr><tr><td>global_transactions</td><td>按 warp 指令累计的 128B line 数</td><td>完整 line 一定被传输</td></tr><tr><td>global_sectors</td><td>同样分组的 32B sector 数</td><td>完整显存协议的请求数</td></tr><tr><td>sector_bytes</td><td>sector 数乘 32B</td><td>profiler 测得的 DRAM 字节数</td></tr></tbody></table>
+<p>tracer 依次运行线程、不模拟 barrier 或缓存；内部用“线程第几次内存访问”近似指令身份。本 Lab 的直线读写与统一尾部 guard 满足用途；带有不同访存分支或不同循环次数的任意 kernel 不在模型支持范围。</p>
+<p>word 16–47 触及两条 line、四个 sector，不能按两条完整 line 算成 256B。这一点在基础设施回归测试里固定下来。</p>
+<h2 id="h-7">7. Q4：实现带单位的 Roofline 下界</h2>
+<p><code>roofline</code> 返回 <code>(秒数,bound)</code>。规格：</p>
+<pre><code class="language-text">memory_time = bytes_moved/(bandwidth_gbps*1e9)
+compute_time = flops/(peak_tflops*1e12)
+seconds = 两者最大值</code></pre>
+<p>带宽和算力必须为正，否则 <code>ValueError</code>；相等时 bound 取 <code>"memory"</code>，否则取较大时间对应的 <code>"memory"</code> 或 <code>"compute"</code>。本题输入的 bytes/FLOPs 为非负数。</p>
+<p>手算搬 1GB、算 1TFLOP、100GB/s、10TFLOP/s：两个时间是 0.01 秒和 0.1 秒，答案 <code>(0.1,"compute")</code>。</p>
+<pre><code class="language-bash">python course/tools/grade.py lab00 --question q4</code></pre>
+<p>这不是模拟器计时结果，也不包含 kernel 启动延迟。</p>
+<h2 id="h-8">8. Q5：独立实现相近的新算子</h2>
+<p>这次实现 <code>vector_scale(a,factor,block=128)</code>，返回 <code>(c,stats)</code>，其中 <code>c[i]=a[i]*factor</code>。不再提供函数体；可以回看 <code>_run_add</code>，但先自己列步骤。</p>
+<p>先读懂提供的骨架，不用猜 Python 新语法：</p>
+<ul><li><code>def kernel(...)</code> 是普通函数，只是定义在另一个函数内部。</li><li>内层函数可以读取外层已有的 <code>n</code>、<code>a_addr</code> 等变量；这里不需要给外层变量重新赋值。</li><li><code>gpu.run(kernel,grid,block)</code> 把这个函数交给 tracer，tracer 为每个线程填入 <code>tid,bid,block_dim,grid_dim,device</code> 后调用它。写 <code>kernel</code> 是传函数，写 <code>kernel(...)</code> 才是立刻调用。</li><li><code>device.load/store</code> 是已经提供的读写工具；它们多做了一件“记录地址”的事。</li></ul>
+<p>这与下面这段普通 Python 循环的“重复调用函数”相似；区别是 tracer 会额外设置记录上下文，所以实际练习要调用 <code>gpu.run</code>，不要自己替换它：</p>
+<pre><code class="language-python">for bid in range(grid):
+    for tid in range(block):
+        kernel(tid, bid, block, grid, gpu)</code></pre>
+<p>如果传函数的写法还不熟，先在纸上推演 <code>grid=2,block=2</code> 时的四次调用，再开始独立实现。</p>
+<p>要求：通过 tracer 每元素读一次、写一次；不修改 a；空输入零访问；block 在 1–1024。可以用 <code>make_vector_gpu(a,[0]*len(a))</code> 获得一维布局，把占位 b 留着不读，不必修改 tracer。</p>
+<pre><code class="language-text">输入 [1,-2,3,0,5]，factor=-3
+期望 [-3,6,-9,0,-15]
+loads=5，stores=5，requested_bytes=40</code></pre>
+<pre><code class="language-bash">python course/tools/grade.py lab00 --question q5 --failfast
+python course/tools/grade.py lab00 --question q5 --hint 1</code></pre>
+<p>测试会同时检查输出和访问计数。直接用列表推导计算输出却不经 tracer，结果正确也不能满足本题目标。</p>
+<h2 id="h-9">9. Q6：修复尾部错误</h2>
+<p><code>vector_add_debug</code> 是完整但有 bug 的版本。先只运行本题：</p>
+<pre><code class="language-bash">python course/tools/grade.py lab00 --question q6 --failfast</code></pre>
+<p>输入长度 5，block=4，分配的内存地址是 0–14。查看异常中的地址，回到源码定位触发读写的 <code>i</code>。</p>
+<p>先回答：<code>i==5</code> 对 a/b/c 都是合法元素位置吗？不要通过增大分配内存或捕获并忽略 <code>IndexError</code> 来掩盖错误。</p>
+<details class="study-hint"><summary>定位过程</summary><p>合法位置是 0–4；第 1 组 tid=1 算出 i=5。错误 guard 允许它继续执行，写 c 的地址为 10+5=15，超出范围。修复 guard，而不是跳过错误测试。</p></details>
+<p>修复后确认：完整 block、尾部 block、空输入均通过。写下一个“修复前失败、修复后通过”的输入。</p>
+<h2 id="h-10">10. 出口与下一步</h2>
+<pre><code class="language-bash">python course/tools/grade.py lab00</code></pre>
+<p>全部运行还会包含 <code>test_simt.py</code>，它检查 tracer 的 sector 和广播规则，不需要你修改。</p>
+<p>能解释以下三个问题就完成本实验；卡住的点标记为“需要复习”，不抹去已经完成的进度：</p>
+<ol><li>n=10、block=4 时，最后一组谁应该跳过？</li><li>Q5 为什么只有一次 load，而 Q1 有两次？</li><li>为什么 line 计数、sector 计数、有用字节不能混为一个指标？</li></ol>
+<p>下一步是 <a href="lec03.html">第 3 讲</a> 和 Lab1 的 Python 算法部分。也可先读 <a href="lec02.html">第 2 讲</a> 的访存推导；CUDA、occupancy、profiling 都可留待后续。现在不要求做 KV/量化作业，也不要求实现完整 Project1。</p>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <span class="doc-nav-card disabled"><span>← 上一篇</span><strong>没有了</strong></span><a class="doc-nav-card" href="lab01.html"><span>下一篇 →</span><strong>实验 1：Reduction、Softmax 与 RMSNorm</strong></a>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>

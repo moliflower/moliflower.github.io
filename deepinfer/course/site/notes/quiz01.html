@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>小测 1：GPU 模型、Roofline、Softmax 与索引 · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <span class="doc-category">小测</span>
+    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">小测 1</div>
+      <h1>小测 1：GPU 模型、Roofline、Softmax 与索引</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 4 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../quizzes/quiz01.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      <div class="doc-actions"><button id="doc-done" class="doc-done" type="button" data-key="w2-quiz1">标记完成</button><span id="doc-done-hint" class="doc-hint"></span></div>
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">Q1（2 分）</a><a class="toc-level-2" href="#h-2">Q2（2 分）</a><a class="toc-level-2" href="#h-3">Q3（2 分）</a><a class="toc-level-2" href="#h-4">Q4（2 分）</a><a class="toc-level-2" href="#h-5">Q5（2 分）</a><a class="toc-level-3" href="#h-6">A1</a><a class="toc-level-3" href="#h-7">A2</a><a class="toc-level-3" href="#h-8">A3</a><a class="toc-level-3" href="#h-9">A4</a><a class="toc-level-3" href="#h-10">A5</a><a class="toc-level-2" href="#h-11">评分</a>
+      </aside>
+      <article class="doc-content">
+        <blockquote><p><strong>时间</strong>：10 分钟  <br><strong>规则</strong>：闭卷，不看笔记，不用 AI。  <br><strong>目的</strong>：检查你是否真的理解了 Week 1–2 的核心数字，而不是只会跑测试。</p></blockquote>
+<hr>
+<h2 id="h-1">Q1（2 分）</h2>
+<p>一个 warp 的 32 个 thread 读取 32 个连续的 <code>int32</code>，起始地址是 word 16（不是 0）。 本题采用 Lab0 的简化模型：以 128 字节（32 个 word）的 line 为一次统计单位。触及几条 line？如果改用 32B sector 统计，又触及几个？这里不把 line 计数称为真实 GPU 的 transaction 数。</p>
+<h2 id="h-2">Q2（2 分）</h2>
+<p><code>vector_add</code> 处理 <code>n = 1,000,000</code> 个 float32：</p>
+<ul><li>搬多少字节？</li><li>做多少 FLOPs？</li><li>如果带宽 500GB/s、算力 10TFLOP/s，它是 memory-bound 还是 compute-bound？预测时间是多少？</li></ul>
+<h2 id="h-3">Q3（2 分）</h2>
+<p>一个 4096 维 float32 的 softmax：</p>
+<ul><li>3-pass 搬多少字节？</li><li>2-pass 搬多少字节？</li><li>采用 Lab1 的 activation-only 口径，分别为 <code>16n</code> 与 <code>12n</code> 字节；在 2TB/s 带宽下，两者的带宽时间下界差多少？这能直接当实测提速吗？</li></ul>
+<h2 id="h-4">Q4（2 分）</h2>
+<p><code>n=10, block=4</code>，需要几个 block？最后一个 block 的 tid=0..3 分别处理哪些 i，哪些应该跳过？</p>
+<h2 id="h-5">Q5（2 分）</h2>
+<p>函数应该返回一个新列表，不改变输入：</p>
+<pre><code class="language-python">def scale(values):
+    result = values
+    for i in range(len(result)):
+        result[i] = result[i] * 2
+    return result</code></pre>
+<p>输入 <code>a=[2,3]</code>，调用后 <code>a</code> 是什么？指出契约被破坏的原因，并说明如何修复。先手算，不运行。</p>
+<hr>
+<details class="study-hint"><summary>答案（做完再看）</summary><h3 id="h-6">A1</h3>
+<p>2 条 line。word 地址 16..47 跨 line 0（0..31）和 line 1（32..63）。对应 byte 64..191，共 4 个 32B sector。两种数字统计的单位不同。</p>
+<h3 id="h-7">A2</h3>
+<ul><li>Bytes = <code>3 * n * 4 = 12,000,000</code> 字节 ≈ 12MB。</li><li>FLOPs = <code>n = 1,000,000</code>（一次加法）。</li><li>memory time = <code>12e6 / 500e9 = 24e-6 s = 24us</code>。</li><li>compute time = <code>1e6 / 10e12 = 0.1e-6 s = 0.1us</code>。</li><li>在此理想模型下 memory-bound，时间下界 24us；忽略 launch、缓存和同步等成本。</li></ul>
+<h3 id="h-8">A3</h3>
+<ul><li>3-pass = <code>16 * 4096 = 65,536</code> 字节 = 64 KiB。</li><li>2-pass = <code>12 * 4096 = 49,152</code> 字节 = 48 KiB。</li><li>差 16,384 字节；在 2TB/s 下 <code>16384 / 2e12 = 8.192e-9 s = 8.192ns</code>。</li><li>这是所选流量模型的带宽时间下界差；小向量还受启动开销、缓存等影响，不能作为实测提速。</li></ul>
+<h3 id="h-9">A4</h3>
+<p>需要 3 个 block。最后一个 bid=2，i 为 8、9、10、11；只处理 8、9，跳过 10、11。guard 是 <code>i&lt;n</code>。</p>
+<h3 id="h-10">A5</h3>
+<p>调用后 <code>a</code> 是 <code>[4,6]</code>，因为 <code>result</code> 与 <code>values</code> 指向同一个列表。可先建新列表，再逐项追加翻倍后的元素；或先复制这个一维数值列表，再改副本。</p></details>
+<hr>
+<h2 id="h-11">评分</h2>
+<ul><li>8–10 分：Week1–2 核心已掌握，可以继续下一阶段。</li><li>5–7 分：回看 Lecture 2/3 的对应小节，再做一遍 Lab。</li><li>0–4 分：不要赶进度；先把 Lab 0/1 的 checkoff 问题讲一遍。</li></ul>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <span class="doc-nav-card disabled"><span>← 上一篇</span><strong>没有了</strong></span><a class="doc-nav-card" href="quiz02.html"><span>下一篇 →</span><strong>小测 2：Attention、KV Cache、量化</strong></a>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>

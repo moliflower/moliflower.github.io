@@ -23,6 +23,13 @@ ninja.data = [{
           handler: () => {
             window.location.href = "/projects/";
           },
+        },{id: "nav-课程",
+          title: "课程",
+          description: "开放的中文自学课程与动手实验。",
+          section: "Navigation",
+          handler: () => {
+            window.location.href = "/courses/";
+          },
         },{id: "nav-简历",
           title: "简历",
           description: "Yuhan Deng 的个人简历。",

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>第 10 讲：前缀命中、共享与淘汰 · DeepInfer 101</title>
+  <script>
+    try {
+      document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="doc-body">
+  <header class="doc-topbar">
+    <a class="doc-back" href="../index.html#/calendar">← 返回周历</a>
+    <span class="doc-category">讲义</span>
+    <a class="doc-back" href="../index.html#/videos">视频</a>
+    <span class="doc-brand">DeepInfer 101</span>
+    <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
+  </header>
+
+  <main class="doc-main">
+    <div class="doc-hero">
+      <div class="eyebrow">讲义 10</div>
+      <h1>第 10 讲：前缀命中、共享与淘汰</h1>
+      <div class="doc-meta">
+        <span>纯阅读约 4 分钟 · 动手另计</span>
+        <span>源文件：<a href="../../lectures/lec10.md">Markdown</a></span>
+        <span>本地渲染版 · 无需联网</span>
+      </div>
+      <div class="doc-actions"><button id="doc-done" class="doc-done" type="button" data-key="w5-l10">标记完成</button><span id="doc-done-hint" class="doc-hint"></span></div>
+    </div>
+
+    <div class="doc-layout">
+      <aside class="doc-toc">
+        <h3>本页目录</h3>
+        <a class="toc-level-2" href="#h-1">1. 命中的是上下文，不是单独一块的文字</a><a class="toc-level-2" href="#h-2">2. 完整块规则</a><a class="toc-level-2" href="#h-3">3. 共享前缀后的容量推导</a><a class="toc-level-2" href="#h-4">4. 无人引用不等于内容必须立即擦除</a><a class="toc-level-2" href="#h-5">5. 三个容易误报的结论</a>
+      </aside>
+      <article class="doc-content">
+        <p>先修：<a href="lec09.html">第 9 讲</a>、Lab4、HW2 的逐请求分页。本讲约 45–60 分钟；配套 <a href="hw05.html">HW5</a> 约 2–3 小时。</p>
+<h2 id="h-1">1. 命中的是上下文，不是单独一块的文字</h2>
+<p>考虑 token 序列 <code>[1,2,3,4,5,6]</code> 和 <code>[9,2,3,4,5,6]</code>。虽然后面五个 token 相同，但因更早的上下文不同，不能假定它们的 KV 相同。</p>
+<p>本课使用固定模型、固定推理配置、确定性 token 输入的教学假设，只复用从位置 0 开始完全相同的前缀。实际服务还需要隔离模型版本、适配器、多模态输入等影响计算的条件。</p>
+<p>vLLM 的前缀缓存设计用父块的标识、当前块 token 和附加条件识别内容；不能仅以当前块文字作为键。见 <a href="https://docs.vllm.ai/en/v0.21.0/design/prefix_caching/">vLLM 前缀缓存设计</a>（核对日期：2026-10-23）。本课用完整 token 比较避免引入哈希碰撞问题。</p>
+<h2 id="h-2">2. 完整块规则</h2>
+<p>缓存序列为 <code>[1,2,3,4,5,6,7]</code>，查询为 <code>[1,2,3,4,5,9]</code>。最长公共前缀为 5。B=4 时只复用前 4 个 token：</p>
+<pre><code class="language-text">hit_tokens = (common_prefix_length // B) * B</code></pre>
+<p>不要向上取整，否则会把并不相同的第 6–8 个 token 算入命中；也不要继续搜索第一个差异之后的相同子串。请求短于缓存时，命中长度不能超过请求长度。</p>
+<p>这里只统计可复用 KV 的 token 数。它不保证可以跳过模型所有计算，也不直接等于 TTFT 加速比例。输出 logits、调度与运行时实现不在该指标内。</p>
+<h2 id="h-3">3. 共享前缀后的容量推导</h2>
+<p>三条请求长度为 <code>[5,8,9]</code>，B=4，全部共享长度为 4 的完整前缀。</p>
+<p>不共享时，每条独立向上取整，占 <code>8+8+12=28</code> 个槽位。共享时：前缀只保留 4 个槽位，三个私有后缀长度分别为 1、4、5，分别占 4、4、8 个槽位，共 <code>4+4+4+8=20</code>。</p>
+<pre><code class="language-text">shared_slots = prefix_tokens
+             + sum(ceil((length-prefix_tokens)/B)*B)</code></pre>
+<p>约束：前缀长度是 B 的倍数且不超过任一请求长度。没有请求时不保留前缀，返回 0。此公式与 HW2 的 prefix_cache_savings 口径不同：HW2 已有一份额外保留的前缀，此处在当前请求集合内部共享一份。回答容量题前先明确“原来有几份、现在有几份”。</p>
+<h2 id="h-4">4. 无人引用不等于内容必须立即擦除</h2>
+<p>Lab4 中 refs=0 意味着可重新分配；如果保留该块的旧内容和索引，它也可以暂时作为缓存。新请求命中后再次取得引用；需要腾出空间时才淘汰。这里区分可覆盖的物理空间和仍可利用的历史数据。</p>
+<p>HW5 的简化策略：先筛选 refs=0 的块，再按 last_used 从小到大淘汰；同时间按物理 ID 升序。refs&gt;0 的块即使最旧也不能淘汰。</p>
+<p>例：refs=<code>[1,0,0,0]</code>、last_used=<code>[0,9,3,3]</code>，候选顺序为 <code>[2,3,1]</code>。最旧的块 0 仍在使用，必须保留。真实系统可能有层级、分组和其他策略；不要把本题的排序当成所有引擎的固定实现。</p>
+<h2 id="h-5">5. 三个容易误报的结论</h2>
+<ul><li>“命中率 80%”需要说明分母是请求、token 还是块。相同的请求命中率可能对应很不同的节省量。</li><li>“节省 8 个槽位”是容量结论，没有测量就不能说快了多少。</li><li>“refs=0”只表示没有活动所有者，不代表没有缓存元数据需要清理。</li></ul>
+<p>完成 HW5 后，在 <a href="project2.html">Project2 Phase1</a> 观察一个慢的大请求怎样阻塞队列。本阶段不实现前缀缓存接入，先把所有权、容量和等待行为做成可验证的事件记录。</p>
+      </article>
+    </div>
+
+    <nav class="doc-nav">
+      <a class="doc-nav-card" href="lec09.html"><span>← 上一篇</span><strong>第 9 讲：分页映射与共享块池</strong></a><span class="doc-nav-card disabled"><span>下一篇 →</span><strong>没有了</strong></span>
+    </nav>
+  </main>
+
+  <script src="../storage.js"></script>
+  <script src="../doc.js"></script>
+</body>
+</html>
