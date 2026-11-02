@@ -3,18 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Python 起步：从第一行代码到可测试的函数 · DeepInfer 101</title>
+  <title>Python 起步：从一行计算到一批请求 · DeepInfer 101</title>
   <script>
     try {
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css?v=fe4449dc2f59">
+  <link rel="stylesheet" href="../styles.css?v=2c061682a2db">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
     <a class="doc-back" href="../../../#/calendar">← 返回周历</a>
-    <span class="doc-category">Python 起步</span>
+    <span class="doc-category">入门教材</span>
     <a class="doc-back" href="../../../#/videos">视频</a>
     <span class="doc-brand">DeepInfer 101</span>
     <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
@@ -22,10 +22,10 @@
 
   <main class="doc-main">
     <div class="doc-hero">
-      <div class="eyebrow">起步指南</div>
-      <h1>Python 起步：从第一行代码到可测试的函数</h1>
+      <div class="eyebrow">入门上篇</div>
+      <h1>Python 起步：从一行计算到一批请求</h1>
       <div class="doc-meta">
-        <span>浏览文字约 6 分钟 · 手算与练习请按正文分段完成</span>
+        <span>浏览文字约 8 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../foundations/README.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -36,12 +36,13 @@
       <details class="doc-toc" id="doc-toc" open>
         <summary>本页目录 · 4 节</summary>
         <nav aria-label="本页章节">
-        <a class="toc-level-2" href="#h-1">1. 第一次运行</a><a class="toc-level-2" href="#h-2">2. 阅读与练习按同一顺序走</a><a class="toc-level-2" href="#h-3">3. 题目规格</a><a class="toc-level-2" href="#h-4">4. 出口检查</a>
+        <a class="toc-level-2" href="#h-1">1. 让计算产生一个可以继续使用的值</a><a class="toc-level-2" href="#h-2">2. 从一条请求走到一批请求</a><a class="toc-level-2" href="#h-3">3. 用一个不变的关系追踪边界</a><a class="toc-level-2" href="#h-4">4. 把推导变成自己的程序</a>
         </nav>
       </details>
       <article class="doc-content">
-        <p><strong>入口：从未写过程序也可以。</strong> 只需要会编辑并保存文本、做整数四则运算。本单元不要求矩阵、GPU、C++ 或任何第三方包。建议先预留 6–12 小时，分成多次；时间是预算，完成条件是能自己解释并修改程序。</p>
-<h2 id="h-1">1. 第一次运行</h2>
+        <p>假设有三条请求，分别需要 2、0、3 个位置。我们想把它们依次放进一段连续空间。第二条没有数据，该给它留一个位置吗？第三条从哪里开始？这是后面学习 KV cache 会遇到的问题。不过眼下不需要知道什么是缓存：画五个格子，拿一支笔，就能开始。</p>
+<p>这一章从计算一条请求开始，最后让同一段程序处理任意长度的列表。可以一口气读，也可以每算通一个例子就停下来试一试。会写函数、能解释循环中变量如何改变的读者，可以直接读<a href="prep.html">第二章：调试与测试</a>。</p>
+<h2 id="h-1">1. 让计算产生一个可以继续使用的值</h2>
 <p>用编辑器打开<strong>课程根目录</strong>，再打开终端。课程根目录的判断标准是能直接看到 <code>course</code> 文件夹：离线ZIP解压后进入这一层；若打开的是 <code>moliflower.github.io</code> 源码仓库，先运行 <code>cd _courses/deepinfer</code>。下文所有 <code>python course/...</code> 都从这里运行，不从 <code>course</code> 文件夹内部运行。终端用来输入命令，<code>.py</code> 文件用来保存Python代码；不要把终端命令写进 <code>.py</code> 文件。</p>
 <pre><code class="language-bash">python --version
 python course/foundations/demo.py
@@ -51,28 +52,50 @@ python course/tools/grade.py foundations --question q0</code></pre>
 .\course\run.ps1 foundations --question q0</code></pre>
 <p>启动器依次探测可运行的 Python，也会尝试当前用户 Codex 配套的 Python；不会安装包或修改系统设置。如果均不存在，按 <a href="https://docs.python.org/3/using/windows.html">Python 官方 Windows 使用说明</a> 安装 Python 后重开终端。WSL/Linux 中若只有 <code>python3</code>，将全文命令名换成 <code>python3</code>。后文的 <code>python course/tools/grade.py 参数</code> 在 Windows 也可以统一换成 <code>.\course\run.ps1 参数</code>。</p>
 <p>示例前 3 行应为 <code>count = 3</code>、<code>bytes = 6</code>、<code>returned = 7</code>，随后打印三轮累计过程。Q0 应通过；后续题初次运行出现 <code>NotImplementedError</code> 表示练习尚未填写。先看错误末尾的题号，不要修改测试。</p>
-<h2 id="h-2">2. 阅读与练习按同一顺序走</h2>
-<table><thead><tr><th>阅读</th><th>新概念</th><th>本次练习</th><th>独立完成的证据</th></tr></thead><tbody><tr><td><a href="foundations00.html">起步 0：表达式与函数</a></td><td>值、名字、赋值、调用、返回值</td><td>Q0 已完成示例；Q1 字节计数</td><td>能区分 <code>print</code> 与 <code>return</code></td></tr><tr><td><a href="foundations01.html">起步 1：条件与整数</a></td><td>比较、布尔值、缩进、整除、余数</td><td>Q2 最少分组数</td><td>解释为什么整除时不加一</td></tr><tr><td><a href="foundations02.html">起步 2：列表与循环</a></td><td>索引、遍历、append、新列表</td><td>Q3 长度截断</td><td>输出变化不会改坏输入</td></tr><tr><td><a href="foundations03.html">起步 3：组合与边界</a></td><td>累计状态、循环不变式、测试</td><td>Q4 连续存储边界</td><td>换一组长度仍能自己推导</td></tr></tbody></table>
-<h2 id="h-3">3. 题目规格</h2>
-<p>只修改 <a href="../../foundations/foundations.py">foundations.py</a> 的 TODO。函数签名与已提供的参数检查保留。所有输入均为普通 Python 整数或整数列表；字符串、小数和其他类型不在本单元输入域，不要求你写通用类型检查。负数或不允许的零按以下规定抛 <code>ValueError</code>，检查代码已提供。</p>
-<table><thead><tr><th>题</th><th>函数</th><th>结果与边界</th><th>依赖</th></tr></thead><tbody><tr><td>Q0</td><td><code>add_example(left, right)</code></td><td>已完成；<code>(2, 5)</code> 返回 <code>7</code></td><td>无</td></tr><tr><td>Q1</td><td><code>bytes_for_elements(count, element_bytes)</code></td><td><code>count&gt;=0</code>、每元素字节数 <code>&gt;0</code>；返回整数；0 个元素占 0 字节</td><td>起步 0</td></tr><tr><td>Q2</td><td><code>ceil_groups(count, group_size)</code></td><td><code>count&gt;=0</code>、组容量 <code>&gt;0</code>；整数运算，0 个元素需要 0 组</td><td>起步 1</td></tr><tr><td>Q3</td><td><code>clamp_lengths(lengths, limit)</code></td><td>非负长度与上限；返回新列表，每项为原值与上限较小者；空输入返回新 <code>[]</code></td><td>起步 2</td></tr><tr><td>Q4</td><td><code>prefix_offsets(lengths)</code></td><td>非负长度；返回所有起点及最终终点；<code>[]</code> 返回 <code>[0]</code>，零长度合法</td><td>起步 3；无其他函数依赖</td></tr></tbody></table>
-<p>Q1/Q2 是局部填空，Q3 给出结果容器，Q4 独立组织函数体。每题测试可单独运行，不会因其他题还没写而失败。</p>
-<pre><code class="language-bash">python course/tools/grade.py foundations --list
-python course/tools/grade.py foundations --question q1 --unlock
-python course/tools/grade.py foundations --question q1 --failfast
-python course/tools/grade.py foundations --question q1 --hint 1</code></pre>
-<p><code>--unlock</code> 是先预测再编码的练习，不会锁住代码。需要帮助时依次看 <code>--hint 1</code>、<code>2</code>、<code>3</code>。公开测试在 <a href="../../foundations/test_foundations.py">test_foundations.py</a>，参考解在 <code>foundations_solution.py</code>；先写自己的解释再对照。</p>
-<h2 id="h-4">4. 出口检查</h2>
-<p>先按“阅读一小节→纸上预测→修改对应函数→单题测试”循环推进；不要第一天把整个课程评分器的未实现题都当作安装失败。Q0是已完成示例，不是独立编码成绩；Q1–Q4逐步减少骨架。每次通过后，换一个输入自己解释，才能判断是否理解而非只记住测试答案。</p>
-<pre><code class="language-bash">python course/tools/grade.py foundations</code></pre>
-<p>测试通过之后，关闭答案，用不曾练过的输入回答：</p>
-<ol><li><code>ceil_groups(13, 4)</code> 是多少？如果换成 12，哪一步改变？</li><li><code>clamp_lengths([1, 7, 4], 4)</code> 返回什么？原列表应当是什么？</li><li><code>prefix_offsets([1, 4, 0, 2])</code> 的每个数字代表什么？为什么结果比输入多一项？</li></ol>
-<p>再用自己的话说出 <code>return</code>、<code>if</code>、<code>for</code> 各自的职责，并记录一个你亲自修复的失败用例。讲不清的题回读对应章节，不清零已有进度。完成后进入 <a href="prep.html">调试预备单元</a>，再学第一讲和 Lab0。</p>
+<p>先看示例的第二行。三个元素，每个占两个字节，总量是六个字节。在 Python 解释器里输入下面两行，会看到两种不同的写法得到同一个数：</p>
+<pre><code class="language-python">&gt;&gt;&gt; 3 * 2
+6
+&gt;&gt;&gt; element_count = 3
+&gt;&gt;&gt; element_count * 2
+6</code></pre>
+<p>这里的 <code>&gt;&gt;&gt;</code> 是解释器的提示符，不是代码的一部分。第一行让解释器求一个表达式的值；赋值则让名字指向一个值，本身不会显示结果。把同一段算术放进文件运行时，单独写一个表达式也不会显示什么。想在终端看结果，用 <code>print</code>；想让另一段计算拿到结果，用 <code>return</code>。这两件事不一样。</p>
+<pre><code class="language-python">def pair_count(request_count):
+    return request_count * 2
+
+reserved = pair_count(3)
+print(reserved + 1)</code></pre>
+<p>运行文件，屏幕出现的是 7，不是 6。先求出调用的结果 6，赋给 <code>reserved</code>，再加一，最后才打印。现在只把函数里的 <code>return request_count * 2</code> 换成 <code>print(request_count * 2)</code>：屏幕先出现 6，下一行加法却会报错。原因不是乘法失败，而是函数走到末尾没有返回结果，调用者拿到的是 <code>None</code>。理解这一点后就能判断 Q1 为什么要返回字节数，而不是把它打印出来。</p>
+<h2 id="h-2">2. 从一条请求走到一批请求</h2>
+<p>现在换一种计量方式：不按字节付费，而是每四个位置领一组。要存九个元素，前八个填满两组，最后一个也得有地方放，所以必须领三组。这里需要的不是近似值，而是能装下所有元素的<strong>最少整数</strong>。用 <code>9 // 4</code> 得到填满的两组，用 <code>9 % 4</code> 得到剩下的一个元素。是否再领一组，取决于余数是不是零，而不是输入是不是偶数。</p>
+<p>先不写函数，把 8、9、0 分别代入。8 和 9 的整除结果都等于 2，却只有 9 需要第三组；0 没有余数，而且一组也不需要。这三个紧挨边界的输入比随便试三个大数更有用。Python 的 <code>if</code> 会先求条件的真假，只在条件为真时执行缩进的语句。比如下面的计数只记录未装满的那组，不会额外增加一个完整组：</p>
+<pre><code class="language-python">tail_groups = 0
+if 9 % 4 != 0:
+    tail_groups = 1
+print(tail_groups)</code></pre>
+<p>这段代码只回答一个问题。如果手头有一批长度，就不该为每条请求复制一份程序。列表把值按顺序放在一起；<code>for length in lengths</code> 让同一个名字在每一轮指向下一个值。下面把每条请求限制在最多两个位置。先预测两次打印，再运行：</p>
+<pre><code class="language-python">lengths = [2, 0, 3]
+accepted = []
+for length in lengths:
+    accepted.append(min(length, 2))
+print(accepted)
+print(lengths)</code></pre>
+<p>第一行是 <code>[2, 0, 2]</code>，第二行仍是 <code>[2, 0, 3]</code>。<code>min</code> 挑出两数中较小的那个，<code>append</code> 把它加到新列表末尾。零长度仍代表一条请求，不能顺手删掉。若一开始写的是 <code>accepted = lengths</code>，那不是复制，而是给同一份列表起了第二个名字；往里追加甚至会改变正在遍历的列表。这里新建空列表，既保住原始输入，也让每条输入恰好贡献一条输出。</p>
+<h2 id="h-3">3. 用一个不变的关系追踪边界</h2>
+<p>回到开头，这次按<strong>原始长度</strong>存放，不做截断。给五个格子从 0 到 4 编号。第一条占下标 0、1，下一条从 2 开始；第二条长度为 0，第三条仍从 2 开始。第三条用掉 2、3、4，因此全部放好后，第一个尚未使用的位置是 5。我们记录的是边界，不是各请求最后一个元素的下标。</p>
+<table><thead><tr><th>本轮读到的长度</th><th>放置前的位置</th><th>放置后的位置</th><th>该请求使用的范围</th></tr></thead><tbody><tr><td>2</td><td>0</td><td>2</td><td>从 0 开始，到 2 之前</td></tr><tr><td>0</td><td>2</td><td>2</td><td>空范围</td></tr><tr><td>3</td><td>2</td><td>5</td><td>从 2 开始，到 5 之前</td></tr></tbody></table>
+<p>于是完整边界是 <code>[0, 2, 2, 5]</code>。相邻边界相减，恰好还原输入 <code>[2, 0, 3]</code>。特别值得保留的是中间重复的 2：如果为了让数字「好看」而去重，就无法还原第二条请求了。</p>
+<p>每轮开始时，当前位置都等于<strong>之前所有请求的长度之和</strong>。这句话就是循环不变式：位置会变，位置与已处理输入之间的关系不变。还没有处理任何请求时，总和为 0；每读一个长度就把它加进去，关系对下一轮仍成立。因此空列表的边界也有一个数 <code>[0]</code>，并非没有边界。试着遮住表格，换成 <code>[1, 4, 0, 2]</code> 走一遍：你应能得到五个边界，最后一个是 7。</p>
+<h2 id="h-4">4. 把推导变成自己的程序</h2>
+<p>只修改 <a href="../../foundations/foundations.py">foundations.py</a> 的待实现部分，保留给出的参数检查。Q0 是已完成的运行示例；以下题目可分别运行，不必写完全部才得到反馈。题页是需要时再查的规格与提示，不是继续读正文的必经站点。</p>
+<table><thead><tr><th>练习</th><th>用它检查什么</th></tr></thead><tbody><tr><td><a href="foundations00.html">Q1：计算字节</a></td><td>调用者拿到结果；0 个元素占 0 字节</td></tr><tr><td><a href="foundations01.html">Q2：最少分组</a></td><td>刚好装满与多一个元素的区别</td></tr><tr><td><a href="foundations02.html">Q3：限制长度</a></td><td>输出是新列表，原输入不变</td></tr><tr><td><a href="foundations03.html">Q4：连续存储边界</a></td><td>空请求与零长度请求都不丢失边界</td></tr></tbody></table>
+<pre><code class="language-bash">python course/tools/grade.py foundations --question q1 --failfast
+python course/tools/grade.py foundations</code></pre>
+<p>卡住时可以把第一条命令的 <code>--failfast</code> 换成 <code>--hint 1</code>。通过以后，给出一个你没有在本章见过的输入，先把边界写在纸上，再运行自己的代码。两者不同时，最值得追的是<strong>第一个</strong>不一致的位置。这正是<a href="prep.html">下一章：调试与测试</a>的起点。</p>
       </article>
     </div>
 
     <nav class="doc-nav">
-      <span class="doc-nav-card disabled"><span>← 上一篇</span><strong>没有了</strong></span><a class="doc-nav-card" href="foundations00.html"><span>下一篇 →</span><strong>起步 0：让一个函数把结果交回来</strong></a>
+      <span class="doc-nav-card disabled"><span>← 上一篇</span><strong>没有了</strong></span><a class="doc-nav-card" href="prep.html"><span>下一篇 →</span><strong>调试与测试：找到程序第一次走错的地方</strong></a>
     </nav>
   </main>
 

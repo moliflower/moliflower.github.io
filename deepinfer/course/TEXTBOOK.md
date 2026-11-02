@@ -8,7 +8,7 @@
 
 ## 1. 两个入口
 
-- **没有写过 Python**：从 [Python 起步](foundations/README.md) 开始，学四节并做 Q0–Q4。
+- **没有写过 Python**：从 [Python 起步](foundations/README.md) 开始，通读上篇，配合 Q0–Q4 动手。
 - **会写简单函数，但调试吃力**：直接做 [调试预备](prep/README.md)。如果不能解释 `return` 与 `print` 或列表别名，先补起步课。
 
 第一遍不要求学 CUDA、C++、Tensor Core 或装完整 DeepInfer。Python 核心题能先练算法、数据布局、数值稳定性与成本分析。
@@ -19,8 +19,8 @@
 
 | 章节 | 必要先修 | 核心练习 | 离开本章的证据 |
 | :--- | :--- | :--- | :--- |
-| [Python 起步 0–3](foundations/README.md) | 整数四则运算 | foundations Q0–Q4 | 追踪变量；独立写列表循环；解释边界 |
-| [调试预备 0–3](prep/README.md) | 函数、条件、循环、列表 | prep Q0–Q3 | traceback → 最小反例 → 修复 → 新测试 |
+| [入门上篇：Python 起步](foundations/README.md) | 整数四则运算 | foundations Q0–Q4 | 追踪变量；独立写列表循环；解释边界 |
+| [入门下篇：调试与测试](prep/README.md) | 函数、条件、循环、列表 | prep Q0–Q3 | traceback → 最小反例 → 修复 → 新测试 |
 | [L1 执行与地址](lectures/lec01.md) | prep | Lab0 Q0–Q6 | 列出尾组索引，区分 word 与 byte |
 | [L2 访存](lectures/lec02.md) | L1 | Lab0 访存计数；GPU 部分选读 | 区分模型 line 与硬件 sector，说明假设 |
 | [L3 数值算子](lectures/lec03.md) | 一维循环、平方、平均值 | Lab1 | 极端 logits 下 softmax 稳定；解释 eps |

@@ -3,18 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>预备单元：把看得懂变成能定位错误 · DeepInfer 101</title>
+  <title>调试与测试：找到程序第一次走错的地方 · DeepInfer 101</title>
   <script>
     try {
       document.documentElement.setAttribute("data-theme", localStorage.getItem("di101-theme") || "dark");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="../styles.css?v=fe4449dc2f59">
+  <link rel="stylesheet" href="../styles.css?v=2c061682a2db">
 </head>
 <body class="doc-body">
   <header class="doc-topbar">
     <a class="doc-back" href="../../../#/calendar">← 返回周历</a>
-    <span class="doc-category">预备</span>
+    <span class="doc-category">入门教材</span>
     <a class="doc-back" href="../../../#/videos">视频</a>
     <span class="doc-brand">DeepInfer 101</span>
     <button id="doc-theme" class="theme-btn" type="button">切换主题</button>
@@ -22,10 +22,10 @@
 
   <main class="doc-main">
     <div class="doc-hero">
-      <div class="eyebrow">预备单元</div>
-      <h1>预备单元：把看得懂变成能定位错误</h1>
+      <div class="eyebrow">入门下篇</div>
+      <h1>调试与测试：找到程序第一次走错的地方</h1>
       <div class="doc-meta">
-        <span>浏览文字约 4 分钟 · 手算与练习请按正文分段完成</span>
+        <span>浏览文字约 6 分钟 · 手算与练习请按正文分段完成</span>
         <span>源文件：<a href="../../prep/README.md">Markdown</a></span>
         <span>本地渲染版 · 无需联网</span>
       </div>
@@ -34,49 +34,45 @@
 
     <div class="doc-layout">
       <details class="doc-toc" id="doc-toc" open>
-        <summary>本页目录 · 6 节</summary>
+        <summary>本页目录 · 4 节</summary>
         <nav aria-label="本页章节">
-        <a class="toc-level-2" href="#h-1">1. 本单元的产物</a><a class="toc-level-2" href="#h-2">2. 按顺序学习</a><a class="toc-level-2" href="#h-3">3. 卡住时怎样得到帮助</a><a class="toc-level-2" href="#h-4">4. 记录一次修复</a><a class="toc-level-2" href="#h-5">5. 出口检查</a><a class="toc-level-2" href="#h-6">6. C++ 在哪里开始？</a>
+        <a class="toc-level-2" href="#h-1">1. 先区分「运行失败」和「答案不对」</a><a class="toc-level-2" href="#h-2">2. 一张矩阵里有两种不同的错误</a><a class="toc-level-2" href="#h-3">3. 好测试既能放过正确结果，也能抓住错误结果</a><a class="toc-level-2" href="#h-4">4. 把一次修复做完整</a>
         </nav>
       </details>
       <article class="doc-content">
-        <blockquote><p><strong>适合你</strong>：能写简单 Python 函数，遇到错误不容易排查；C++ 基础少。  <br><strong>需要</strong>：Python 3.10+；不需要 C++、CUDA、GPU 或第三方包。  <br><strong>节奏</strong>：四次短练习，可分几天完成；不计入正式 15 周。</p></blockquote>
-<p>如果还没有写过 Python，先完成 <a href="foundations.html">Python 起步</a> 的四节课和 Q0–Q4。能解释 <code>return</code>、<code>if</code>、<code>for</code>，并独立构造新列表后再进入这里；本单元开始练调试，不再把这些语法当成新概念。</p>
-<h2 id="h-1">1. 本单元的产物</h2>
-<p>你将修复 <code>prep.py</code> 中三个位置的错误、一个测试辅助函数，并独立写一个向量加法。文件里的错误是故意留下的，不是安装失败。</p>
-<p>完成后，你应能说清楚一次调试的五件事：输入、期望、实际、最小复现、修复依据。不会要求你记住 traceback 的每一行。</p>
-<h2 id="h-2">2. 按顺序学习</h2>
-<table><thead><tr><th>课</th><th>先学什么</th><th>动手任务</th><th>检查命令的题号</th></tr></thead><tbody><tr><td><a href="prep00.html">预备 0：运行和报错</a></td><td>路径、运行文件、追踪变量</td><td>运行已经完成的示例</td><td>q0</td></tr><tr><td><a href="prep01.html">预备 1：定位逻辑错误</a></td><td>最小复现、循环不变式</td><td>修复最大值函数</td><td>q1</td></tr><tr><td><a href="prep02.html">预备 2：列表和矩阵</a></td><td>副本、二维索引、累计值</td><td>修复复制与矩阵乘法</td><td>q2</td></tr><tr><td><a href="prep03.html">预备 3：让测试帮助你</a></td><td>断言、误差、边界、自测</td><td>修复比较函数，独立写向量加法</td><td>q3</td></tr></tbody></table>
-<p>所有下面这样的命令都在<strong>课程根目录</strong>运行，即能直接看到 <code>course</code> 文件夹的位置。离线ZIP解压后进入这一层；若从个人主页源码仓库开始，先 <code>cd _courses/deepinfer</code>。不要已经进入 <code>course</code> 后又输入以 <code>course/</code> 开头的路径。若环境只提供 <code>python3</code>，将命令中的 <code>python</code> 替换为 <code>python3</code>；Windows启动器也可用 <code>.\course\run.ps1 prep --question q0</code>。</p>
+        <p>程序打印了一个数，不代表它算对了；测试亮了红灯，也不代表整段程序都错了。本章围绕一个问题展开：当你和程序给出的答案不同时，怎样找到<strong>第一个不符合预期的状态</strong>？我们先查一个只有一个变量的程序，再把同样的方法用到矩阵，最后检查测试本身是否可信。</p>
+<p>如果你还不能独立写一个遍历列表的函数，先读<a href="foundations.html">第一章：Python 起步</a>。以下命令都从能直接看到 <code>course</code> 文件夹的目录执行；在个人主页源码仓库里先进入 <code>_courses/deepinfer</code>。不需要 GPU 或第三方库。</p>
+<h2 id="h-1">1. 先区分「运行失败」和「答案不对」</h2>
 <pre><code class="language-bash">python course/prep/demo.py
 python course/tools/grade.py prep --question q0</code></pre>
-<p>第一条最后显示 <code>result = 5</code>；第二条显示 <code>PASS</code>。先获得一个确定能运行的起点，再处理故意留下的错误。</p>
-<h2 id="h-3">3. 卡住时怎样得到帮助</h2>
-<pre><code class="language-bash">python course/tools/grade.py prep --question q1 --failfast
-python course/tools/grade.py prep --question q1 --hint 1
-python course/tools/grade.py prep --question q1 --hint 2
-python course/tools/grade.py prep --question q1 --hint 3</code></pre>
-<p>每次只显示所选的一层提示。先尝试自己的解释，再逐层打开；不要求一次独立完成。<code>--failfast</code> 让当前题在第一次失败时停止，避免被后面的错误淹没。</p>
-<p>只编辑 <code>prep.py</code>。<code>demo.py</code> 是现成示例，<code>test_prep.py</code> 是公开规格，<code>prep_solution.py</code> 是对照用的完整解法。参考解法测试会在临时副本中运行，不覆盖你的文件。</p>
-<h2 id="h-4">4. 记录一次修复</h2>
-<p>在自己的笔记中写下下面五行即可；不强制使用 Git，不需要新建固定路径的文件。</p>
-<pre><code class="language-text">输入：
-期望：
-实际：
-我定位到的原因：
-修复后新增的测试：</code></pre>
-<h2 id="h-5">5. 出口检查</h2>
-<p>四节阅读分别只对应q0、q1、q2、q3；q2包含复制矩阵与矩阵乘法两项，q3包含比较函数与独立向量加法两项。先修复当前小题再整份运行，避免把其他故意保留的错误误认成一次修复引起的回归。</p>
-<pre><code class="language-bash">python course/tools/grade.py prep</code></pre>
-<ul><li>能修好全负数的最大值，而不是给某个测试特判。</li><li>能解释复制矩阵时为什么要复制每一行。</li><li>能手算矩阵的一格，并在代码中找到对应的累计过程。</li><li>能让测试既接受微小浮点误差，也拒绝明显错误。</li></ul>
-<p>有一项讲不清，就回看对应一课，状态记为“需要复习”，已完成的部分仍然有效。准备好后，进入 <a href="lec01.html">第 1 讲</a>，再做 <a href="lab00.html">Lab0</a>。</p>
-<h2 id="h-6">6. C++ 在哪里开始？</h2>
-<p>这条入门路径先用 Python 建立算法和调试能力。之后的 C++ 桥接按“函数与编译 → vector → 引用 → 指针与连续内存”展开，再进入 GPU。桥接单元尚未发布；现在不用为了本单元去安装 CUDA 或补完整套 C++。</p>
+<p>第一条最后显示 <code>result = 5</code>，第二条应通过。如果 Python 提示找不到文件，它连要调试的算法都没有开始运行；先检查当前目录。若出现 traceback，先读末尾的异常类型与消息，再往上找自己代码的文件、行号和当时的输入。另一种失败更安静：程序正常退出，但算出的值不是题目要求的值。没有异常可以追，这时要自己制造一个容易判断对错的输入。</p>
+<p>以寻找列表最大值为例。设程序先记下「目前最好的是 0」，然后遇到更大的数就替换它。用 <code>[2, 5, 1]</code> 试，答案是 5，看上去很合理。现在只试 <code>[-4]</code>：列表中唯一的元素显然也是最大值。可是 −4 不大于 0，程序就把一个<strong>从未出现在输入里</strong>的 0 当成了答案。此时增加循环次数或换一种比较符号，都没有抓到根因：在读第一个元素之前，「最好的是 0」已经是未经证明的假设。</p>
+<table><thead><tr><th>输入</th><th>正确期望</th><th>这个输入能排除什么</th></tr></thead><tbody><tr><td>单元素的负数列表</td><td>这个负数本身</td><td>把 0 当作无条件起点</td></tr><tr><td>两个相等的数</td><td>任一个的值</td><td>把相等误判为异常</td></tr><tr><td>空列表</td><td>按本题规格抛出 ValueError</td><td>编造一个不存在的最大值</td></tr></tbody></table>
+<p>修复前先说出你想维持的关系：「处理过至少一个元素后，记录值是<strong>已读部分</strong>的最大值。」再去看 <a href="../../prep/prep.py">prep.py</a> 中的 <code>maximum</code>，判断哪一步可以第一次让这个关系成立。空输入需要单独履行规格，而不是让读取第一个元素的操作碰巧抛出另一种异常。</p>
+<h2 id="h-2">2. 一张矩阵里有两种不同的错误</h2>
+<p>列表套列表就能表示矩阵。假设你给某一批请求保存了两行测量值，想复制一份再做实验。复制之后，两份数据打印成相同的数字是好事，却不是复制正确的证据：如果它们实际上共用一行，打印也会相同。运行这段小实验，先猜最后一行：</p>
+<pre><code class="language-python">original = [[1, 2], [3, 4]]
+candidate = original[:]
+candidate[0][1] = 99
+print(original)</code></pre>
+<p>输出是 <code>[[1, 99], [3, 4]]</code>。切片新建了外层列表，但第一行仍是同一个可修改对象。要证明副本能独立使用，测试必须包含<strong>写入之后的观察</strong>：只改副本的一格，再读原矩阵的那一格。对本课由数字组成的二维矩阵，外层和各行都独立就够了，不必为此引入通用的对象复制框架。</p>
+<p>矩阵乘法的另一类错误即使完全没有共享行也会发生。看一行两列的左矩阵 <code>[[2, 3]]</code> 与右矩阵 <code>[[1, 4], [5, 2]]</code>。左矩阵的同一行分别和右矩阵的两列配对。第一格是 <code>2×1 + 3×5 = 17</code>，第二格是 <code>2×4 + 3×2 = 14</code>。预期输出是一行两列的 <code>[[17, 14]]</code>。两格要用不同的累计过程：</p>
+<table><thead><tr><th>要算的格子</th><th>开始</th><th>加入第一项</th><th>加入第二项</th></tr></thead><tbody><tr><td>第 0 行、第 0 列</td><td>0</td><td>2</td><td>17</td></tr><tr><td>第 0 行、第 1 列</td><td>0</td><td>8</td><td>14</td></tr></tbody></table>
+<p>如果程序给出 <code>[[17, 31]]</code>，不要先怀疑乘法或转置：31 恰好等于 17 加 14。把第二格开始时的累计值打印出来；若它还是 17，就已经找到了错误，不用等到最终输出。累计值属于<strong>一格输出</strong>，因此应该在开始这一格时清零；若在每次乘法前清零，又会只留下最后一项。上章的边界计算恰好相反：它需要跨请求保留总和。判断在哪里初始化变量，不靠背缩进，靠问「这个量是在替谁累计？」</p>
+<h2 id="h-3">3. 好测试既能放过正确结果，也能抓住错误结果</h2>
+<p>有了纸上的期望，最后一步是把比较交给程序。整数索引应该严格相等；浮点计算却可能因为有限精度产生很小的差别。先在解释器里比较 <code>0.1 + 0.2 == 0.3</code>，再看 <code>abs((0.1 + 0.2) - 0.3)</code>。第一次得到 False，第二次得到约 5.55×10⁻¹⁷。这两个结果并不矛盾：问题从「是否逐位相等」变成了「差多少」。</p>
+<p>本题的输入是有限数值，约定使用非负绝对容差。假定容差为 0.001，期望向量是 <code>[1.0, 2.0]</code>：<code>[1.0004, 2.0]</code> 应通过，<code>[1.04, 2.0]</code> 应失败，只有一个元素的 <code>[1.0]</code> 也应失败。最后一个例子与精度无关。如果只用 <code>zip</code> 逐对比较，它会在较短的列表结束时停止，根本看不到缺的第二项。先检查结构，再比较每一项，最后报告第一个超出容差的位置，这比看到红灯就放宽容差可靠得多。</p>
+<p>试着为逐项向量加法设计自己的验收：<code>[2, -1]</code> 加 <code>[3, 4]</code> 应得到什么？输入列表还应是什么？换成长度不同的两个列表该怎么办？正常结果 <code>[5, 3]</code> 检查算术，事后再读输入检查是否被意外修改，不等长时按题目要求报错则检查了契约。这三项不能用同一条「结果看起来没问题」来代替。</p>
+<h2 id="h-4">4. 把一次修复做完整</h2>
+<p><a href="prep00.html">Q0 运行示例</a>用来确认起点；<a href="prep01.html">Q1 最大值</a>练初始状态；<a href="prep02.html">Q2 矩阵</a>分别练副本与累计值；<a href="prep03.html">Q3 测试与向量加法</a>让你先修好比较工具，再写独立函数。代码只需修改 <code>prep.py</code>，无需改公开测试。</p>
+<pre><code class="language-bash">python course/tools/grade.py prep --question q2 --failfast
+python course/tools/grade.py prep</code></pre>
+<p>遇到失败时，留下这样一条记录就足够了：「期望第二格开始时是 0，实际是 17；我把清零移到每一格的起点，再用不同的两列重复了测试。」这比记下「矩阵题已通过」更有用，因为换一个形状后，你仍然知道该检查哪里。如果你能对一个自己选的输入做出同样的解释，就可以进入<a href="lec01.html">第 1 讲：执行模型</a>，用相同方法检查每个线程负责哪个元素。</p>
       </article>
     </div>
 
     <nav class="doc-nav">
-      <span class="doc-nav-card disabled"><span>← 上一篇</span><strong>没有了</strong></span><a class="doc-nav-card" href="prep00.html"><span>下一篇 →</span><strong>预备 0：运行程序，读懂第一条反馈</strong></a>
+      <a class="doc-nav-card" href="foundations.html"><span>← 上一篇</span><strong>Python 起步：从一行计算到一批请求</strong></a><span class="doc-nav-card disabled"><span>下一篇 →</span><strong>没有了</strong></span>
     </nav>
   </main>
 

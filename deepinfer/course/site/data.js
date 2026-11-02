@@ -86,12 +86,12 @@ window.COURSE = {
       dates: "正式第 1 周之前 · 按掌握程度推进",
       theme: "入门：Python 起步 → 调试与测试",
       items: [
-        { type: "reading", label: "零基础", title: "Python 起步：先读指南并运行 Q0", link: "notes/foundations.html", key: "foundations-guide" },
+        { type: "reading", label: "入门上篇", title: "Python 起步：从一行计算到一批请求", link: "notes/foundations.html", key: "foundations-guide" },
         { type: "lab", label: "起步 0", title: "表达式与函数 → Q1", link: "notes/foundations00.html", key: "foundations-q1" },
         { type: "lab", label: "起步 1", title: "条件与整数 → Q2", link: "notes/foundations01.html", key: "foundations-q2" },
         { type: "lab", label: "起步 2", title: "列表与循环 → Q3", link: "notes/foundations02.html", key: "foundations-q3" },
         { type: "lab", label: "起步 3", title: "累计状态与测试 → Q4", link: "notes/foundations03.html", key: "foundations-q4" },
-        { type: "reading", label: "入门指南", title: "从这里开始：预备单元路线", link: "notes/prep.html", key: "prep-guide" },
+        { type: "reading", label: "入门下篇", title: "调试与测试：找到程序第一次走错的地方", link: "notes/prep.html", key: "prep-guide" },
         { type: "lab", label: "预备 0", title: "运行、变量跟踪与报错", link: "notes/prep00.html", key: "prep-q0" },
         { type: "lab", label: "预备 1", title: "修复最大值：最小复现与错误假设", link: "notes/prep01.html", key: "prep-q1" },
         { type: "lab", label: "预备 2", title: "修复矩阵：副本、索引与累计值", link: "notes/prep02.html", key: "prep-q2" },
@@ -710,7 +710,7 @@ window.COURSE = {
     "id": "python-start",
     "num": "00A",
     "title": "Python 起步",
-    "intro": "从未编程也能开始：四节正文，每节只引入下一题所需的概念。",
+    "intro": "沿着一批请求的长度，从计算字节数读到推导存储边界；正文在一页内连续阅读。",
     "understanding": "先预测运行结果，再写返回值、分支、列表循环，最后独立实现连续存储边界。",
     "keyPoints": [
       "先修：整数四则运算。",

@@ -25,7 +25,7 @@ python course/tools/grade.py foundations --question q0
 
 Windows 若 `python` 命令不可用，运行 `.\course\run.ps1 --demo` 和 `.\course\run.ps1 foundations --question q0`。启动器自动寻找可用 Python，不安装依赖。
 
-系统只有 python3 时统一替换 python。然后打开 [Python 起步](course/site/notes/foundations.html)，按起步 0–3 学习。教材正文和作业对应见 [教材导航](course/site/notes/textbook.html)。Unit1 的 100 分、第 5 周和第 6 周各自的 100 分分别记录，见 [验收标准](course/site/notes/assessment.html)。
+系统只有 python3 时统一替换 python。然后打开 [Python 起步](course/site/notes/foundations.html)，通读入门上篇，再读调试与测试下篇。教材正文和作业对应见 [教材导航](course/site/notes/textbook.html)。Unit1 的 100 分、第 5 周和第 6 周各自的 100 分分别记录，见 [验收标准](course/site/notes/assessment.html)。
 
 ## 2. 长期路线图
 
