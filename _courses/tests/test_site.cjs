@@ -82,6 +82,16 @@ for (const item of weekSix.items) {
   assert.ok(!item.soon && item.key && item.link, `Week 6 item is not published: ${item.title}`);
 }
 const practiceHtml = render("practice").html;
+const introItems = course.weeks.find((week) => week.n === 0).items;
+for (const route of ["home", "calendar"]) {
+  const introCard = render(route).html.match(/<section[^>]*data-week="0"[\s\S]*?<\/section>/)[0];
+  assert.equal((introCard.match(/data-key-row=/g) || []).length, 2);
+  for (const item of introItems) {
+    const row = `data-key-row="${item.key}"`;
+    assert.equal(introCard.includes(row), item.type === "reading");
+    if (item.type === "lab") assert.ok(practiceHtml.includes(row));
+  }
+}
 for (const note of ["lab05.html", "hw06.html", "project2-scheduler.html"]) {
   assert.ok(practiceHtml.includes(`href="notes/${note}"`), `practice center omits ${note}`);
 }

@@ -163,7 +163,9 @@
 
   function renderWeek(week) {
     const isCurrent = week.n === currentWeek();
-    const items = week.items.map(renderItem).join("");
+    const visibleItems = week.n === 0 ? week.items.filter((item) => item.type === "reading") : week.items;
+    const items = visibleItems.map(renderItem).join("") + (week.n === 0
+      ? `<p class="intro-practice"><a href="#/practice">配套练习与逐题进度 →</a> · 可以先读完一章，再动手。</p>` : "");
     const right = (week.right || []).map(renderSide).join("");
     const search = [
       week.theme,
@@ -228,7 +230,7 @@
       </section>
 
       <div class="section-title"><h2>先走通入门路径</h2><a href="notes/foundations.html">入门指南 →</a></div>
-      <div class="callout"><p><strong>当前建议：</strong>Python 起步 0–3 → 调试预备 0–3 → 第一讲核心 → Lab0 Q0–Q6。C++、CUDA、Tensor Core 暂不作为入门要求；先修复一个失败测试，再增加新知识。日历是路线，不是赶进度的截止日期。</p></div>
+      <div class="callout"><p><strong>当前建议：</strong>先读「Python 起步」，再读「调试与测试」；已有 Python 基础可直接读第二章。C++、CUDA、Tensor Core 暂不作为入门要求；先修复一个失败测试，再增加新知识。日历是路线，不是赶进度的截止日期。</p></div>
       ${C.weeks.find((item) => item.n === 0) ? renderWeek(C.weeks.find((item) => item.n === 0)) : ""}
 
       <div class="section-title"><h2>公告</h2><a href="#/calendar">周历 →</a></div>

@@ -8,7 +8,7 @@
 
 ## Unit 1: GPU Kernels（Week 1–4）
 
-**零基础入口**：[Python 起步 0–3](foundations/README.md)，先学习变量、函数、条件、循环和列表，再进入调试预备。
+**零基础入口**：[入门上篇：Python 起步](foundations/README.md)，先学习变量、函数、条件、循环和列表，再进入调试预备。
 
 **入门前置**：[预备 0–3](prep/README.md)，练运行、调试、矩阵与测试，不要求 C++。正式第 1 周以第一讲核心和 Lab0 为主。CUDA/occupancy/profiling 等为选读，后续材料继续审校。
 
