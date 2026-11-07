@@ -2,95 +2,174 @@
  * Blog post and listing styles
  ******************************************************************************/
 
-.header-bar {
-  margin-bottom: 2.5rem;
-  padding: clamp(1.75rem, 5vw, 3.2rem);
-  overflow: hidden;
-  text-align: center;
-  border: 1px solid rgba(var(--global-theme-color-rgb), 0.18);
-  border-radius: 22px;
-  background: linear-gradient(145deg, rgba(var(--global-theme-color-rgb), 0.08), var(--global-card-bg-color) 65%);
-  box-shadow: 0 18px 48px rgba(25, 45, 50, 0.07);
+.blog-index {
+  --journal-accent: var(--global-theme-color);
+  --journal-muted: var(--global-text-color-light);
+  margin-bottom: 3rem;
+  overflow-wrap: anywhere;
 
-  h1 {
-    max-width: 48rem;
-    margin: 0 auto;
-    color: var(--global-text-color);
-    font-size: clamp(2.2rem, 7vw, 3.8rem);
-    font-weight: 700;
-    letter-spacing: -0.045em;
-    line-height: 1.15;
+  a {
+    text-underline-offset: 0.2em;
+  }
+  a:hover,
+  a:focus-visible {
+    color: var(--journal-accent);
+    text-decoration: underline;
+  }
+  a:focus-visible {
+    outline: 2px solid var(--journal-accent);
+    outline-offset: 3px;
   }
 
-  h2 {
-    margin: 0.9rem 0 0;
-    color: var(--global-text-color-light);
-    font-size: clamp(0.95rem, 2vw, 1.1rem);
-    font-weight: 400;
+  .blog-index__header {
+    padding-block: clamp(0.5rem, 2vw, 1.4rem) 0;
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 5vw, 3.25rem);
+      font-weight: 500;
+      line-height: 1.25;
+    }
+  }
+  .blog-index__eyebrow {
+    margin: 0 0 0.8rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--journal-accent);
+  }
+  .blog-index__intro {
+    margin: 0.75rem 0 0;
+    color: var(--journal-muted);
+    line-height: 1.8;
+  }
+  .blog-index__contents {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 1.5rem;
+    margin-top: clamp(2rem, 5vw, 3.5rem);
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid var(--global-divider-color);
+
+    > span {
+      color: var(--journal-muted);
+      font-size: 0.83rem;
+    }
+  }
+  .blog-index__topics,
+  .blog-entry__topics,
+  .blog-entry__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.15rem 0.8rem;
+    font-size: 0.8rem;
     line-height: 1.7;
+  }
+  .blog-year {
+    display: grid;
+    grid-template-columns: minmax(6rem, 0.35fr) minmax(0, 1.65fr);
+    align-items: start;
+    gap: 2rem;
+    padding-top: clamp(2rem, 4vw, 3rem);
+    & + .blog-year {
+      margin-top: 2rem;
+      border-top: 1px solid var(--global-divider-color);
+    }
+    h2 {
+      margin: -0.12em 0 0;
+      font-size: clamp(1.6rem, 3.5vw, 2.35rem);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.2;
+    }
+    h2 a,
+    time,
+    .blog-entry__featured {
+      color: var(--journal-accent);
+    }
+  }
+  .blog-year__entries,
+  .blog-entry__topics {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .blog-entry {
+    display: flow-root;
+    & + .blog-entry {
+      margin-top: clamp(1.6rem, 3.5vw, 2.35rem);
+    }
+    h3 {
+      margin: 0.3rem 0;
+      font-size: clamp(1.15rem, 2.4vw, 1.4rem);
+      font-weight: 500;
+      line-height: 1.55;
+    }
+    h3 a:not(:hover):not(:focus-visible) {
+      color: var(--global-text-color);
+    }
+  }
+  .blog-entry__meta {
+    font-variant-numeric: tabular-nums;
+    span {
+      color: var(--journal-muted);
+    }
+  }
+  .blog-entry__summary {
+    margin: 0.35rem 0;
+    max-width: 44em;
+    color: var(--journal-muted);
+    font-size: 0.94rem;
+    line-height: 1.8;
+  }
+  .blog-entry__topics a {
+    display: inline-block;
+    padding: 0.15rem 0;
+    color: var(--journal-muted);
+    &:hover,
+    &:focus-visible {
+      color: var(--journal-accent);
+    }
+  }
+  .blog-entry__thumbnail {
+    float: right;
+    width: min(20%, 7rem);
+    height: auto;
+    margin: 0.35rem 0 0.5rem 1rem;
+  }
+  .pagination {
+    flex-wrap: wrap;
+    margin-top: 3rem;
+    .page-item .page-link {
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: var(--journal-muted);
+      font-size: 1rem;
+    }
+    .page-item.active .page-link,
+    .page-link:hover,
+    .page-link:focus-visible {
+      background: transparent;
+      color: var(--journal-accent);
+      text-decoration: underline;
+    }
   }
 }
 
-.tag-category-list {
-  border-bottom: 1px solid var(--global-divider-color);
-  text-align: center;
-  padding-top: 1rem;
-
-  ul {
-    justify-content: center;
-    display: flow-root;
-
-    p,
-    li {
-      list-style: none;
-      display: inline-block;
-      padding: 1rem 0.5rem;
-      color: var(--global-text-color-light);
-    }
+@media (max-width: 600px) {
+  .blog-index .blog-year {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
   }
 }
 
 .post-title {
+  font-weight: 500;
+  letter-spacing: normal;
+
   mjx-container[jax="CHTML"][display="true"] {
     display: unset;
-  }
-}
-
-.post-list {
-  margin: 0 0 40px;
-  padding: 0;
-
-  li {
-    padding-top: 2rem;
-    padding-bottom: 2rem;
-    list-style: none;
-    border-bottom: 1px solid var(--global-divider-color);
-
-    .post-meta {
-      color: var(--global-text-color-light);
-      font-size: 0.875rem;
-      margin-bottom: 0;
-    }
-
-    .post-tags {
-      color: var(--global-text-color-light);
-      font-size: 0.875rem;
-      padding-top: 0.25rem;
-      padding-bottom: 0;
-    }
-
-    a {
-      color: var(--global-text-color);
-      text-decoration: none;
-
-      &:hover {
-        color: var(--global-theme-color);
-      }
-    }
-
-    mjx-container[jax="CHTML"][display="true"] {
-      display: unset;
-    }
   }
 }
 
@@ -193,10 +272,6 @@
 }
 
 @media (max-width: 767px) {
-  .header-bar {
-    border-radius: 18px;
-  }
-
   .post-detail #markdown-content .figure-scroll {
     display: block;
     max-width: 100%;
@@ -227,34 +302,6 @@
       width: 960px !important;
       max-width: none;
     }
-  }
-}
-
-.featured-posts {
-  a {
-    color: var(--global-text-color-light);
-    text-decoration: none;
-
-    .card-text {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    &:hover {
-      color: var(--global-theme-color);
-
-      .card-title {
-        color: var(--global-theme-color);
-      }
-    }
-  }
-
-  .post-meta {
-    color: var(--global-text-color-light);
-    font-size: 0.875rem;
-    margin-bottom: 0;
-    padding-top: 0.5rem;
   }
 }
 

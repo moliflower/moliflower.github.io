@@ -1,57 +1,41 @@
-{% if page.showcase_items %}
+{% if page.showcase_items.size > 0 %}
   <section id="selected-work" class="home-showcase scroll-animate" aria-labelledby="home-showcase-title">
-    <div class="home-showcase__header">
+    <div class="home-section-header">
       <div>
-        <p class="home-showcase__eyebrow">SELECTED WORK</p>
-        <h2 id="home-showcase-title">精选成果</h2>
+        <p class="home-section-label">02 / Projects</p>
+        <h2 id="home-showcase-title">项目展示</h2>
       </div>
-      <div class="home-showcase__meta">
-        <p class="home-showcase__intro">近期代表性的研究与工程成果。</p>
-        <a class="home-showcase__all" href="{{ '/projects/' | relative_url }}">
-          查看全部项目
-          <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-        </a>
-      </div>
+      <a class="home-text-link" href="{{ '/projects/' | relative_url }}">全部项目 <span aria-hidden="true">↗</span></a>
     </div>
 
     <div class="home-showcase__grid">
       {% for item in page.showcase_items %}
         <article class="home-showcase-card">
-          <a class="home-showcase-card__link" href="{{ item.url | relative_url }}" aria-label="查看 {{ item.title }}">
-            <span class="home-showcase-card__type">{{ item.type }}</span>
-            <span class="home-showcase-card__number" aria-hidden="true">0{{ forloop.index }}</span>
-
-            {% if item.visual == 'morphology' %}
-              <span class="home-showcase-card__matrix" aria-hidden="true">
-                <span class="home-showcase-card__matrix-grid">
-                  {% for cell in (1..9) -%}
-                    <i></i>
-                  {%- endfor %}
-                </span>
-                <b>→</b>
-                <span class="home-showcase-card__matrix-grid home-showcase-card__matrix-grid--output">
-                  {% for cell in (1..9) -%}
-                    <i></i>
-                  {%- endfor %}
-                </span>
-              </span>
-            {% endif %}
-
-            <h3>{{ item.title }}</h3>
-            <p>{{ item.description }}</p>
-
-            {% if item.tags %}
-              <ul class="home-showcase-card__tags" aria-label="技术标签">
-                {% for tag in item.tags %}
-                  <li>{{ tag }}</li>
-                {% endfor %}
-              </ul>
-            {% endif %}
-
-            <span class="home-showcase-card__action">
-              查看{{ item.type }}
-              <i class="home-showcase-card__arrow fa-solid fa-arrow-right" aria-hidden="true"></i>
-            </span>
+          <a class="home-showcase-card__link" href="{{ item.url | relative_url }}" aria-label="查看{{ item.type }}：{{ item.title | escape }}">
+            <div class="home-showcase-card__visual" aria-hidden="true">
+              {% if item.image %}
+                <img class="home-showcase-card__image" src="{{ item.image | relative_url | escape }}" alt="" loading="lazy" decoding="async">
+              {% elsif item.visual == 'morphology' %}
+                {% include home-morphology.liquid index=forloop.index %}
+              {% else %}
+                <span class="home-showcase-card__monogram">{{ item.title | slice: 0 | upcase }}</span>
+              {% endif %}
+            </div>
+            <div class="home-showcase-card__body">
+              <h3>{{ item.title | escape }}</h3>
+              <p>{{ item.description }}</p>
+              {% if item.tags %}
+                <ul class="home-showcase-card__tags" aria-label="技术标签">
+                  {% for tag in item.tags %}
+                    <li>{{ tag }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+              <span class="home-showcase-card__action"
+                >查看{{ item.type }}
+                <span aria-hidden="true">→</span></span
+              >
+            </div>
           </a>
         </article>
       {% endfor %}

@@ -66,8 +66,13 @@
   animation-delay: 0.5s;
 }
 
-// Elements waiting for scroll trigger start invisible
+// Content stays readable when JavaScript is unavailable.
 .scroll-animate {
+  opacity: 1;
+}
+
+// Added only after an off-screen element has been observed successfully.
+.scroll-animate.scroll-reveal-pending {
   opacity: 0;
 }
 
@@ -91,7 +96,8 @@
     animation: none;
   }
 
-  .scroll-animate {
+  .scroll-animate,
+  .scroll-animate.scroll-reveal-pending {
     opacity: 1;
   }
 }

@@ -1,27 +1,12 @@
 {% if page.research_interests %}
-  <section class="home-signal" aria-label="研究技术栈">
-    <div class="home-signal__label">
-      <span aria-hidden="true"></span>
-      RESEARCH STACK
-    </div>
-    <div class="home-signal__viewport">
-      <div class="home-signal__track">
-        {% for copy in (1..2) %}
-          <div
-            class="home-signal__group"
-            {% if copy == 2 %}
-              aria-hidden="true"
-            {% endif %}
-          >
-            {% for interest in page.research_interests %}
-              <span>
-                <i>{{ forloop.index | prepend: '0' }}</i>
-                {{ interest }}
-              </span>
-            {% endfor %}
-          </div>
-        {% endfor %}
-      </div>
-    </div>
+  <section class="home-signal" aria-label="研究方向">
+    <p class="home-signal__label">Research interests<span>研究方向</span></p>
+    <ul class="home-signal__list">
+      {% for interest in page.research_interests %}
+        <li>
+          <span aria-hidden="true">{{ forloop.index | prepend: '0' }}</span>{{ interest }}
+        </li>
+      {% endfor %}
+    </ul>
   </section>
 {% endif %}

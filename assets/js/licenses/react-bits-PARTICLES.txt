@@ -1,0 +1,32 @@
+React Bits Particles — custom homepage halo
+==========================================
+
+Original component author: David Haz
+Component: https://reactbits.dev/backgrounds/particles
+Source: https://github.com/DavidHDev/react-bits/blob/e12c22192ac7b4b452c5e2feb9b586d74765d696/src/content/Backgrounds/Particles/Particles.jsx
+Revision: e12c22192ac7b4b452c5e2feb9b586d74765d696
+License source: https://github.com/DavidHDev/react-bits/blob/e12c22192ac7b4b452c5e2feb9b586d74765d696/LICENSE.md
+License copy: react-bits-LICENSE.txt
+
+Retained from the source:
+- The complete PARTICLE_FRAGMENT shader (particle shapes, soft edges, glow,
+  shimmer, and premultiplied output).
+- The seeded random-number generator.
+- Instanced camera-facing quad rendering and Euler rotation matrix layout.
+
+Customized for this website:
+- A new helical torus distribution replaces the original random 3D cloud.
+- A new vertex shader controls perspective, depth tint, radius, and subtle
+  coherent torus ripple; a small surrounding dust field is included.
+- The React lifecycle is replaced by standalone JavaScript with no runtime
+  dependencies, CDN requests, analytics, or additional framework.
+- Theme-aware teal ink and mint colors, a 55-degree tilted composition, subtle pointer
+  rotation, visible play/pause control, persistent manual pause, 30fps limit,
+  1.5 DPR cap, reduced-motion static mode, and visibility/GPU fallbacks.
+  Animation runs only while visible and a pause control exists; without
+  that control the artwork remains static.
+
+This is an adaptation, not an unchanged official React Bits component.
+The adaptation is distributed only as part of this personal website.
+The upstream license permits incorporation into websites but does not
+permit selling, sublicensing, or redistributing the component itself.

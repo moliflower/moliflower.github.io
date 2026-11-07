@@ -4,6 +4,7 @@
 
 footer.fixed-bottom {
   background-color: var(--global-footer-bg-color);
+  border-top: 1px solid var(--global-divider-color);
   font-size: 0.75rem;
 
   .container {
@@ -25,11 +26,33 @@ footer.fixed-bottom {
 
 footer.sticky-bottom {
   border-top: 1px solid var(--global-divider-color);
-  padding-top: 40px;
-  padding-bottom: 40px;
-  font-size: 0.9rem;
+  padding-top: 28px;
+  padding-bottom: 32px;
+  color: var(--global-footer-text-color);
+  font-size: 0.78rem;
+  line-height: 1.8;
 
   .container {
     text-align: center;
   }
+}
+
+footer a {
+  color: var(--global-footer-link-color);
+  text-underline-offset: 3px;
+
+  &:hover {
+    color: var(--global-theme-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--global-theme-color);
+    outline-offset: 3px;
+  }
+}
+
+footer.sticky-bottom .container,
+footer.sticky-bottom .container span,
+footer.fixed-bottom .container span {
+  color: var(--global-footer-text-color);
 }

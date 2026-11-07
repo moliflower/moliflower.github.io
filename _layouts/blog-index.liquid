@@ -1,0 +1,107 @@
+---
+layout: default
+---
+{% if page.pagination.enabled and paginator %}
+  {% assign entries = paginator.posts %}
+  {% assign total = paginator.total_posts %}
+{% else %}
+  {% assign entries = site.posts %}
+  {% assign total = entries.size %}
+{% endif %}
+{% assign years = entries | group_by_exp: 'entry', 'entry.date | date: "%Y"' %}
+<div class="blog-index">
+  <header class="blog-index__header">
+    <p class="blog-index__eyebrow" lang="en">Field notes</p>
+    <h1>{{ site.blog_name | default: page.title | escape }}</h1>
+    {% if site.blog_description != blank %}
+      <p class="blog-index__intro">{{ site.blog_description | escape }}</p>
+    {% endif %}
+    <div class="blog-index__contents">
+      <span>文章目录 · 共 {{ total }} 篇</span>
+      {% if site.display_tags.size > 0 or site.display_categories.size > 0 %}
+        <nav class="blog-index__topics" aria-label="按主题浏览">
+          {% for tag in site.display_tags %}
+            <a href="{{ tag | slugify | prepend: '/blog/tag/' | append: '/' | relative_url }}">#{{ tag | escape }}</a>
+          {% endfor %}
+          {% for category in site.display_categories %}
+            <a href="{{ category | slugify | prepend: '/blog/category/' | append: '/' | relative_url }}">{{ category | escape }}</a>
+          {% endfor %}
+        </nav>
+      {% endif %}
+    </div>
+  </header>
+  {{ content }}
+  {% for group in years %}
+    <section class="blog-year" aria-labelledby="year-{{ group.name }}">
+      <h2 id="year-{{ group.name }}">
+        <a href="{{ group.name | prepend: '/blog/' | append: '/' | relative_url }}" aria-label="{{ group.name }} 年的文章">{{ group.name }}</a>
+      </h2>
+      <ol class="blog-year__entries" role="list">
+        {% for post in group.items %}
+          {% assign target = post.url | relative_url %}
+          {% assign external = false %}
+          {% if post.redirect != blank %}
+            {% if post.redirect contains '://' %}
+              {% assign target = post.redirect %}
+              {% assign external = true %}
+            {% else %}
+              {% assign target = post.redirect | relative_url %}
+            {% endif %}
+          {% endif %}
+          {% assign reading_text = post.content %}
+          {% if post.external_source != blank %}
+            {% assign reading_text = post.feed_content %}
+          {% endif %}
+          <li class="blog-entry">
+            <div class="blog-entry__meta">
+              <time datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date: '%m.%d' }}</time>
+              <span>{{ reading_text | strip_html | number_of_words: 'auto' | divided_by: 180 | plus: 1 }} 分钟阅读</span>
+              {% if post.featured -%}
+                <span class="blog-entry__featured">精选</span>
+              {%- endif %}
+              {% if post.external_source != blank -%}
+                <span>{{ post.external_source | escape }}</span>
+              {%- endif %}
+            </div>
+            {% if post.thumbnail %}
+              <img class="blog-entry__thumbnail" src="{{ post.thumbnail | relative_url | escape }}" alt="" loading="lazy">
+            {% endif %}
+            <h3>
+              <a
+                href="{{ target | escape }}"
+                {% if external %}
+                  target="_blank" rel="noopener noreferrer"
+                {% endif %}
+              >
+                {{- post.title | escape -}}
+                {% if external %}
+                  <span aria-hidden="true">↗</span><span class="sr-only">（在新标签页打开）</span>
+                {%- endif %}
+              </a>
+            </h3>
+            {% if post.description != blank %}
+              <p class="blog-entry__summary">{{ post.description | strip_html | escape }}</p>
+            {% endif %}
+            {% if post.tags.size > 0 or post.categories.size > 0 %}
+              <ul class="blog-entry__topics" aria-label="分类与标签" role="list">
+                {% for category in post.categories %}
+                  <li>
+                    <a href="{{ category | slugify | prepend: '/blog/category/' | append: '/' | relative_url }}">{{ category | escape }}</a>
+                  </li>
+                {% endfor %}
+                {% for tag in post.tags %}
+                  <li>
+                    <a href="{{ tag | slugify | prepend: '/blog/tag/' | append: '/' | relative_url }}">#{{ tag | escape }}</a>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ol>
+    </section>
+  {% else %}
+    <p class="blog-index__intro">还没有发布文章。</p>
+  {% endfor %}
+  {% if page.pagination.enabled %}{% include pagination.liquid %}{% endif %}
+</div>

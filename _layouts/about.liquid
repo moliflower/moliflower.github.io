@@ -44,11 +44,25 @@ layout: default
     {% endif %}
 
     {% if page.enhanced_home %}
-      <section class="home-intro scroll-animate" aria-labelledby="home-intro-title">
-        <div class="home-intro__label">
-          <span>ABOUT MY RESEARCH</span>
-          <h2 id="home-intro-title">{{ page.intro_heading }}</h2>
-        </div>
+      <section class="home-intro scroll-animate{% if page.profile.image %} home-intro--portrait{% endif %}" aria-labelledby="home-intro-title">
+        <header class="home-intro__label">
+          <span class="home-section-label">01 / About</span>
+          <h2 id="home-intro-title">关于我</h2>
+        </header>
+        {% if page.profile.image %}
+          {% assign profile_image_path = page.profile.image | prepend: 'assets/img/' %}
+          <div class="home-profile">
+            <div class="home-profile__image">
+              {%
+                include figure.liquid loading="lazy" path=profile_image_path class="home-profile__photo" sizes="(max-width: 767px) 80px, 200px"
+                alt="邓予涵在湖边的个人照片" cache_bust=true
+              %}
+            </div>
+            {% if page.profile.more_info %}
+              <div class="home-profile__meta">{{ page.profile.more_info }}</div>
+            {% endif %}
+          </div>
+        {% endif %}
         <div class="home-intro__body">{{ content }}</div>
       </section>
 
@@ -69,12 +83,16 @@ layout: default
 
     <!-- Latest posts -->
     {% if page.latest_posts and page.latest_posts.enabled %}
-      <hr class="section-divider">
-      <h2 class="scroll-animate">
-        <i class="fa-solid fa-pen-nib section-icon"></i>
-        <a href="{{ '/blog/' | relative_url }}" style="color: inherit" data-i18n="latest_posts">最新文章</a>
-      </h2>
-      {% include latest_posts.liquid %}
+      {% if page.enhanced_home %}
+        {% include home-posts.liquid %}
+      {% else %}
+        <hr class="section-divider">
+        <h2 class="scroll-animate">
+          <i class="fa-solid fa-pen-nib section-icon"></i>
+          <a href="{{ '/blog/' | relative_url }}" style="color: inherit" data-i18n="latest_posts">最新文章</a>
+        </h2>
+        {% include latest_posts.liquid %}
+      {% endif %}
     {% endif %}
 
     <!-- Selected papers -->

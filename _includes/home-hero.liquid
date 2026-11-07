@@ -1,4 +1,4 @@
-<section class="home-hero scroll-animate" aria-labelledby="home-title">
+<section class="home-hero" aria-labelledby="home-title">
   <div class="home-hero__content">
     {% if page.hero_eyebrow %}
       <p class="home-hero__eyebrow">
@@ -7,62 +7,37 @@
       </p>
     {% endif %}
 
-    <h1 id="home-title" class="home-hero__title">{{ site.title }}</h1>
-    <p class="home-hero__subtitle">{{ page.subtitle }}</p>
-
-    {% if page.research_interests %}
-      <div class="home-hero__focus">
-        <span>CURRENT FOCUS</span>
-        <strong>{{ page.research_interests | join: ' / ' }}</strong>
-      </div>
+    <h1 id="home-title" class="home-hero__title">
+      {% if site.first_name and site.last_name %}
+        <span>{{ site.first_name }}</span>
+        <span class="home-hero__title-accent">{{ site.last_name }}</span>
+      {% else %}
+        {{ site.title }}
+      {% endif %}
+    </h1>
+    {% if page.hero_name %}
+      <p class="home-hero__name">{{ page.hero_name }}</p>
     {% endif %}
+    <p class="home-hero__statement">{{ page.intro_heading }}</p>
+    <p class="home-hero__subtitle">{{ page.subtitle }}</p>
 
     <div class="home-hero__actions">
       {% if page.github_url %}
         <a class="home-button home-button--secondary" href="{{ page.github_url }}" target="_blank" rel="noopener noreferrer">
           <i class="fa-brands fa-github" aria-hidden="true"></i>
           GitHub
+          <span class="home-button__arrow" aria-hidden="true">↗</span>
         </a>
       {% endif %}
     </div>
   </div>
 
-  {% if page.profile %}
-    <aside class="home-profile" aria-label="个人资料">
-      {% if page.profile.image %}
-        {% assign profile_image_path = page.profile.image | prepend: 'assets/img/' %}
-        <div class="home-profile__image">
-          {%
-            include figure.liquid
-            loading="eager"
-            path=profile_image_path
-            class="home-profile__photo"
-            sizes="(min-width: 992px) 310px, (min-width: 576px) 42vw, 88vw"
-            alt="邓予涵在湖边的个人照片"
-            cache_bust=true
-          %}
-
-          <div class="home-profile__hud home-profile__hud--status" aria-hidden="true">
-            <span>RESEARCH NODE</span>
-            <strong><i></i> ONLINE</strong>
-          </div>
-
-          <div class="home-profile__telemetry" aria-hidden="true">
-            <span>GPU SIGNAL</span>
-            <div class="home-profile__bars">
-              {% for bar in (1..10) %}
-                <i></i>
-              {% endfor %}
-            </div>
-            <strong>CUDA / ACTIVE</strong>
-          </div>
-        </div>
-      {% endif %}
-
-      <div class="home-profile__meta">
-        <span><i class="fa-solid fa-location-dot" aria-hidden="true"></i> 上海 · 中国</span>
-        <span><i class="fa-solid fa-flask" aria-hidden="true"></i> ICL · 上海大学</span>
-      </div>
-    </aside>
-  {% endif %}
+  <div class="home-particles" aria-hidden="true">
+    <div class="home-particles__fallback"><i></i><i></i><i></i></div>
+    <canvas data-home-particles></canvas>
+  </div>
+  <div class="home-hero__footer">
+    <span class="home-hero__signature">Research. Code. Systems.</span>
+    <button class="home-particles__toggle" type="button" data-particles-toggle aria-label="暂停粒子动画" hidden>暂停粒子</button>
+  </div>
 </section>

@@ -7,14 +7,33 @@
 .navbar {
   box-shadow: none;
   border-bottom: 1px solid var(--global-divider-color);
-  background: color-mix(in srgb, var(--global-bg-color) 86%, transparent);
-  backdrop-filter: blur(18px) saturate(140%);
+  background: var(--global-bg-color);
+  background: color-mix(in srgb, var(--global-bg-color) 92%, transparent);
+  backdrop-filter: blur(16px);
+
+  a:focus-visible,
+  button:focus-visible {
+    outline: 2px solid var(--global-theme-color);
+    outline-offset: 3px;
+  }
+
+  .navbar-nav {
+    gap: 0.2rem;
+  }
+
+  .toggle-container {
+    display: flex;
+    align-items: center;
+  }
 }
 
 .navbar .dropdown-menu,
 .btn-group.dropdown .dropdown-menu {
   background-color: var(--global-bg-color);
   border: 1px solid var(--global-divider-color);
+  border-radius: 12px;
+  padding: 0.4rem;
+  box-shadow: 0 12px 32px rgba(12, 30, 27, 0.08);
 
   a:not(.active) {
     color: var(--global-text-color);
@@ -31,6 +50,7 @@
 
 .dropdown-item {
   color: var(--global-text-color);
+  border-radius: 7px;
 
   &:hover {
     color: var(--global-hover-color);
@@ -57,11 +77,17 @@
 
   .navbar-brand {
     color: var(--global-text-color);
+    letter-spacing: normal;
+    font-size: 1.1rem;
+    font-weight: 500 !important;
   }
 
   .navbar-nav .nav-item .nav-link {
-    color: var(--global-text-color);
-    border-radius: 8px;
+    color: var(--global-text-color-light);
+    padding: 0.5rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 400;
     transition:
       color 160ms ease,
       background-color 160ms ease;
@@ -74,7 +100,7 @@
 
   .navbar-nav .nav-item.active > .nav-link {
     background: rgba(var(--global-theme-color-rgb), 0.08);
-    font-weight: bolder;
+    font-weight: 500;
     color: var(--global-theme-color);
 
     &:hover {
@@ -121,6 +147,10 @@
 }
 
 .navbar-toggler {
+  min-width: 42px;
+  min-height: 42px;
+  border-radius: 10px;
+
   .icon-bar {
     display: block;
     width: 22px;
@@ -166,20 +196,16 @@
   background-color: inherit;
   color: var(--global-text-color);
   /* Fix footprint to prevent navbar shifting when icon changes */
-  width: 2rem;
-  height: 2rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 
   &:hover {
     color: var(--global-hover-color);
-  }
-}
-
-@media (min-width: 576px) {
-  #light-toggle {
-    transform: translateY(4px);
+    background-color: rgba(var(--global-theme-color-rgb), 0.06);
   }
 }
 
@@ -200,15 +226,15 @@
   background-color: inherit;
   color: var(--global-text-color);
   font-size: 0.85rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-weight: 500;
+  letter-spacing: normal;
   cursor: pointer;
-  width: 2rem;
-  height: 2rem;
+  width: 2.5rem;
+  height: 2.5rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 50%;
   transition:
     color 0.2s ease,
     background-color 0.2s ease;
@@ -216,5 +242,32 @@
   &:hover {
     color: var(--global-hover-color);
     background-color: var(--global-divider-color);
+  }
+}
+
+@media (max-width: 575px) {
+  .navbar #navbarNav {
+    max-height: calc(100vh - 70px);
+    max-height: calc(100dvh - 70px);
+    overflow-y: auto;
+    text-align: left !important;
+  }
+
+  .navbar .navbar-nav {
+    padding: 0.6rem 0 0.8rem;
+  }
+
+  .navbar.navbar-light .navbar-nav .nav-item .nav-link {
+    min-height: 44px;
+    padding: 0.7rem 0.9rem;
+    border-radius: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navbar.navbar-light .navbar-nav .nav-item .nav-link,
+  .navbar-toggler .icon-bar,
+  #lang-toggle {
+    transition: none;
   }
 }
