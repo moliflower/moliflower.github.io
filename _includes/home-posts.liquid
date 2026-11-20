@@ -1,14 +1,11 @@
 {% if site.posts.size > 0 %}
-  <section class="home-posts scroll-animate" aria-labelledby="home-posts-title">
-    <header class="home-section-header home-posts__header">
-      <div>
-        <p class="home-section-label">03 / Field notes</p>
-        <h2 id="home-posts-title">最近在写</h2>
-      </div>
-      <a class="home-text-link" href="{{ '/blog/' | relative_url }}">全部文章 <span aria-hidden="true">→</span></a>
+  <section class="home-section" aria-labelledby="home-posts-title">
+    <header class="home-section__header">
+      <h2 id="home-posts-title">最新文章</h2>
+      <a href="{{ '/blog/' | relative_url }}">全部文章</a>
     </header>
     {% assign home_posts_limit = page.latest_posts.limit | default: site.posts.size %}
-    <ol class="home-posts__list" role="list">
+    <ul class="home-list" role="list">
       {% for item in site.posts limit: home_posts_limit %}
         {% assign post_target = item.url | relative_url %}
         {% if item.redirect != blank %}
@@ -18,23 +15,11 @@
             {% assign post_target = item.redirect | relative_url %}
           {% endif %}
         {% endif %}
-        {% assign topic = item.tags | first | default: item.categories.first %}
-        <li class="home-note">
-          <div class="home-note__meta">
-            <time class="home-note__date" datetime="{{ item.date | date_to_xmlschema }}">{{ item.date | date: '%Y.%m.%d' }}</time>
-            {% if topic != blank %}
-              <span aria-hidden="true">/</span>
-              <span>{{ topic | escape }}</span>
-            {% endif %}
-          </div>
-          <h3>
-            <a class="home-note__link" href="{{ post_target | escape }}">{{ item.title | escape }}</a>
-          </h3>
-          {% if forloop.first and item.description != blank %}
-            <p class="home-note__excerpt">{{ item.description | strip_html | truncate: 100 | escape }}</p>
-          {% endif %}
+        <li class="home-list__item home-list__item--dated">
+          <a href="{{ post_target | escape }}">{{ item.title | escape }}</a>
+          <time datetime="{{ item.date | date_to_xmlschema }}">{{ item.date | date: '%Y-%m-%d' }}</time>
         </li>
       {% endfor %}
-    </ol>
+    </ul>
   </section>
 {% endif %}

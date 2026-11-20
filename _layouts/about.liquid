@@ -3,8 +3,7 @@ layout: default
 ---
 <div class="post{% if page.enhanced_home %} enhanced-home{% endif %}">
   {% if page.enhanced_home %}
-    {% include home-hero.liquid %}
-    {% include home-signal.liquid %}
+    {% include home-hero.liquid bio=content %}
   {% else %}
     <header class="post-header">
       <h1 class="post-title">
@@ -44,28 +43,6 @@ layout: default
     {% endif %}
 
     {% if page.enhanced_home %}
-      <section class="home-intro scroll-animate{% if page.profile.image %} home-intro--portrait{% endif %}" aria-labelledby="home-intro-title">
-        <header class="home-intro__label">
-          <span class="home-section-label">01 / About</span>
-          <h2 id="home-intro-title">关于我</h2>
-        </header>
-        {% if page.profile.image %}
-          {% assign profile_image_path = page.profile.image | prepend: 'assets/img/' %}
-          <div class="home-profile">
-            <div class="home-profile__image">
-              {%
-                include figure.liquid loading="lazy" path=profile_image_path class="home-profile__photo" sizes="(max-width: 767px) 80px, 200px"
-                alt="邓予涵在湖边的个人照片" cache_bust=true
-              %}
-            </div>
-            {% if page.profile.more_info %}
-              <div class="home-profile__meta">{{ page.profile.more_info }}</div>
-            {% endif %}
-          </div>
-        {% endif %}
-        <div class="home-intro__body">{{ content }}</div>
-      </section>
-
       {% include home-showcase.liquid %}
     {% else %}
       <div class="clearfix">{{ content }}</div>

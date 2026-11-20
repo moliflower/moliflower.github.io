@@ -1,43 +1,36 @@
-<section class="home-hero" aria-labelledby="home-title">
-  <div class="home-hero__content">
-    {% if page.hero_eyebrow %}
-      <p class="home-hero__eyebrow">
-        <span class="home-hero__status-dot" aria-hidden="true"></span>
-        {{ page.hero_eyebrow }}
+<section class="home-hero{% if page.profile.image %} home-hero--portrait{% endif %}" aria-labelledby="home-title">
+  <div class="home-hero__heading">
+    <h1 id="home-title">{{ page.hero_name | default: site.title | escape }}</h1>
+    {% if page.hero_name %}
+      <p class="home-hero__name" lang="en">
+        {{ site.first_name }}
+        {{ site.last_name }}
       </p>
     {% endif %}
-
-    <h1 id="home-title" class="home-hero__title">
-      {% if site.first_name and site.last_name %}
-        <span>{{ site.first_name }}</span>
-        <span class="home-hero__title-accent">{{ site.last_name }}</span>
-      {% else %}
-        {{ site.title }}
-      {% endif %}
-    </h1>
-    {% if page.hero_name %}
-      <p class="home-hero__name">{{ page.hero_name }}</p>
-    {% endif %}
-    <p class="home-hero__statement">{{ page.intro_heading }}</p>
     <p class="home-hero__subtitle">{{ page.subtitle }}</p>
+  </div>
 
-    <div class="home-hero__actions">
-      {% if page.github_url %}
-        <a class="home-button home-button--secondary" href="{{ page.github_url }}" target="_blank" rel="noopener noreferrer">
-          <i class="fa-brands fa-github" aria-hidden="true"></i>
-          GitHub
-          <span class="home-button__arrow" aria-hidden="true">↗</span>
-        </a>
-      {% endif %}
+  {% if page.profile.image %}
+    {% assign profile_image_path = page.profile.image | prepend: 'assets/img/' %}
+    <div class="home-hero__portrait">
+      {%
+        include figure.liquid loading="eager" path=profile_image_path class="home-hero__photo" sizes="(max-width: 575px) 88px, 192px"
+        alt=page.profile.image_alt cache_bust=true
+      %}
     </div>
-  </div>
+  {% endif %}
 
-  <div class="home-particles" aria-hidden="true">
-    <div class="home-particles__fallback"><i></i><i></i><i></i></div>
-    <canvas data-home-particles></canvas>
-  </div>
-  <div class="home-hero__footer">
-    <span class="home-hero__signature">Research. Code. Systems.</span>
-    <button class="home-particles__toggle" type="button" data-particles-toggle aria-label="暂停粒子动画" hidden>暂停粒子</button>
+  <div class="home-hero__body">
+    {{ include.bio }}
+    {% if page.github_url or site.email %}
+      <div class="home-hero__contact">
+        {% if page.github_url %}
+          <a href="{{ page.github_url | escape }}">GitHub</a>
+        {% endif %}
+        {% if site.email %}
+          <a href="mailto:{{ site.email | escape }}">{{ site.email | escape }}</a>
+        {% endif %}
+      </div>
+    {% endif %}
   </div>
 </section>

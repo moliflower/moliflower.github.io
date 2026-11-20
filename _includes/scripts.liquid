@@ -187,11 +187,6 @@
 <!-- Scroll Animations -->
 <script defer src="{{ '/assets/js/scroll-animations.js' | relative_url | bust_file_cache }}"></script>
 
-{% if page.enhanced_home %}
-  <!-- Locally hosted particle field; no framework or remote runtime required. -->
-  <script defer src="{{ '/assets/js/home-particles.js' | relative_url | bust_file_cache }}"></script>
-{% endif %}
-
 <!-- Jupyter Open External Links New Tab -->
 <script defer src="{{ '/assets/js/jupyter_new_tab.js' | relative_url | bust_file_cache }}"></script>
 
@@ -383,7 +378,6 @@
   <ninja-keys hideBreadcrumbs noAutoLoadMdIcons placeholder="Type to start searching"></ninja-keys>
   <script src="{{ '/assets/js/search-setup.js' | relative_url | bust_file_cache }}"></script>
   <script src="{{ '/assets/js/search-data.js' | relative_url }}"></script>
-  <script src="{{ '/assets/js/shortcut-key.js' | relative_url | bust_file_cache }}"></script>
 {% endif %}
 
 {% if site.newsletter.enabled %}

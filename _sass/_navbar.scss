@@ -2,14 +2,10 @@
  * Navigation bar and header customization
  ******************************************************************************/
 
-@use "variables" as v;
-
 .navbar {
   box-shadow: none;
   border-bottom: 1px solid var(--global-divider-color);
   background: var(--global-bg-color);
-  background: color-mix(in srgb, var(--global-bg-color) 92%, transparent);
-  backdrop-filter: blur(16px);
 
   a:focus-visible,
   button:focus-visible {
@@ -85,22 +81,17 @@
   .navbar-nav .nav-item .nav-link {
     color: var(--global-text-color-light);
     padding: 0.5rem 0.8rem;
-    border-radius: 999px;
     font-size: 0.9rem;
     font-weight: 400;
-    transition:
-      color 160ms ease,
-      background-color 160ms ease;
 
     &:hover {
       color: var(--global-hover-color);
-      background: rgba(var(--global-theme-color-rgb), 0.06);
     }
   }
 
   .navbar-nav .nav-item.active > .nav-link {
-    background: rgba(var(--global-theme-color-rgb), 0.08);
-    font-weight: 500;
+    background-color: transparent;
+    font-weight: 600;
     color: var(--global-theme-color);
 
     &:hover {
@@ -190,7 +181,8 @@
   }
 }
 
-#light-toggle {
+#light-toggle,
+#search-toggle {
   padding: 0;
   border: 0;
   background-color: inherit;
@@ -198,22 +190,9 @@
   /* Fix footprint to prevent navbar shifting when icon changes */
   width: 2.5rem;
   height: 2.5rem;
-  border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
-  &:hover {
-    color: var(--global-hover-color);
-    background-color: rgba(var(--global-theme-color-rgb), 0.06);
-  }
-}
-
-#search-toggle {
-  padding: 0;
-  border: 0;
-  background-color: inherit;
-  color: var(--global-text-color);
 
   &:hover {
     color: var(--global-hover-color);
@@ -265,7 +244,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .navbar.navbar-light .navbar-nav .nav-item .nav-link,
   .navbar-toggler .icon-bar,
   #lang-toggle {
     transition: none;

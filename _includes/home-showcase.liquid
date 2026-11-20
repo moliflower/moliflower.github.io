@@ -1,44 +1,19 @@
 {% if page.showcase_items.size > 0 %}
-  <section id="selected-work" class="home-showcase scroll-animate" aria-labelledby="home-showcase-title">
-    <div class="home-section-header">
-      <div>
-        <p class="home-section-label">02 / Projects</p>
-        <h2 id="home-showcase-title">项目展示</h2>
-      </div>
-      <a class="home-text-link" href="{{ '/projects/' | relative_url }}">全部项目 <span aria-hidden="true">↗</span></a>
-    </div>
+  <section id="selected-work" class="home-section" aria-labelledby="home-showcase-title">
+    <header class="home-section__header">
+      <h2 id="home-showcase-title">项目</h2>
+      <a href="{{ '/projects/' | relative_url }}">全部项目</a>
+    </header>
 
-    <div class="home-showcase__grid">
+    <ul class="home-list" role="list">
       {% for item in page.showcase_items %}
-        <article class="home-showcase-card">
-          <a class="home-showcase-card__link" href="{{ item.url | relative_url }}" aria-label="查看{{ item.type }}：{{ item.title | escape }}">
-            <div class="home-showcase-card__visual" aria-hidden="true">
-              {% if item.image %}
-                <img class="home-showcase-card__image" src="{{ item.image | relative_url | escape }}" alt="" loading="lazy" decoding="async">
-              {% elsif item.visual == 'morphology' %}
-                {% include home-morphology.liquid index=forloop.index %}
-              {% else %}
-                <span class="home-showcase-card__monogram">{{ item.title | slice: 0 | upcase }}</span>
-              {% endif %}
-            </div>
-            <div class="home-showcase-card__body">
-              <h3>{{ item.title | escape }}</h3>
-              <p>{{ item.description }}</p>
-              {% if item.tags %}
-                <ul class="home-showcase-card__tags" aria-label="技术标签">
-                  {% for tag in item.tags %}
-                    <li>{{ tag }}</li>
-                  {% endfor %}
-                </ul>
-              {% endif %}
-              <span class="home-showcase-card__action"
-                >查看{{ item.type }}
-                <span aria-hidden="true">→</span></span
-              >
-            </div>
-          </a>
-        </article>
+        <li class="home-list__item">
+          <h3>
+            <a href="{{ item.url | relative_url | escape }}">{{ item.title | escape }}</a>
+          </h3>
+          <p>{{ item.description }}</p>
+        </li>
       {% endfor %}
-    </div>
+    </ul>
   </section>
 {% endif %}
