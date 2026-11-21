@@ -9,7 +9,7 @@ github_url: https://github.com/moliflower
 
 showcase_items:
   - title: TorchMorph
-    description: 面向 PyTorch 的轻量级 CUDA 加速批量并行形态学变换库。
+    description: 面向 PyTorch 的 CUDA 加速形态学变换库，配套论文已在 Pattern Recognition Letters 在线发表。
     url: /projects/torchmorph/
 
 profile:

@@ -11,26 +11,14 @@ related_publications: false
 
 ## 项目简介
 
-[TorchMorph](https://github.com/intcomp/torchmorph) 是一个轻量、可扩展的 PyTorch 形态学操作库。项目通过自定义 CUDA kernel 将形态学变换引入 PyTorch，面向实时和大规模视觉任务提供 GPU 加速与批量并行能力。
+TorchMorph 是一个 PyTorch 扩展，用自定义 CUDA 算子批量处理图像和掩码。我是论文第一作者和项目的主要算子贡献者，负责 CUDA 算子实现、性能优化和测试验证。
 
-我为该项目主要算子贡献者，主要关注 CUDA 算子的实现、性能优化和测试验证。
+## 论文
 
-## 主要特点
+Congrats! 🎆 [TorchMorph: CUDA-accelerated morphological transforms](https://doi.org/10.1016/j.patrec.2026.11.008) 已在 _Pattern Recognition Letters_ 在线发表。
 
-- **CUDA 加速**：核心操作由原生 CUDA kernel 实现，以提高计算吞吐。
-- **PyTorch 集成**：输入和输出均为 `torch.Tensor`，兼容 CUDA stream 与 PyTorch 工作流。
-- **批量并行**：面向大 batch 和多维输入进行并行处理。
-- **模块化设计**：不同形态学操作使用相对独立的实现，便于继续扩展。
-- **轻量依赖**：核心运行环境主要依赖 PyTorch 与可用的 CUDA 工具链。
+## 算子与安装
 
-## 技术栈
+TorchMorph 提供二值与灰度形态学、距离变换和 Sinkhorn 最优传输算子。形态学与距离变换可直接处理 `(B, C, Spatial...)` 格式的 CUDA 张量，支持最多 8 个空间维度。
 
-`Python` · `PyTorch` · `C++` · `CUDA` · `GPU Kernel Optimization`
-
-## 项目链接
-
-- [GitHub 仓库](https://github.com/intcomp/torchmorph)
-- [API 文档](https://intcomp.github.io/tm/)
-- [查看源代码与最新进展](https://github.com/intcomp/torchmorph/commits/main/)
-
-> 项目和 API 文档仍在持续更新中，后续将根据算子实现和性能测试进展继续完善。
+从 [GitHub 仓库]({{ page.github }}) 获取源码，按 [README]({{ page.github }}/blob/main/README.md) 编译 CUDA 扩展。请使用与 PyTorch CUDA 版本兼容的 `nvcc`。算子和参数见 [API 文档]({{ page.docs }})。
